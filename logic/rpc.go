@@ -2,11 +2,13 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gochat/clog"
 	"gochat/config"
 	pb "gochat/proto/logicproto"
 	"gochat/tools"
+	"gochat/tools/queue"
 	"net"
 	"os"
 	"os/signal"
@@ -42,7 +44,6 @@ func InitRPCServer() {
 	ip, err := tools.GetLocalIP()
 	if err != nil {
 		clog.Error("failed to get local IP: %v", err)
-		ip = "127.0.0.1" // fallback to localhost
 	}
 	instanceID := fmt.Sprintf("logic-server-%d-%s", config.Conf.LogicRPC.Port, ip)
 
@@ -146,4 +147,84 @@ func (s *server) GetUserInfoByUserId(ctx context.Context, in *pb.GetUserInfoRequ
 		return &pb.GetUserInfoResponse{Code: config.RPCCodeFailed}, nil
 	}
 	return &pb.GetUserInfoResponse{Code: config.RPCCodeSuccess, UserName: userName}, nil
+}
+
+func (s *server) Push(ctx context.Context, in *pb.Send) (*pb.SuccessReply, error) {
+	bodyBytes, err := json.Marshal(in)
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	userSidKey := fmt.Sprintf("gochat_%d", in.ToUserId)
+	serverIdStr := RedisClient.Get(ctx, userSidKey).Val()
+	QueueMsg := queue.QueueMsg{
+		Op:       config.OpSingleSend,
+		ServerId: serverIdStr,
+		Msg:      bodyBytes,
+		UserId:   int(in.ToUserId),
+	}
+	err = queue.DefaultQueue.PublishMessage(&QueueMsg)
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
+}
+
+func (s *server) PushRoom(ctx context.Context, in *pb.Send) (*pb.SuccessReply, error) {
+	bodyBytes, err := json.Marshal(in)
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	roomUserKey := fmt.Sprintf("gochat_room_%d", in.RoomId)
+	roomUserInfo, err := RedisClient.HGetAll(ctx, roomUserKey).Result()
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	QueueMsg := queue.QueueMsg{
+		Op:           config.OpRoomSend,
+		RoomId:       int(in.RoomId),
+		Count:        len(roomUserInfo),
+		Msg:          bodyBytes,
+		RoomUserInfo: roomUserInfo,
+	}
+	err = queue.DefaultQueue.PublishMessage(&QueueMsg)
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
+}
+
+func (s *server) Count(ctx context.Context, in *pb.Send) (*pb.SuccessReply, error) {
+	count, err := RedisClient.Get(ctx, fmt.Sprintf("gochat_room_online_count_%d", in.RoomId)).Int()
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	QueueMsg := queue.QueueMsg{
+		Op:     config.OpRoomCountSend,
+		RoomId: int(in.RoomId),
+		Count:  count,
+	}
+	err = queue.DefaultQueue.PublishMessage(&QueueMsg)
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
+}
+
+func (s *server) GetRoomInfo(ctx context.Context, in *pb.Send) (*pb.SuccessReply, error) {
+	roomUserKey := fmt.Sprintf("gochat_room_%d", in.RoomId)
+	roomUserInfo, err := RedisClient.HGetAll(ctx, roomUserKey).Result()
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	QueueMsg := queue.QueueMsg{
+		Op:           config.OpRoomInfoSend,
+		RoomId:       int(in.RoomId),
+		Count:        len(roomUserInfo),
+		RoomUserInfo: roomUserInfo,
+	}
+	err = queue.DefaultQueue.PublishMessage(&QueueMsg)
+	if err != nil {
+		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
+	}
+	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
 }
