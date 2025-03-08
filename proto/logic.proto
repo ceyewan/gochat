@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package logicproto;
+
+option go_package = "./logicproto";
+
+// ChatLogicService 定义聊天系统的核心业务逻辑服务
+service ChatLogicService {
+  // 用户认证相关
+  rpc Register(RegisterRequest) returns (RegisterReply) {}
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+  rpc CheckAuth(CheckAuthRequest) returns (CheckAuthResponse) {}
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {}
+  rpc GetUserInfoByUserId(GetUserInfoRequest) returns (GetUserInfoResponse) {}
+
+  // 连接管理相关
+  rpc Connect(ConnectRequest) returns (ConnectReply) {}
+  rpc DisConnect(DisConnectRequest) returns (DisConnectReply) {}
+
+  // 消息推送相关
+  rpc Push(Send) returns (SuccessReply) {}
+  rpc PushRoom(Send) returns (SuccessReply) {}
+
+  // 房间信息相关
+  rpc Count(Send) returns (SuccessReply) {}
+  rpc GetRoomInfo(Send) returns (SuccessReply) {}
+}
+
+// 用户认证相关消息
+message RegisterRequest {
+  string name = 1;
+  string password = 2;
+}
+
+message RegisterReply {
+  int32 code = 1;
+  string auth_token = 2;
+}
+
+message LoginRequest {
+  string name = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  int32 code = 1;
+  string auth_token = 2;
+}
+
+message CheckAuthRequest {
+  string auth_token = 1;
+}
+
+message CheckAuthResponse {
+  int32 code = 1;
+  int32 user_id = 2;
+  string user_name = 3;
+}
+
+message LogoutRequest {
+  string auth_token = 1;
+}
+
+message LogoutResponse {
+  int32 code = 1;
+}
+
+message GetUserInfoRequest {
+  int32 user_id = 1;
+}
+
+message GetUserInfoResponse {
+  int32 code = 1;
+  int32 user_id = 2;
+  string user_name = 3;
+}
+
+// 连接管理相关消息
+message ConnectRequest {
+  string auth_token = 1;
+  int32 room_id = 2;
+  string server_id = 3;
+}
+
+message ConnectReply {
+  int32 user_id = 1;
+}
+
+message DisConnectRequest {
+  int32 user_id = 1;
+  int32 room_id = 2;
+}
+
+message DisConnectReply {
+  // 空响应，仅表示操作结果
+}
+
+// 消息发送相关
+message Send {
+  int32 from_user_id = 1;
+  string from_user_name = 2;
+  int32 to_user_id = 3;
+  string to_user_name = 4;
+  int32 room_id = 5;
+  string msg = 6;
+  int32 op = 7;
+  string create_time = 8;
+}
+
+// 通用响应
+message SuccessReply {
+  int32 code = 1;
+}
