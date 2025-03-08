@@ -2,6 +2,9 @@ package config
 
 import "os"
 
+// Config 实例
+var Conf Config
+
 // 操作码定义
 const (
 	OpSingleSend    = iota // 发送消息给单个用户的操作码
@@ -17,6 +20,35 @@ const (
 	RPCUnknowError
 	RPCSessionError
 )
+
+// MySQL 定义 MySQL 数据库的配置结构体
+type MySQL struct {
+	Host     string `mapstructure:"host"`     // MySQL 服务器主机名
+	Port     int    `mapstructure:"port"`     // MySQL 服务器端口
+	Username string `mapstructure:"username"` // 用户名
+	Password string `mapstructure:"password"` // 密码
+	Charset  string `mapstructure:"charset"`  // 字符集
+}
+
+// Redis 定义 Redis 数据库的配置结构体
+type Redis struct {
+	Host     string `mapstructure:"host"`     // Redis 服务器主机名
+	Port     int    `mapstructure:"port"`     // Redis 服务器端口
+	Password string `mapstructure:"password"` // 密码
+	DB       int    `mapstructure:"db"`       // 数据库
+}
+
+// RPC 定义 RPC 服务的配置结构体
+type RPC struct {
+	Port int `mapstructure:"port"` // RPC 服务端口
+}
+
+// Config 是应用程序的主配置结构体，包含了所有服务组件的配置
+type Config struct {
+	MySQL MySQL // MySQL数据库配置
+	Redis Redis // Redis数据库配置
+	LogicRPC   RPC   // RPC服务配置
+}
 
 // GetMode 获取当前运行模式，从环境变量RUN_MODE中读取，默认为"dev"
 func GetMode() string {

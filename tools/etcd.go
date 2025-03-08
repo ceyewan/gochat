@@ -93,7 +93,7 @@ type etcdResolverBuilder struct {
 	serviceName string
 }
 
-// 接收目标服务信息和gRPC客户端连接，构建并返回一个新的解析器
+// Build 接收目标服务信息和gRPC客户端连接，构建并返回一个新的解析器
 func (b *etcdResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	r := &etcdResolver{
 		client:      b.client,
@@ -105,7 +105,7 @@ func (b *etcdResolverBuilder) Build(target resolver.Target, cc resolver.ClientCo
 	return r, nil
 }
 
-// 定义 URL 方案为 etcd，使 gRPC 能够识别 etcd:///{serviceName} 形式的地址
+// Scheme 定义 URL 方案为 etcd，使 gRPC 能够识别 etcd:///{serviceName} 形式的地址
 func (b *etcdResolverBuilder) Scheme() string {
 	return "etcd"
 }
@@ -136,7 +136,10 @@ func (r *etcdResolver) watch() {
 			addresses = append(addresses, resolver.Address{Addr: string(kv.Value)})
 		}
 		// 更新gRPC客户端连接状态
-		r.cc.UpdateState(resolver.State{Addresses: addresses})
+		err = r.cc.UpdateState(resolver.State{Addresses: addresses})
+		if err != nil {
+			return
+		}
 		// 监听服务变更
 		watchChan := r.client.Watch(context.Background(), prefix, clientv3.WithPrefix())
 		for range watchChan {
