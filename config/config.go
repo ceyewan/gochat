@@ -32,8 +32,7 @@ type MySQL struct {
 
 // Redis 定义 Redis 数据库的配置结构体
 type Redis struct {
-	Host     string `mapstructure:"host"`     // Redis 服务器主机名
-	Port     int    `mapstructure:"port"`     // Redis 服务器端口
+	Addr     string `mapstructure:"addr"`     // Redis 服务器主机名
 	Password string `mapstructure:"password"` // 密码
 	DB       int    `mapstructure:"db"`       // 数据库
 }
@@ -45,9 +44,9 @@ type RPC struct {
 
 // Config 是应用程序的主配置结构体，包含了所有服务组件的配置
 type Config struct {
-	MySQL MySQL // MySQL数据库配置
-	Redis Redis // Redis数据库配置
-	LogicRPC   RPC   // RPC服务配置
+	MySQL    MySQL // MySQL数据库配置
+	Redis    Redis // Redis数据库配置
+	LogicRPC RPC   // RPC服务配置
 }
 
 // GetMode 获取当前运行模式，从环境变量RUN_MODE中读取，默认为"dev"

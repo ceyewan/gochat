@@ -1,8 +1,9 @@
 package logic
 
 import (
+	"context"
 	"gochat/clog"
-	"gochat/config"
+	"gochat/tools"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -10,18 +11,23 @@ import (
 
 var RedisClient *redis.Client
 
-func InitRedisClient() {
-	RedisClient = redis.NewClient(&redis.Options{
-		Addr:       config.Conf.Redis.Host,
-		Password:   config.Conf.Redis.Password,
-		DB:         config.Conf.Redis.DB,
-		MaxConnAge: 20 * time.Second,
-	})
-	// 测试连接
-	_, err := RedisClient.Ping(RedisClient.Context()).Result()
+func InitRedisClient() error {
+	// 使用全局Redis客户端
+	client, err := tools.GetRedisClient()
 	if err != nil {
-		clog.Error("Redis连接失败: %v", err)
-		return
+		clog.Error("Redis队列初始化失败: %s", err.Error())
+		return err
 	}
-	clog.Info("Redis连接成功")
+	RedisClient = client
+	// 测试连接
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	pong, err := RedisClient.Ping(ctx).Result()
+	if err != nil {
+		clog.Error("Redis队列连接测试失败: %s", err.Error())
+		return err
+	}
+	clog.Info("Redis队列连接成功: %s", pong)
+	return nil
 }
+
