@@ -1,146 +1,118 @@
 package handler
 
 import (
+	"time"
+
 	"gochat/api/rpc"
 	"gochat/clog"
 	"gochat/config"
-	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
+// 消息推送请求结构体
 type PushForm struct {
-	Msg       string `json:"msg"`
-	ToUserId  int    `json:"toUserId"`
-	RoomId    int    `json:"roomId"`
-	AuthToken string `json:"authToken"`
+	Msg       string `json:"msg"`       // 消息内容
+	ToUserId  int    `json:"toUserId"`  // 接收用户ID（单聊时使用）
+	RoomId    int    `json:"roomId"`    // 房间ID
+	AuthToken string `json:"authToken"` // 认证令牌
 }
 
+// 获取当前时间的格式化字符串
+func getCurrentTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+// 处理认证并返回用户信息
+func authenticateUser(c *gin.Context, token string) (bool, int, string) {
+	code, userID, userName := rpc.LogicRPCObj.CheckAuth(token)
+	if code != config.RPCCodeSuccess {
+		clog.Warning("Authentication failed: token=%s, code=%d", token, code)
+		c.JSON(statusUnauth, response{
+			Code:  code,
+			Error: "认证失败",
+		})
+		return false, 0, ""
+	}
+	return true, userID, userName
+}
+
+// Push 处理单聊消息推送
 func Push(c *gin.Context) {
 	var req PushForm
-	if err := c.BindJSON(&req); err != nil {
-		clog.Error("Push bind json failed: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !bindJSON(c, &req, "push") {
 		return
 	}
 
-	// 检查用户身份
-	code, userID, userName := rpc.LogicRPCObj.CheckAuth(req.AuthToken)
-	if code != config.RPCCodeSuccess {
-		c.JSON(http.StatusUnauthorized, gin.H{"code": code, "error": "认证失败"})
+	// 认证用户
+	ok, userID, userName := authenticateUser(c, req.AuthToken)
+	if !ok {
 		return
 	}
 
 	// 获取目标用户名称
 	code, toUserName := rpc.LogicRPCObj.GetUserNameByID(req.ToUserId)
 	if code != config.RPCCodeSuccess {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": code, "error": "获取用户信息失败"})
+		clog.Warning("Failed to get user info: toUserID=%d, code=%d", req.ToUserId, code)
+		c.JSON(statusServerError, response{
+			Code:  code,
+			Error: "获取用户信息失败",
+		})
 		return
 	}
 
-	// 获取当前时间作为消息创建时间
-	createTime := time.Now().Format("2006-01-02 15:04:05")
-
-	// 调用逻辑服务的RPC方法发送消息
+	// 发送消息
 	pushCode := rpc.LogicRPCObj.Push(
-		userID,              // 发送者ID
-		req.ToUserId,        // 接收者ID
-		req.RoomId,          // 房间ID
-		config.OpSingleSend, // 操作类型：单聊
-		req.Msg,             // 消息内容
-		userName,            // 发送者用户名
-		toUserName,          // 接收者用户名
-		createTime,          // 创建时间
+		userID, req.ToUserId, req.RoomId,
+		config.OpSingleSend, req.Msg,
+		userName, toUserName, getCurrentTime(),
 	)
 
 	if pushCode != config.RPCCodeSuccess {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": pushCode, "error": "发送消息失败"})
+		clog.Error("Message sending failed: from=%d, to=%d, code=%d",
+			userID, req.ToUserId, pushCode)
+		c.JSON(statusServerError, response{
+			Code:  pushCode,
+			Error: "发送消息失败",
+		})
 		return
 	}
 
-	clog.Info("Push success, from: %d(%s), to: %d(%s), msg: %s",
-		userID, userName, req.ToUserId, toUserName, req.Msg)
-	c.JSON(http.StatusOK, gin.H{"code": pushCode})
+	clog.Info("Message sent: from=%d(%s), to=%d(%s), room=%d",
+		userID, userName, req.ToUserId, toUserName, req.RoomId)
+	c.JSON(statusOK, response{Code: pushCode})
 }
 
+// PushRoom 处理群聊消息推送
 func PushRoom(c *gin.Context) {
 	var req PushForm
-	if err := c.BindJSON(&req); err != nil {
-		clog.Error("PushRoom bind json failed: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !bindJSON(c, &req, "push-room") {
 		return
 	}
 
-	// 检查用户身份
-	code, userID, userName := rpc.LogicRPCObj.CheckAuth(req.AuthToken)
-	if code != config.RPCCodeSuccess {
-		c.JSON(http.StatusUnauthorized, gin.H{"code": code, "error": "认证失败"})
+	// 认证用户
+	ok, userID, userName := authenticateUser(c, req.AuthToken)
+	if !ok {
 		return
 	}
 
-	// 获取当前时间作为消息创建时间
-	createTime := time.Now().Format("2006-01-02 15:04:05")
-
-	// 调用逻辑服务的RPC方法发送消息
+	// 发送群消息
 	pushCode := rpc.LogicRPCObj.PushRoom(
-		userID,            // 发送者ID
-		req.RoomId,        // 房间ID
-		config.OpRoomSend, // 操作类型：群聊
-		req.Msg,           // 消息内容
-		userName,          // 发送者用户名
-		createTime,        // 创建时间
+		userID, req.RoomId, config.OpRoomSend,
+		req.Msg, userName, getCurrentTime(),
 	)
 
 	if pushCode != config.RPCCodeSuccess {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": pushCode, "error": "发送消息失败"})
+		clog.Error("Room message sending failed: from=%d, room=%d, code=%d",
+			userID, req.RoomId, pushCode)
+		c.JSON(statusServerError, response{
+			Code:  pushCode,
+			Error: "发送消息失败",
+		})
 		return
 	}
 
-	clog.Info("PushRoom success, from: %d(%s), room: %d, msg: %s",
-		userID, userName, req.RoomId, req.Msg)
-	c.JSON(http.StatusOK, gin.H{"code": pushCode})
-}
-
-type FormCount struct {
-	RoomId int `json:"roomId" binding:"required"`
-}
-
-// Count 统计房间消息数量，调用 Send
-func Count(c *gin.Context) {
-	var req FormCount
-	if err := c.Bind(&req); err != nil {
-		clog.Error("Count bind json failed: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 调用逻辑服务的RPC方法统计消息数量
-	countCode := rpc.LogicRPCObj.Count(req.RoomId, config.OpRoomCountSend)
-	if countCode != config.RPCCodeSuccess {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": countCode, "error": "统计消息数量失败"})
-		return
-	}
-
-	clog.Info("Count success, room: %d", req.RoomId)
-	c.JSON(http.StatusOK, gin.H{"code": countCode})
-}
-
-func GetRoomInfo(c *gin.Context) {
-	var req FormCount
-	if err := c.Bind(&req); err != nil {
-		clog.Error("GetRoomInfo bind json failed: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 调用逻辑服务的RPC方法获取房间信息
-	code := rpc.LogicRPCObj.GetRoomInfo(req.RoomId, config.OpRoomInfoSend)
-	if code != config.RPCCodeSuccess {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": code, "error": "获取房间信息失败"})
-		return
-	}
-
-	clog.Info("GetRoomInfo success, room: %d", req.RoomId)
-	c.JSON(http.StatusOK, gin.H{"code": code})
+	clog.Info("Room message sent: from=%d(%s), room=%d",
+		userID, userName, req.RoomId)
+	c.JSON(statusOK, response{Code: pushCode})
 }

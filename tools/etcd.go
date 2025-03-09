@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"fmt"
+	"gochat/clog"
+	"gochat/config"
 	"sync"
 	"time"
 
@@ -23,13 +25,19 @@ var (
 )
 
 // InitEtcdClient 初始化etcd客户端，确保只初始化一次
-func InitEtcdClient(endpoints []string, dialTimeout time.Duration) error {
+func InitEtcdClient() error {
 	var err error
+	clog.Debug("Initializing etcd client with endpoints: %v", config.Conf.Etcd.Addrs)
 	etcdClientOnce.Do(func() {
 		etcdClient, err = clientv3.New(clientv3.Config{
-			Endpoints:   endpoints,
-			DialTimeout: dialTimeout,
+			Endpoints:   config.Conf.Etcd.Addrs,
+			DialTimeout: 5 * time.Second,
 		})
+		if err != nil {
+			clog.Error("Failed to initialize etcd client: %v", err)
+		} else {
+			clog.Info("Etcd client initialized successfully")
+		}
 	})
 	return err
 }
@@ -37,25 +45,33 @@ func InitEtcdClient(endpoints []string, dialTimeout time.Duration) error {
 // ServiceRegistry 处理服务注册
 func ServiceRegistry(ctx context.Context, serviceName, instanceID, addr string) error {
 	if etcdClient == nil {
-		return fmt.Errorf("etcd client未初始化，请先调用InitEtcdClient")
+		clog.Error("Failed to register service: etcd client not initialized")
+		return fmt.Errorf("etcd client not initialized, call InitEtcdClient first")
 	}
 	// 创建租约，TTL 设置为 5 秒
 	lease, err := etcdClient.Grant(ctx, 5)
 	if err != nil {
-		return fmt.Errorf("创建租约失败: %v", err)
+		clog.Error("Failed to create lease for service %s/%s: %v", serviceName, instanceID, err)
+		return fmt.Errorf("failed to create lease: %w", err)
 	}
 	// 设置自动续租
 	keepAliveCh, err := etcdClient.KeepAlive(ctx, lease.ID)
 	if err != nil {
-		return fmt.Errorf("设置自动续租失败: %v", err)
+		clog.Error("Failed to setup lease keepalive for service %s/%s: %v", serviceName, instanceID, err)
+		return fmt.Errorf("failed to setup keepalive: %w", err)
 	}
-	// 后台处理续租响应
+	// 处理续租响应
 	go func() {
 		for {
 			select {
-			case <-keepAliveCh:
-				// 续租成功，忽略响应
+			case resp, ok := <-keepAliveCh:
+				if !ok {
+					clog.Warning("Keepalive channel closed for service %s/%s", serviceName, instanceID)
+					return
+				}
+				clog.Debug("Lease renewed for service %s/%s, TTL: %d", serviceName, instanceID, resp.TTL)
 			case <-ctx.Done():
+				clog.Info("Service registry context canceled for %s/%s", serviceName, instanceID)
 				return
 			}
 		}
@@ -64,17 +80,22 @@ func ServiceRegistry(ctx context.Context, serviceName, instanceID, addr string) 
 	key := fmt.Sprintf("/services/%s/%s", serviceName, instanceID)
 	_, err = etcdClient.Put(ctx, key, addr, clientv3.WithLease(lease.ID))
 	if err != nil {
-		return fmt.Errorf("注册服务失败: %v", err)
+		clog.Error("Failed to register service %s/%s: %v", serviceName, instanceID, err)
+		return fmt.Errorf("failed to register service: %w", err)
 	}
+
+	clog.Info("Service registered successfully: %s/%s at %s", serviceName, instanceID, addr)
 	return nil
 }
 
-// ServiceDiscovery 处理服务发现，返回gRPC连接池，这个连接池会自动处理负载均衡
-// 连接池在某个服务实例不可用时会自动切换到其他可用实例，也具有自动重连功能
+// ServiceDiscovery 使用etcd发现服务，返回支持负载均衡的gRPC连接
 func ServiceDiscovery(ctx context.Context, serviceName string) (*grpc.ClientConn, error) {
 	if etcdClient == nil {
-		return nil, fmt.Errorf("etcd client未初始化，请先调用InitEtcdClient")
+		clog.Error("Failed to discover service %s: etcd client not initialized", serviceName)
+		return nil, fmt.Errorf("etcd client not initialized, call InitEtcdClient first")
 	}
+
+	clog.Debug("Setting up service discovery for %s", serviceName)
 
 	// 创建自定义resolver，关联etcd客户端和要查找的服务名
 	builder := &etcdResolverBuilder{
@@ -91,12 +112,15 @@ func ServiceDiscovery(ctx context.Context, serviceName string) (*grpc.ClientConn
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("创建gRPC连接失败: %v", err)
+		clog.Error("Failed to create gRPC connection for service %s: %v", serviceName, err)
+		return nil, fmt.Errorf("failed to create gRPC connection: %w", err)
 	}
+
+	clog.Info("Service discovery enabled for %s", serviceName)
 	return conn, nil
 }
 
-// ServiceInstanceConnManager 管理一个服务的所有实例连接
+// ServiceInstanceConnManager 管理服务实例连接
 type ServiceInstanceConnManager struct {
 	serviceName      string
 	connMap          map[string]*grpc.ClientConn // 实例ID到连接的映射
@@ -106,10 +130,11 @@ type ServiceInstanceConnManager struct {
 	watchInitialized sync.WaitGroup
 }
 
-// 获取服务实例连接管理器
+// getServiceInstanceConnManager 获取服务实例连接管理器
 func getServiceInstanceConnManager(serviceName string) (*ServiceInstanceConnManager, error) {
 	if etcdClient == nil {
-		return nil, fmt.Errorf("etcd client未初始化，请先调用InitEtcdClient")
+		clog.Error("Failed to get service manager: etcd client not initialized")
+		return nil, fmt.Errorf("etcd client not initialized, call InitEtcdClient first")
 	}
 
 	serviceConnManagersMutex.RLock()
@@ -120,7 +145,7 @@ func getServiceInstanceConnManager(serviceName string) (*ServiceInstanceConnMana
 		return manager, nil
 	}
 
-	// 如果不存在，创建新的管理器
+	// 创建新的管理器
 	serviceConnManagersMutex.Lock()
 	defer serviceConnManagersMutex.Unlock()
 
@@ -129,6 +154,8 @@ func getServiceInstanceConnManager(serviceName string) (*ServiceInstanceConnMana
 	if exists {
 		return manager, nil
 	}
+
+	clog.Debug("Creating service instance connection manager for %s", serviceName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	manager = &ServiceInstanceConnManager{
@@ -148,6 +175,7 @@ func getServiceInstanceConnManager(serviceName string) (*ServiceInstanceConnMana
 	manager.watchInitialized.Wait()
 
 	serviceConnManagers[serviceName] = manager
+	clog.Info("Service instance connection manager created for %s", serviceName)
 	return manager, nil
 }
 
@@ -158,18 +186,22 @@ func (m *ServiceInstanceConnManager) watchServiceInstances() {
 	// 首次获取所有服务实例
 	resp, err := etcdClient.Get(m.ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
+		clog.Error("Failed to get initial service instances for %s: %v", m.serviceName, err)
 		m.watchInitialized.Done()
 		return
 	}
 
 	// 为每个实例创建连接
 	m.updateInstances(resp.Kvs)
+	clog.Info("Initial service instances loaded for %s: found %d instances", m.serviceName, len(resp.Kvs))
 
 	// 标记初始化完成
 	m.watchInitialized.Done()
 
 	// 监听后续变化
 	watchChan := etcdClient.Watch(m.ctx, prefix, clientv3.WithPrefix())
+	clog.Debug("Watching for service instance changes: %s", m.serviceName)
+
 	for watchResp := range watchChan {
 		for _, event := range watchResp.Events {
 			key := string(event.Kv.Key)
@@ -184,6 +216,7 @@ func (m *ServiceInstanceConnManager) watchServiceInstances() {
 				// 如果连接已存在，先关闭
 				if conn, exists := m.connMap[instanceID]; exists {
 					conn.Close()
+					clog.Debug("Closing existing connection for updated instance %s/%s", m.serviceName, instanceID)
 				}
 
 				// 创建新连接
@@ -194,6 +227,9 @@ func (m *ServiceInstanceConnManager) watchServiceInstances() {
 				)
 				if err == nil {
 					m.connMap[instanceID] = conn
+					clog.Debug("Created connection for instance %s/%s at %s", m.serviceName, instanceID, addr)
+				} else {
+					clog.Error("Failed to create connection for instance %s/%s: %v", m.serviceName, instanceID, err)
 				}
 
 			case clientv3.EventTypeDelete:
@@ -201,6 +237,7 @@ func (m *ServiceInstanceConnManager) watchServiceInstances() {
 				if conn, exists := m.connMap[instanceID]; exists {
 					conn.Close()
 					delete(m.connMap, instanceID)
+					clog.Debug("Removed connection for deleted instance %s/%s", m.serviceName, instanceID)
 				}
 			}
 
@@ -251,11 +288,13 @@ func CloseServiceManager(serviceName string) {
 	defer serviceConnManagersMutex.Unlock()
 
 	if manager, exists := serviceConnManagers[serviceName]; exists {
+		clog.Info("Closing service connection manager for %s", serviceName)
 		manager.cancel() // 取消监听
 
 		manager.connMapMutex.Lock()
-		for _, conn := range manager.connMap {
+		for instanceID, conn := range manager.connMap {
 			conn.Close()
+			clog.Debug("Closed connection for instance %s/%s", serviceName, instanceID)
 		}
 		manager.connMapMutex.Unlock()
 
@@ -267,6 +306,7 @@ func CloseServiceManager(serviceName string) {
 func GetServiceInstanceConn(serviceName, instanceID string) (*grpc.ClientConn, error) {
 	manager, err := getServiceInstanceConnManager(serviceName)
 	if err != nil {
+		clog.Error("Failed to get connection for %s/%s: %v", serviceName, instanceID, err)
 		return nil, err
 	}
 
@@ -275,9 +315,11 @@ func GetServiceInstanceConn(serviceName, instanceID string) (*grpc.ClientConn, e
 
 	conn, exists := manager.connMap[instanceID]
 	if !exists {
-		return nil, fmt.Errorf("未找到服务实例连接: %s/%s", serviceName, instanceID)
+		clog.Warning("Connection not found for instance %s/%s", serviceName, instanceID)
+		return nil, fmt.Errorf("connection not found for service instance: %s/%s", serviceName, instanceID)
 	}
 
+	clog.Debug("Retrieved connection for instance %s/%s", serviceName, instanceID)
 	return conn, nil
 }
 
@@ -285,6 +327,7 @@ func GetServiceInstanceConn(serviceName, instanceID string) (*grpc.ClientConn, e
 func GetAllServiceInstanceConns(serviceName string) (map[string]*grpc.ClientConn, error) {
 	manager, err := getServiceInstanceConnManager(serviceName)
 	if err != nil {
+		clog.Error("Failed to get connections for service %s: %v", serviceName, err)
 		return nil, err
 	}
 
@@ -297,6 +340,7 @@ func GetAllServiceInstanceConns(serviceName string) (map[string]*grpc.ClientConn
 		result[id] = conn
 	}
 
+	clog.Debug("Retrieved all connections for service %s: found %d", serviceName, len(result))
 	return result, nil
 }
 
@@ -338,21 +382,30 @@ func (r *etcdResolver) start() {
 // watch 监听服务变化
 func (r *etcdResolver) watch() {
 	prefix := fmt.Sprintf("/services/%s/", r.serviceName)
+
 	for {
 		// 获取当前所有服务实例
 		resp, err := r.client.Get(context.Background(), prefix, clientv3.WithPrefix())
 		if err != nil {
+			clog.Error("Resolver failed to get services for %s: %v", r.serviceName, err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
+
 		var addresses []resolver.Address
 		for _, kv := range resp.Kvs {
 			addresses = append(addresses, resolver.Address{Addr: string(kv.Value)})
 		}
+
 		// 更新gRPC客户端连接状态
 		err = r.cc.UpdateState(resolver.State{Addresses: addresses})
 		if err != nil {
+			clog.Error("Resolver failed to update state for %s: %v", r.serviceName, err)
 			return
 		}
+
+		clog.Debug("Resolver updated %d addresses for service %s", len(addresses), r.serviceName)
+
 		// 监听服务变更
 		watchChan := r.client.Watch(context.Background(), prefix, clientv3.WithPrefix())
 		for range watchChan {
@@ -365,3 +418,23 @@ func (r *etcdResolver) watch() {
 func (r *etcdResolver) ResolveNow(resolver.ResolveNowOptions) {}
 
 func (r *etcdResolver) Close() {}
+
+// CloseEtcdClient 关闭etcd客户端连接并释放资源
+func CloseEtcdClient() error {
+	clog.Debug("Attempting to close etcd client")
+
+	if etcdClient == nil {
+		clog.Debug("Etcd client already closed or not initialized")
+		return nil
+	}
+
+	// 关闭etcd客户端
+	if err := etcdClient.Close(); err != nil {
+		clog.Error("Failed to close etcd client: %v", err)
+		return err
+	}
+
+	etcdClient = nil
+	clog.Info("Etcd client closed successfully")
+	return nil
+}

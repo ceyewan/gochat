@@ -3,67 +3,76 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+
 	"gochat/api/router"
 	"gochat/api/rpc"
 	"gochat/clog"
 	"gochat/config"
 	"gochat/tools"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Chat 结构体作为整个API服务的实例
-type Chat struct{}
-
-// NewChat 创建并返回一个新的 Chat 实例
-//
-// 返回:
-//   - *Chat: 初始化好的 Chat 对象实例
-func New() *Chat {
-	return &Chat{}
+// Chat API服务实例
+type Chat struct {
+	server *http.Server
+	quit   chan os.Signal
 }
 
-// Run 启动 Chat 服务
-func (c *Chat) Run() {
-	// 初始化 etcd 服务
-	tools.InitEtcdClient(config.Conf.Etcd.Addrs, 5*time.Second)
-	// 初始化 LogicRPC 客户端
+// New 创建API服务实例
+func New() *Chat {
+	return &Chat{
+		quit: make(chan os.Signal, 1),
+	}
+}
+
+// Run 启动API服务
+func (c *Chat) Run() error {
+	// 初始化依赖服务
+	tools.InitEtcdClient()
 	rpc.InitLogicRPCClient()
 
-	// 初始化并注册路由
-	r := router.Register()
+	// 配置Gin
 	runMode := config.GetGinRunMode()
-	clog.Info("API Server Running in %s mode", runMode)
 	gin.SetMode(runMode)
+	clog.Info("[API] Server running in %s mode", runMode)
 
-	// 配置服务端口
-	server := &http.Server{
+	// 初始化路由
+	r := router.Register()
+
+	// 配置HTTP服务
+	c.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", config.Conf.APIConfig.Port),
 		Handler: r,
 	}
 
-	// 启动服务
+	// 启动服务器
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			clog.Error("API Server start failed: %v", err)
+		clog.Info("[API] Server starting on port %d", config.Conf.APIConfig.Port)
+		if err := c.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			clog.Error("[API] Server failed to start: %v", err)
+			os.Exit(1)
 		}
 	}()
+	return nil
+}
 
-	// 等待中断信号以优雅地关闭服务器
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-	<-quit
-	clog.Info("API Server Shutting down...")
-	// 设置关闭超时时间，确保所有连接都能正常关闭
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		clog.Error("API Server Shutdown failed: %v", err)
+// Shutdown 优雅关闭API服务
+func (c *Chat) Shutdown(ctx context.Context) error {
+	if c.server != nil {
+		// 关闭HTTP服务
+		if err := c.server.Shutdown(ctx); err != nil {
+			clog.Error("[API] Server shutdown error: %v", err)
+			return err
+		}
 	}
-	clog.Info("API Server exiting")
-	os.Exit(0)
+
+	clog.Info("[API] Server shutdown complete")
+
+	// 关闭依赖服务
+	tools.CloseEtcdClient()
+	clog.Info("[API] Etcd client closed")
+	return nil
 }

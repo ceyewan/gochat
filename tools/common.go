@@ -2,6 +2,7 @@ package tools
 
 import (
 	"errors"
+	"gochat/clog"
 	"net"
 	"sync"
 	"time"
@@ -9,12 +10,20 @@ import (
 	"github.com/bwmarrin/snowflake"
 )
 
+// IP 相关常量
+const (
+	defaultNodeID = 1 // 默认雪花算法节点ID
+)
+
 // GetLocalIP 获取本机首个非环回IPv4地址
 // 返回格式如："192.168.1.100"
 func GetLocalIP() (string, error) {
+	clog.Debug("Attempting to get local IP address")
+
 	// 获取所有网络接口
 	interfaces, err := net.Interfaces()
 	if err != nil {
+		clog.Error("Failed to get network interfaces: %v", err)
 		return "", err
 	}
 
@@ -32,6 +41,7 @@ func GetLocalIP() (string, error) {
 		// 获取该接口的所有地址
 		addrs, err := iface.Addrs()
 		if err != nil {
+			clog.Debug("Failed to get addresses for interface %s: %v", iface.Name, err)
 			continue
 		}
 
@@ -50,11 +60,14 @@ func GetLocalIP() (string, error) {
 			}
 
 			// 返回找到的第一个有效IP地址
-			return ip.String(), nil
+			ipAddress := ip.String()
+			clog.Debug("Found valid local IP: %s", ipAddress)
+			return ipAddress, nil
 		}
 	}
 
-	return "", errors.New("无法获取本机IP地址")
+	clog.Warning("Unable to find any valid local IP address")
+	return "", errors.New("no valid local IP address found")
 }
 
 // snowflakeNode 是雪花算法的节点实例
@@ -67,25 +80,39 @@ var (
 // initSnowflakeNode 初始化雪花算法节点
 // 使用本机IP地址的最后一个字节作为节点ID
 func initSnowflakeNode() {
+	clog.Debug("Initializing snowflake node")
+
 	// 获取本机IP地址
 	ip, err := GetLocalIP()
 	if err != nil {
-		// 如果获取IP失败，使用默认节点ID 1
-		snowflakeNode, nodeInitError = snowflake.NewNode(1)
+		// 如果获取IP失败，使用默认节点ID
+		clog.Warning("Failed to get local IP, using default node ID %d: %v", defaultNodeID, err)
+		snowflakeNode, nodeInitError = snowflake.NewNode(defaultNodeID)
 		return
 	}
+
 	// 解析IP地址
 	ipObj := net.ParseIP(ip)
 	if ipObj == nil {
-		// 如果解析IP失败，使用默认节点ID 1
-		snowflakeNode, nodeInitError = snowflake.NewNode(1)
+		// 如果解析IP失败，使用默认节点ID
+		clog.Warning("Failed to parse IP %s, using default node ID %d", ip, defaultNodeID)
+		snowflakeNode, nodeInitError = snowflake.NewNode(defaultNodeID)
 		return
 	}
+
 	// 使用IP地址的最后一个字节作为节点ID (范围 0-255)
 	// snowflake库的Node ID范围是 0-1023，所以我们可以直接使用IP的最后一个字节
 	nodeID := int64(ipObj.To4()[3])
+	clog.Debug("Using node ID %d derived from IP %s", nodeID, ip)
+
 	// 创建雪花算法节点
 	snowflakeNode, nodeInitError = snowflake.NewNode(nodeID)
+
+	if nodeInitError != nil {
+		clog.Error("Failed to create snowflake node: %v", nodeInitError)
+	} else {
+		clog.Info("Snowflake node initialized successfully with ID %d", nodeID)
+	}
 }
 
 // GetSnowflakeID 生成一个全局唯一的64位整数ID
@@ -95,9 +122,20 @@ func GetSnowflakeID() int64 {
 
 	// 如果初始化失败，返回时间戳作为备用方案
 	if nodeInitError != nil || snowflakeNode == nil {
-		return int64(time.Now().UnixNano())
+		timestamp := int64(time.Now().UnixNano())
+		clog.Warning("Using fallback timestamp ID due to snowflake initialization failure")
+		return timestamp
 	}
 
 	// 生成雪花ID并返回
-	return snowflakeNode.Generate().Int64()
+	id := snowflakeNode.Generate().Int64()
+	clog.Debug("Generated snowflake ID: %d", id)
+	return id
+}
+
+// SendMsg 用于发送消息的结构体
+type SendMsg struct {
+	Count        int               `json:"count"`          // 计数
+	Msg          string            `json:"msg"`            // 消息内容
+	RoomUserInfo map[string]string `json:"room_user_info"` // 房间用户信息
 }

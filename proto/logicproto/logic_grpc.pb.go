@@ -28,8 +28,6 @@ const (
 	ChatLogicService_DisConnect_FullMethodName          = "/logicproto.ChatLogicService/DisConnect"
 	ChatLogicService_Push_FullMethodName                = "/logicproto.ChatLogicService/Push"
 	ChatLogicService_PushRoom_FullMethodName            = "/logicproto.ChatLogicService/PushRoom"
-	ChatLogicService_Count_FullMethodName               = "/logicproto.ChatLogicService/Count"
-	ChatLogicService_GetRoomInfo_FullMethodName         = "/logicproto.ChatLogicService/GetRoomInfo"
 )
 
 // ChatLogicServiceClient is the client API for ChatLogicService service.
@@ -50,9 +48,6 @@ type ChatLogicServiceClient interface {
 	// 消息推送相关
 	Push(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error)
 	PushRoom(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error)
-	// 房间信息相关
-	Count(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error)
-	GetRoomInfo(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error)
 }
 
 type chatLogicServiceClient struct {
@@ -153,26 +148,6 @@ func (c *chatLogicServiceClient) PushRoom(ctx context.Context, in *Send, opts ..
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) Count(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SuccessReply)
-	err := c.cc.Invoke(ctx, ChatLogicService_Count_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *chatLogicServiceClient) GetRoomInfo(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SuccessReply)
-	err := c.cc.Invoke(ctx, ChatLogicService_GetRoomInfo_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // ChatLogicServiceServer is the server API for ChatLogicService service.
 // All implementations must embed UnimplementedChatLogicServiceServer
 // for forward compatibility.
@@ -191,9 +166,6 @@ type ChatLogicServiceServer interface {
 	// 消息推送相关
 	Push(context.Context, *Send) (*SuccessReply, error)
 	PushRoom(context.Context, *Send) (*SuccessReply, error)
-	// 房间信息相关
-	Count(context.Context, *Send) (*SuccessReply, error)
-	GetRoomInfo(context.Context, *Send) (*SuccessReply, error)
 	mustEmbedUnimplementedChatLogicServiceServer()
 }
 
@@ -230,12 +202,6 @@ func (UnimplementedChatLogicServiceServer) Push(context.Context, *Send) (*Succes
 }
 func (UnimplementedChatLogicServiceServer) PushRoom(context.Context, *Send) (*SuccessReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PushRoom not implemented")
-}
-func (UnimplementedChatLogicServiceServer) Count(context.Context, *Send) (*SuccessReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Count not implemented")
-}
-func (UnimplementedChatLogicServiceServer) GetRoomInfo(context.Context, *Send) (*SuccessReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRoomInfo not implemented")
 }
 func (UnimplementedChatLogicServiceServer) mustEmbedUnimplementedChatLogicServiceServer() {}
 func (UnimplementedChatLogicServiceServer) testEmbeddedByValue()                          {}
@@ -420,42 +386,6 @@ func _ChatLogicService_PushRoom_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatLogicService_Count_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Send)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChatLogicServiceServer).Count(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ChatLogicService_Count_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatLogicServiceServer).Count(ctx, req.(*Send))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ChatLogicService_GetRoomInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Send)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChatLogicServiceServer).GetRoomInfo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ChatLogicService_GetRoomInfo_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatLogicServiceServer).GetRoomInfo(ctx, req.(*Send))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // ChatLogicService_ServiceDesc is the grpc.ServiceDesc for ChatLogicService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -498,14 +428,6 @@ var ChatLogicService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PushRoom",
 			Handler:    _ChatLogicService_PushRoom_Handler,
-		},
-		{
-			MethodName: "Count",
-			Handler:    _ChatLogicService_Count_Handler,
-		},
-		{
-			MethodName: "GetRoomInfo",
-			Handler:    _ChatLogicService_GetRoomInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1,7 +1,6 @@
 package task
 
 import (
-	"context"
 	"errors"
 	"gochat/clog"
 	"gochat/config"
@@ -79,23 +78,23 @@ func Push(msg *queue.QueueMsg) error {
 }
 
 // 添加优雅关闭方法
-func (t *Task) Shutdown(ctx context.Context) error {
-	// 通知所有处理协程停止
-	close(stopChan)
+// func (t *Task) Shutdown(ctx context.Context) error {
+// 	// 通知所有处理协程停止
+// 	close(stopChan)
 
-	// 等待所有协程退出，带超时控制
-	doneChan := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(doneChan)
-	}()
+// 	// 等待所有协程退出，带超时控制
+// 	doneChan := make(chan struct{})
+// 	go func() {
+// 		wg.Wait()
+// 		close(doneChan)
+// 	}()
 
-	select {
-	case <-doneChan:
-		clog.Info("All push processors stopped gracefully")
-		return nil
-	case <-ctx.Done():
-		clog.Warning("Timeout waiting for push processors to stop")
-		return ctx.Err()
-	}
-}
+// 	select {
+// 	case <-doneChan:
+// 		clog.Info("All push processors stopped gracefully")
+// 		return nil
+// 	case <-ctx.Done():
+// 		clog.Warning("Timeout waiting for push processors to stop")
+// 		return ctx.Err()
+// 	}
+// }
