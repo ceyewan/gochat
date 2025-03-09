@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package connectproto;
+
+option go_package = "./connectproto";
+
+// 消息服务定义
+service ConnectService {
+  // 推送单个消息
+  rpc PushSingleMsg(PushMsgRequest) returns (SuccessReply) {}
+  
+  // 推送房间消息
+  rpc PushRoomMsg(PushRoomMsgRequest) returns (SuccessReply) {}
+  
+  // 推送房间人数
+  rpc PushRoomCount(PushRoomMsgRequest) returns (SuccessReply) {}
+  
+  // 推送房间信息
+  rpc PushRoomInfo(PushRoomMsgRequest) returns (SuccessReply) {}
+}
+
+// 通用消息结构
+message Msg {
+  int32 ver = 1;
+  int32 operation = 2;
+  int64 seqId = 3;
+  bytes body = 4;
+}
+
+// 推送消息请求
+message PushMsgRequest {
+  int32 userId = 1;
+  Msg msg = 2;
+}
+
+// 推送房间消息请求
+message PushRoomMsgRequest {
+  int32 roomId = 1;
+  Msg msg = 2;
+}
+
+// 成功回复
+message SuccessReply {
+  string msg = 1;
+  int32 code = 2;
+}
+
+// Redis房间人数消息
+message RedisRoomCountMsg {
+  int32 count = 1;
+  int32 op = 2;
+}
+
+// Redis房间信息消息
+message RedisRoomInfo {
+  int32 count = 1;
+  int32 op = 2;
+  int32 roomId = 3;
+  map<string, string> roomUserInfo = 4;
+}
