@@ -39,7 +39,7 @@ func GenerateToken(userID int, userName, passwordHash string, expiration time.Du
 	return tokenString, nil
 }
 
-// ValidateToken 验证Token（包含过期检查）
+// ValidateToken 验证Token（包含过期检查）, 返回用户ID, 用户名, 密码哈希
 func ValidateToken(tokenString string) (int, string, string, error) {
 	claims := &Claims{}
 
