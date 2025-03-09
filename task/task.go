@@ -1,7 +1,6 @@
 package task
 
 import (
-	"gochat/clog"
 	"gochat/tools/queue"
 	"runtime"
 	"time"
@@ -20,10 +19,4 @@ func (t *Task) Run() {
 	queue.InitDefaultQueue()
 	// 消费消息
 	queue.DefaultQueue.ConsumeMessages(5*time.Second, Push)
-}
-
-func Push(msg *queue.QueueMsg) error {
-	// 将消息使用 clog.Info 打印出来
-	clog.Info("Push: %v", msg)
-	return nil
 }
