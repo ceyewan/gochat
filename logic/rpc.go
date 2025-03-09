@@ -28,7 +28,7 @@ var _ pb.ChatLogicServiceServer = (*server)(nil)
 // InitRPCServer 初始化RPC服务器并将服务注册到etcd
 func InitRPCServer() {
 	// 创建gRPC服务器
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Conf.LogicRPC.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Conf.RPC.Port))
 	if err != nil {
 		clog.Error("failed to listen: %v", err)
 		return
@@ -45,13 +45,13 @@ func InitRPCServer() {
 	if err != nil {
 		clog.Error("failed to get local IP: %v", err)
 	}
-	instanceID := fmt.Sprintf("logic-server-%d-%s", config.Conf.LogicRPC.Port, ip)
+	instanceID := fmt.Sprintf("logic-server-%d-%s", config.Conf.RPC.Port, ip)
 
 	// 创建上下文，用于服务注册和取消注册
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// 服务地址
-	addr := fmt.Sprintf("%s:%d", ip, config.Conf.LogicRPC.Port)
+	addr := fmt.Sprintf("%s:%d", ip, config.Conf.RPC.Port)
 
 	// 注册服务到etcd
 	go func() {
@@ -77,7 +77,7 @@ func InitRPCServer() {
 		clog.Info("service unregistered and server stopped")
 	}()
 
-	clog.Info("logic RPC server starting on port %d", config.Conf.LogicRPC.Port)
+	clog.Info("logic RPC server starting on port %d", config.Conf.RPC.Port)
 
 	// 启动gRPC服务器
 	if err := s.Serve(lis); err != nil {
@@ -98,6 +98,7 @@ func (s *server) Login(ctx context.Context, in *pb.LoginRequest) (*pb.LoginRespo
 	if err != nil {
 		return &pb.LoginResponse{Code: config.RPCCodeFailed, AuthToken: ""}, nil
 	}
+	// 如果用户已经登录，撤销旧 Token
 	oldToken, _ := RedisClient.Get(ctx, sessionID).Result()
 	if oldToken != "" {
 		// Todo JWT 撤销旧Token
@@ -227,4 +228,97 @@ func (s *server) GetRoomInfo(ctx context.Context, in *pb.Send) (*pb.SuccessReply
 		return &pb.SuccessReply{Code: config.RPCCodeFailed}, nil
 	}
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
+}
+
+func (s *server) Connect(ctx context.Context, in *pb.ConnectRequest) (*pb.ConnectReply, error) {
+	userID, userName, _, err := tools.ValidateToken(in.AuthToken)
+	if err != nil {
+		return &pb.ConnectReply{UserId: int32(userID)}, nil
+	}
+	// 1. 建立 userID 到 serverID 的映射关系
+	userSidKey := fmt.Sprintf("gochat_%d", userID)
+	err = RedisClient.Set(ctx, userSidKey, in.ServerId, 0).Err()
+	if err != nil {
+		clog.Error("failed to set user-server mapping: %v", err)
+		return &pb.ConnectReply{UserId: int32(userID)}, nil
+	}
+	// 2. 添加用户到房间成员信息中 (使用 userID 作为字段名，serverID 作为值)
+	roomUserKey := fmt.Sprintf("gochat_room_%d", in.RoomId)
+	err = RedisClient.HSet(ctx, roomUserKey, fmt.Sprintf("%d", userID), userName).Err()
+	if err != nil {
+		clog.Error("failed to add user to room: %v", err)
+		return &pb.ConnectReply{UserId: int32(userID)}, nil
+	}
+	// 3. 在线用户数量加一
+	_, err = RedisClient.Incr(ctx, fmt.Sprintf("gochat_room_online_count_%d", in.RoomId)).Result()
+	if err != nil {
+		clog.Error("failed to increment online count: %v", err)
+		return &pb.ConnectReply{UserId: int32(userID)}, nil
+	}
+	// 4. 通过消息队列广播房间信息更新
+	roomUserInfo, err := RedisClient.HGetAll(ctx, roomUserKey).Result()
+	if err == nil {
+		// 发送房间成员信息更新消息
+		infoQueueMsg := queue.QueueMsg{
+			Op:           config.OpRoomInfoSend,
+			RoomId:       int(in.RoomId),
+			Count:        len(roomUserInfo),
+			RoomUserInfo: roomUserInfo,
+		}
+		queue.DefaultQueue.PublishMessage(&infoQueueMsg)
+
+		// 发送房间人数更新消息
+		countQueueMsg := queue.QueueMsg{
+			Op:     config.OpRoomCountSend,
+			RoomId: int(in.RoomId),
+			Count:  len(roomUserInfo),
+		}
+		queue.DefaultQueue.PublishMessage(&countQueueMsg)
+	}
+	return &pb.ConnectReply{UserId: int32(userID)}, nil
+}
+
+func (s *server) Disconnect(ctx context.Context, in *pb.DisConnectRequest) (*pb.DisConnectReply, error) {
+	// 1. 删除 userID 到 serverID 的映射关系
+	userSidKey := fmt.Sprintf("gochat_%d", in.UserId)
+	err := RedisClient.Del(ctx, userSidKey).Err()
+	if err != nil {
+		clog.Error("failed to delete user-server mapping: %v", err)
+	}
+	// 2. 从房间成员信息中删除用户
+	roomUserKey := fmt.Sprintf("gochat_room_%d", in.RoomId)
+	userIDStr := fmt.Sprintf("%d", in.UserId)
+	_, err = RedisClient.HDel(ctx, roomUserKey, userIDStr).Result()
+	if err != nil {
+		clog.Error("failed to remove user from room: %v", err)
+		return &pb.DisConnectReply{}, nil
+	}
+	// 3. 减少房间在线人数
+	_, err = RedisClient.Decr(ctx, fmt.Sprintf("gochat_room_online_count_%d", in.RoomId)).Result()
+	if err != nil {
+		clog.Error("failed to decrement room count: %v", err)
+		return &pb.DisConnectReply{}, nil
+	}
+
+	// 4. 通过消息队列广播房间信息更新
+	roomUserInfo, err := RedisClient.HGetAll(ctx, roomUserKey).Result()
+	if err == nil {
+		// 发送房间成员信息更新消息
+		infoQueueMsg := queue.QueueMsg{
+			Op:           config.OpRoomInfoSend,
+			RoomId:       int(in.RoomId),
+			Count:        len(roomUserInfo),
+			RoomUserInfo: roomUserInfo,
+		}
+		queue.DefaultQueue.PublishMessage(&infoQueueMsg)
+
+		// 发送房间人数更新消息
+		countQueueMsg := queue.QueueMsg{
+			Op:     config.OpRoomCountSend,
+			RoomId: int(in.RoomId),
+			Count:  len(roomUserInfo),
+		}
+		queue.DefaultQueue.PublishMessage(&countQueueMsg)
+	}
+	return &pb.DisConnectReply{}, nil
 }

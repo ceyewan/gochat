@@ -65,7 +65,7 @@ type TaskConfig struct {
 type Config struct {
 	MySQL      MySQL      // MySQL数据库配置
 	Redis      Redis      // Redis数据库配置
-	LogicRPC   RPC        // RPC服务配置
+	RPC        RPC        // RPC服务配置
 	APIConfig  APIConfig  // API服务配置
 	Etcd       Etcd       // Etcd配置
 	TaskConfig TaskConfig // Task配置
