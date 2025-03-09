@@ -14,7 +14,7 @@ import (
 func (t *Task) pushSingleToConnect(instanceID string, userID int, msg []byte) {
 	conn, err := tools.GetServiceInstanceConn("connect-service", instanceID)
 	if err != nil {
-		clog.Error("Failed to get connection, serverID: %s, err: %v", instanceID, err)
+		clog.Error("Failed to get connection, instanceID: %s, err: %v", instanceID, err)
 		return
 	}
 
@@ -34,10 +34,10 @@ func (t *Task) pushSingleToConnect(instanceID string, userID int, msg []byte) {
 
 	reply, err := client.PushSingleMsg(ctx, req)
 	if err != nil {
-		clog.Error("Failed to push single message, serverID: %s, userID: %d, err: %v", instanceID, userID, err)
+		clog.Error("Failed to push single message, instanceID: %s, userID: %d, err: %v", instanceID, userID, err)
 		return
 	}
-	clog.Info("Successfully pushed single message, serverID: %s, userID: %d, reply: %v", instanceID, userID, reply)
+	clog.Info("Successfully pushed single message, instanceID: %s, userID: %d, reply: %v", instanceID, userID, reply)
 }
 
 // broadcastRoomToConnect 向指定房间广播消息
@@ -63,18 +63,18 @@ func (t *Task) broadcastRoomToConnect(roomID int, msg []byte) {
 		},
 	}
 
-	for serverID, conn := range conns {
+	for instanceID, conn := range conns {
 		client := connectproto.NewConnectServiceClient(conn)
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		reply, err := client.PushRoomMsg(ctx, req)
 		cancel()
 
 		if err != nil {
-			clog.Error("Failed to broadcast room message, serverID: %s, roomID: %d, err: %v", serverID, roomID, err)
+			clog.Error("Failed to broadcast room message, instanceID: %s, roomID: %d, err: %v", instanceID, roomID, err)
 			continue
 		}
 
-		clog.Info("Successfully broadcasted room message, serverID: %s, roomID: %d, reply: %v", serverID, roomID, reply)
+		clog.Info("Successfully broadcasted room message, instanceID: %s, roomID: %d, reply: %v", instanceID, roomID, reply)
 	}
 }
 
@@ -112,18 +112,18 @@ func (t *Task) broadcastRoomCountToConnect(roomID int, count int) {
 		},
 	}
 
-	for serverID, conn := range conns {
+	for instanceID, conn := range conns {
 		client := connectproto.NewConnectServiceClient(conn)
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		reply, err := client.PushRoomCount(ctx, req)
 		cancel()
 
 		if err != nil {
-			clog.Error("Failed to broadcast room count, serverID: %s, roomID: %d, err: %v", serverID, roomID, err)
+			clog.Error("Failed to broadcast room count, instanceID: %s, roomID: %d, err: %v", instanceID, roomID, err)
 			continue
 		}
 
-		clog.Info("Successfully broadcasted room count, serverID: %s, roomID: %d, count: %d, reply: %v", serverID, roomID, count, reply)
+		clog.Info("Successfully broadcasted room count, instanceID: %s, roomID: %d, count: %d, reply: %v", instanceID, roomID, count, reply)
 	}
 }
 
@@ -163,17 +163,17 @@ func (t *Task) broadcastRoomInfoToConnect(roomID int, roomUserInfo map[string]st
 		},
 	}
 
-	for serverID, conn := range conns {
+	for instanceID, conn := range conns {
 		client := connectproto.NewConnectServiceClient(conn)
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		reply, err := client.PushRoomInfo(ctx, req)
 		cancel()
 
 		if err != nil {
-			clog.Error("Failed to broadcast room info, serverID: %s, roomID: %d, err: %v", serverID, roomID, err)
+			clog.Error("Failed to broadcast room info, instanceID: %s, roomID: %d, err: %v", instanceID, roomID, err)
 			continue
 		}
 
-		clog.Info("Successfully broadcasted room info, serverID: %s, roomID: %d, reply: %v", serverID, roomID, reply)
+		clog.Info("Successfully broadcasted room info, instanceID: %s, roomID: %d, reply: %v", instanceID, roomID, reply)
 	}
 }
