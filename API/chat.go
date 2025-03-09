@@ -7,6 +7,7 @@ import (
 	"gochat/api/rpc"
 	"gochat/clog"
 	"gochat/config"
+	"gochat/tools"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,12 +23,14 @@ type Chat struct{}
 //
 // 返回:
 //   - *Chat: 初始化好的 Chat 对象实例
-func NewChat() *Chat {
+func New() *Chat {
 	return &Chat{}
 }
 
 // Run 启动 Chat 服务
 func (c *Chat) Run() {
+	// 初始化 etcd 服务
+	tools.InitEtcdClient(config.Conf.Etcd.Addrs, 5*time.Second)
 	// 初始化 LogicRPC 客户端
 	rpc.InitLogicRPCClient()
 
@@ -39,7 +42,7 @@ func (c *Chat) Run() {
 
 	// 配置服务端口
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", config.APIConfig.Port),
+		Addr:    fmt.Sprintf(":%d", config.Conf.APIConfig.Port),
 		Handler: r,
 	}
 

@@ -15,10 +15,10 @@ import (
 
 // User 定义用户模型结构体，对应数据库中的 user 表
 type User struct {
-	ID         uint      `gorm:"primaryKey;autoIncrement"`           // 用户ID，主键，自增
-	UserName   string    `gorm:"size:20;not null;unique"`            // 用户名，不能为空，唯一
-	Password   string    `gorm:"type:char(40);not null"`             // 密码，不能为空
-	CreateTime time.Time `gorm:"not null;default:current_timestamp"` // 创建时间，默认为当前时间戳
+	ID         uint      `gorm:"primaryKey;autoIncrement"`                         // 用户ID，主键，自增
+	UserName   string    `gorm:"size:20;not null;unique"`                          // 用户名，不能为空，唯一
+	Password   string    `gorm:"type:char(40);not null"`                           // 密码，不能为空
+	CreateTime time.Time `gorm:"type:datetime;not null;default:CURRENT_TIMESTAMP"` // 创建时间，默认为当前时间戳
 }
 
 // TableName 指定用户模型对应的数据库表名
@@ -54,6 +54,8 @@ func initDB(dbName string) {
 		dbConfig.Port,
 		dbName,
 	)
+
+	clog.Info("Database DSN: %s", dsn)
 
 	syncLock.Lock()
 	defer syncLock.Unlock()

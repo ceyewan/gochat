@@ -1,6 +1,11 @@
 package config
 
-import "os"
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/viper"
+)
 
 // Config 实例
 var Conf Config
@@ -42,11 +47,55 @@ type RPC struct {
 	Port int `mapstructure:"port"` // RPC 服务端口
 }
 
+// APIConfig 定义 API 服务的配置结构体
+type APIConfig struct {
+	Port int `mapstructure:"port"` // API 服务端口
+}
+
+// Etcd 定义 Etcd 服务的配置结构体
+type Etcd struct {
+	Addrs []string `mapstructure:"addrs"` // Etcd 服务器地址
+}
+
+type TaskConfig struct {
+	ChannelSize int `mapstructure:"channelsize"` // 通道大小
+}
+
 // Config 是应用程序的主配置结构体，包含了所有服务组件的配置
 type Config struct {
-	MySQL    MySQL // MySQL数据库配置
-	Redis    Redis // Redis数据库配置
-	LogicRPC RPC   // RPC服务配置
+	MySQL      MySQL      // MySQL数据库配置
+	Redis      Redis      // Redis数据库配置
+	LogicRPC   RPC        // RPC服务配置
+	APIConfig  APIConfig  // API服务配置
+	Etcd       Etcd       // Etcd配置
+	TaskConfig TaskConfig // Task配置
+}
+
+func init() {
+	LoadConfig()
+}
+
+// LoadConfig 从配置文件加载配置
+func LoadConfig() error {
+	mode := GetMode()
+	configFile := fmt.Sprintf("config/config.%s.yaml", mode)
+
+	// 检查配置文件是否存在，不存在则使用默认配置文件
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		configFile = "config/config.yaml"
+	}
+
+	viper.SetConfigFile(configFile)
+
+	if err := viper.ReadInConfig(); err != nil {
+		return fmt.Errorf("读取配置文件失败: %w", err)
+	}
+
+	if err := viper.Unmarshal(&Conf); err != nil {
+		return fmt.Errorf("解析配置文件失败: %w", err)
+	}
+
+	return nil
 }
 
 // GetMode 获取当前运行模式，从环境变量RUN_MODE中读取，默认为"dev"
@@ -73,9 +122,4 @@ func GetGinRunMode() string {
 		return "release"
 	}
 	return "release"
-}
-
-// API 端口配置
-var APIConfig struct {
-	Port int `json:"port"`
 }
