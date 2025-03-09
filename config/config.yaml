@@ -1,8 +1,8 @@
 mysql:
   host: localhost
   port: 3306
-  username: root
-  password: password
+  username: ceyewan
+  password: 888666
   charset: utf8mb4
   dbname: gochat
 
@@ -24,7 +24,8 @@ etcd:
     - localhost:23793
 
 task:
-  channelsize: 100
+  channelsize: 4
+  channelbuffersize: 1000
 
 connect:
   websocket:

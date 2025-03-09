@@ -401,7 +401,8 @@ func (r *etcdResolver) watch() {
 		err = r.cc.UpdateState(resolver.State{Addresses: addresses})
 		if err != nil {
 			clog.Error("Resolver failed to update state for %s: %v", r.serviceName, err)
-			return
+			time.Sleep(1 * time.Second)
+			continue
 		}
 
 		clog.Debug("Resolver updated %d addresses for service %s", len(addresses), r.serviceName)

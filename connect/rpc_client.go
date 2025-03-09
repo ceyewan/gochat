@@ -45,9 +45,9 @@ func (l *LogicRPC) Connect(authToken, serverID string, roomID int) (int, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req := &logicproto.ConnectRequest{
-		ServerId:  serverID,
-		RoomId:    int32(roomID),
-		AuthToken: authToken,
+		InstanceId: serverID,
+		RoomId:     int32(roomID),
+		AuthToken:  authToken,
 	}
 	reply, err := LogicClient.Connect(ctx, req)
 	if err != nil {
@@ -74,4 +74,3 @@ func (l *LogicRPC) Disconnect(userID, roomID int) error {
 	clog.Info("RPC Disconnect success")
 	return nil
 }
-
