@@ -22,7 +22,7 @@ func (l *Logic) Run() error {
 	// 初始化 Etcd 客户端
 	tools.InitEtcdClient()
 	// 启动消息队列
-	queue.InitDefaultQueue()
+	queue.InitRedisQueue()
 	// 初始化Redis
 	InitRedisClient()
 	// 初始化RPC服务器

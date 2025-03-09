@@ -69,7 +69,8 @@ type Etcd struct {
 
 // TaskConfig 定义 Task 服务的配置结构体
 type TaskConfig struct {
-	ChannelSize int `mapstructure:"channelsize"` // 通道大小
+	ChannelSize       int `mapstructure:"channelsize"`       // 通道大小
+	ChannelBufferSize int `mapstructure:"channelbuffersize"` // 通道缓冲区大小
 }
 
 // ConnectConfig 定义 Connect 服务的配置结构体

@@ -198,14 +198,14 @@ func (s *server) Push(ctx context.Context, in *pb.Send) (*pb.SuccessReply, error
 
 	// 获取目标用户的服务器ID
 	userSidKey := fmt.Sprintf("gochat_%d", in.ToUserId)
-	serverIdStr := RedisClient.Get(ctx, userSidKey).Val()
+	instanceIdStr := RedisClient.Get(ctx, userSidKey).Val()
 
 	// 发布消息到队列
 	queueMsg := queue.QueueMsg{
-		Op:       config.OpSingleSend,
-		ServerId: serverIdStr,
-		Msg:      msgBytes,
-		UserId:   int(in.ToUserId),
+		Op:         config.OpSingleSend,
+		InstanceId: instanceIdStr,
+		Msg:        msgBytes,
+		UserId:     int(in.ToUserId),
 	}
 
 	if err = queue.DefaultQueue.PublishMessage(&queueMsg); err != nil {
@@ -268,7 +268,7 @@ func (s *server) Connect(ctx context.Context, in *pb.ConnectRequest) (*pb.Connec
 
 	// 1. 建立用户到服务器的映射
 	userSidKey := fmt.Sprintf("gochat_%d", userID)
-	if err := RedisClient.Set(ctx, userSidKey, in.ServerId, 0).Err(); err != nil {
+	if err := RedisClient.Set(ctx, userSidKey, in.InstanceId, 0).Err(); err != nil {
 		clog.Error("[RPC] Failed to set user-server mapping: %v", err)
 		return &pb.ConnectReply{UserId: int32(userID)}, nil
 	}
@@ -290,7 +290,7 @@ func (s *server) Connect(ctx context.Context, in *pb.ConnectRequest) (*pb.Connec
 	updateRoomInfo(int(in.RoomId))
 
 	clog.Info("[RPC] User %s (ID: %d) connected to room %d on server %s",
-		userName, userID, in.RoomId, in.ServerId)
+		userName, userID, in.RoomId, in.InstanceId)
 	return &pb.ConnectReply{UserId: int32(userID)}, nil
 }
 
