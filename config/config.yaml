@@ -1,19 +1,20 @@
 mysql:
   host: localhost
   port: 3306
-  username: ceyewan
-  password: 888666
+  username: root
+  password: password
   charset: utf8mb4
+  dbname: gochat
 
 redis:
   addr: localhost:6379
   password: ""
   db: 0
 
-logic_rpc:
-  port: 8001
-  
-api_config:
+rpc:
+  port: 50051
+
+api:
   port: 8080
 
 etcd:
@@ -22,5 +23,19 @@ etcd:
     - localhost:23792
     - localhost:23793
 
-task_config:
+task:
   channelsize: 100
+
+connect:
+  websocket:
+    bind: ":8081"
+    read_buffer_size: 1024
+    write_buffer_size: 1024
+    broadcast_size: 512
+
+env:
+  mode: "dev"
+  gin_mode: "debug"
+
+jwtkey:
+  signkey: "gochat-jwt-secret-key"

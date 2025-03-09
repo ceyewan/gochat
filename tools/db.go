@@ -13,106 +13,137 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// User 定义用户模型结构体，对应数据库中的 user 表
+// User 数据库用户模型
 type User struct {
-	ID         uint      `gorm:"primaryKey;autoIncrement"`                         // 用户ID，主键，自增
-	UserName   string    `gorm:"size:20;not null;unique"`                          // 用户名，不能为空，唯一
-	Password   string    `gorm:"type:char(40);not null"`                           // 密码，不能为空
-	CreateTime time.Time `gorm:"type:datetime;not null;default:CURRENT_TIMESTAMP"` // 创建时间，默认为当前时间戳
+	ID         uint      `gorm:"primaryKey;autoIncrement"`                         // 用户ID
+	UserName   string    `gorm:"size:20;not null;unique"`                          // 用户名
+	Password   string    `gorm:"type:char(40);not null"`                           // 密码(哈希值)
+	CreateTime time.Time `gorm:"type:datetime;not null;default:CURRENT_TIMESTAMP"` // 创建时间
 }
 
-// TableName 指定用户模型对应的数据库表名
+// TableName 指定表名
 func (User) TableName() string {
 	return "user"
 }
 
-// dbMap 存储数据库连接的映射，键为数据库名称，值为对应的数据库连接
-var dbMap = map[string]*gorm.DB{}
+var (
+	// dbMap 数据库连接映射
+	dbMap = map[string]*gorm.DB{}
 
-// syncLock 用于在操作 dbMap 时提供线程安全
-var syncLock sync.Mutex
+	// dbLock 确保线程安全
+	dbLock sync.Mutex
 
-// init 在包被导入时自动执行，负责初始化数据库连接。
-// 该函数调用 initDB 函数，并使用 "gochat" 作为数据库名称参数。
-func init() {
-	initDB("gochat")
-}
+	// 确保数据库只初始化一次
+	initOnce sync.Once
+)
 
-// initDB 初始化指定名称的数据库连接，并执行自动迁移
-// 参数 dbName: 数据库名称
-func initDB(dbName string) {
-	var err error
+// initDB 初始化数据库连接和表结构
+func initDB() {
+	clog.Debug("Initializing database connection")
 
-	// 获取数据库配置
+	// 获取配置
 	dbConfig := config.Conf.MySQL
+	dbName := dbConfig.DbName
 
-	// 构建 DSN (Data Source Name)
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	if dbName == "" {
+		clog.Error("Database name is empty")
+		return
+	}
+
+	// 构建数据源名称
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
 		dbConfig.Username,
 		dbConfig.Password,
 		dbConfig.Host,
 		dbConfig.Port,
 		dbName,
+		dbConfig.Charset,
 	)
 
-	clog.Info("Database DSN: %s", dsn)
+	dbLock.Lock()
+	defer dbLock.Unlock()
 
-	syncLock.Lock()
-	defer syncLock.Unlock()
-
-	// 配置 GORM 日志
+	// 设置日志级别
 	gormLogLevel := logger.Silent
-	if config.GetMode() == "dev" {
+	if config.GetMode() == config.ModeDev {
 		gormLogLevel = logger.Info
 	}
 
-	// 使用 GORM 打开数据库连接
+	// 连接数据库
+	var err error
 	dbMap[dbName], err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(gormLogLevel),
 	})
 
 	if err != nil {
-		clog.Error("open database error: %v", err)
-		return
-	}
-
-	// 获取通用数据库对象，配置连接池
-	sqlDB, err := dbMap[dbName].DB()
-	if err != nil {
-		clog.Error("get database object error: %v", err)
+		clog.Error("Failed to connect to database: %v", err)
 		return
 	}
 
 	// 配置连接池
-	sqlDB.SetMaxIdleConns(10)                  // 最大空闲连接数
-	sqlDB.SetMaxOpenConns(100)                 // 最大打开连接数
-	sqlDB.SetConnMaxLifetime(time.Hour)        // 连接最大存活时间
-	sqlDB.SetConnMaxIdleTime(30 * time.Minute) // 连接最大空闲时间
-
-	// 自动迁移用户模型，创建或更新表结构
-	err = dbMap[dbName].AutoMigrate(&User{})
+	sqlDB, err := dbMap[dbName].DB()
 	if err != nil {
-		clog.Error("Auto migrate table failed: %v", err)
+		clog.Error("Failed to get database instance: %v", err)
 		return
 	}
-	clog.Info("Database initialized successfully with auto migration")
+
+	sqlDB.SetMaxIdleConns(10)                  // 最大空闲连接数
+	sqlDB.SetMaxOpenConns(100)                 // 最大连接数
+	sqlDB.SetConnMaxLifetime(time.Hour)        // 连接最大生命周期
+	sqlDB.SetConnMaxIdleTime(30 * time.Minute) // 空闲连接超时时间
+
+	// 自动迁移表结构
+	if err = dbMap[dbName].AutoMigrate(&User{}); err != nil {
+		clog.Error("Failed to migrate database schema: %v", err)
+		return
+	}
+
+	clog.Info("Database connection established and schema migrated successfully")
 }
 
-// GetDB 获取指定名称的数据库连接
-// 参数 dbName: 数据库名称
-// 返回: 对应的数据库连接，如果不存在则返回nil
-func GetDB(dbName string) *gorm.DB {
-	if db, ok := dbMap[dbName]; ok {
+// GetDB 获取数据库连接
+// 如果连接不存在，则初始化数据库
+func GetDB() *gorm.DB {
+	dbName := config.Conf.MySQL.DbName
+
+	// 检查连接是否已存在
+	dbLock.Lock()
+	db, exists := dbMap[dbName]
+	dbLock.Unlock()
+
+	if exists {
 		return db
 	}
-	return nil
+
+	// 惰性初始化
+	initOnce.Do(initDB)
+
+	dbLock.Lock()
+	db = dbMap[dbName]
+	dbLock.Unlock()
+
+	if db == nil {
+		clog.Warning("No database connection available for: %s", dbName)
+	}
+
+	return db
 }
 
-// DBGoChat 提供访问gochat数据库的结构体
-type DBGoChat struct{}
+// CloseAllDBConnections 关闭所有数据库连接
+func CloseAllDBConnections() {
+	dbLock.Lock()
+	defer dbLock.Unlock()
 
-// GetDBName 返回gochat数据库的名称
-// 返回: 数据库名称字符串
-func (*DBGoChat) GetDBName() string {
-	return "gochat"
+	for name, db := range dbMap {
+		if sqlDB, err := db.DB(); err == nil {
+			if err = sqlDB.Close(); err != nil {
+				clog.Error("Failed to close database connection %s: %v", name, err)
+			} else {
+				clog.Info("Database connection %s closed successfully", name)
+			}
+		}
+	}
+
+	// 清空连接映射
+	dbMap = map[string]*gorm.DB{}
 }

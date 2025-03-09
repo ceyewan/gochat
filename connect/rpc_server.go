@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gochat/clog"
 	"gochat/config"
@@ -15,15 +16,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+// 全局连接管理器
+var connectionManager *ConnectionManager
+
 type server struct {
 	pb.UnimplementedConnectServiceServer
+	connMgr *ConnectionManager
 }
 
-// 匿名类型 server 实现了 ConnectServiceServer 接口
 var _ pb.ConnectServiceServer = (*server)(nil)
 
-// InitRPCServer 初始化RPC服务器并将服务注册到etcd
 func InitRPCServer() {
+	// 创建连接管理器
+	connectionManager = NewConnectionManager()
+
 	// 创建gRPC服务器
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Conf.RPC.Port))
 	if err != nil {
@@ -35,7 +41,10 @@ func InitRPCServer() {
 	s := grpc.NewServer()
 
 	// 注册connect服务
-	pb.RegisterConnectServiceServer(s, &server{})
+	svr := &server{
+		connMgr: connectionManager,
+	}
+	pb.RegisterConnectServiceServer(s, svr)
 
 	// 生成唯一实例ID
 	ip, err := tools.GetLocalIP()
@@ -83,21 +92,97 @@ func InitRPCServer() {
 }
 
 func (s *server) PushSingleMsg(ctx context.Context, in *pb.PushMsgRequest) (*pb.SuccessReply, error) {
-	// todo: 实现推送单条消息的逻辑
+	userID := int(in.UserId)
+	ch, exists := s.connMgr.GetUser(userID)
+
+	if !exists {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "user not connected",
+		}, nil
+	}
+
+	ch.send <- in.Msg.Body
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push msg to user success"}, nil
 }
 
 func (s *server) PushRoomMsg(ctx context.Context, in *pb.PushRoomMsgRequest) (*pb.SuccessReply, error) {
-	// todo: 实现推送房间消息的逻辑
+	roomID := int(in.RoomId)
+
+	success := s.connMgr.BroadcastToRoom(roomID, in.Msg.Body)
+	if !success {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "room not found",
+		}, nil
+	}
+
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push msg to room success"}, nil
 }
 
 func (s *server) PushRoomCount(ctx context.Context, in *pb.PushRoomMsgRequest) (*pb.SuccessReply, error) {
-	// todo: 实现推送房间人数的逻辑
+	roomID := int(in.RoomId)
+
+	// 从客户端JSON解析房间计数消息
+	var roomCountMsg pb.RedisRoomCountMsg
+	if err := json.Unmarshal(in.Msg.Body, &roomCountMsg); err != nil {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "failed to unmarshal room count message",
+		}, nil
+	}
+	msgBytes, err := json.Marshal(&SendMsg{
+		Count:        int(roomCountMsg.Count),
+		Msg:          "",
+		RoomUserInfo: nil,
+	})
+	if err != nil {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "failed to marshal room count message",
+		}, nil
+	}
+	success := s.connMgr.BroadcastToRoom(roomID, msgBytes)
+	if !success {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "room not found",
+		}, nil
+	}
+
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push room count success"}, nil
 }
 
 func (s *server) PushRoomInfo(ctx context.Context, in *pb.PushRoomMsgRequest) (*pb.SuccessReply, error) {
-	// todo: 实现推送房间信息的逻辑
+	roomID := int(in.RoomId)
+
+	var roomInfoMsg pb.RedisRoomInfo
+	if err := json.Unmarshal(in.Msg.Body, &roomInfoMsg); err != nil {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "failed to unmarshal room info message",
+		}, nil
+	}
+
+	msgBytes, err := json.Marshal(&SendMsg{
+		Count:        -1,
+		Msg:          "",
+		RoomUserInfo: roomInfoMsg.RoomUserInfo,
+	})
+	if err != nil {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "failed to marshal room info message",
+		}, nil
+	}
+
+	success := s.connMgr.BroadcastToRoom(roomID, msgBytes)
+	if !success {
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+			Msg:  "room not found",
+		}, nil
+	}
+
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push room info success"}, nil
 }

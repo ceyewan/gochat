@@ -20,10 +20,6 @@ service ChatLogicService {
   // 消息推送相关
   rpc Push(Send) returns (SuccessReply) {}
   rpc PushRoom(Send) returns (SuccessReply) {}
-
-  // 房间信息相关
-  rpc Count(Send) returns (SuccessReply) {}
-  rpc GetRoomInfo(Send) returns (SuccessReply) {}
 }
 
 // 用户认证相关消息
@@ -34,7 +30,6 @@ message RegisterRequest {
 
 message RegisterReply {
   int32 code = 1;
-  string auth_token = 2;
 }
 
 message LoginRequest {
