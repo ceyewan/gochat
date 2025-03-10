@@ -41,8 +41,6 @@ func (t *Task) processPush(c chan *queue.QueueMsg) {
 				t.pushSingleToConnect(msg.InstanceId, msg.UserId, msg.Msg)
 			case config.OpRoomSend:
 				t.broadcastRoomToConnect(msg.RoomId, msg.Msg)
-			case config.OpRoomCountSend:
-				t.broadcastRoomCountToConnect(msg.RoomId, msg.Count)
 			case config.OpRoomInfoSend:
 				t.broadcastRoomInfoToConnect(msg.RoomId, msg.RoomUserInfo)
 			}

@@ -2,11 +2,11 @@ package rpc
 
 import (
 	"context"
+	"gochat/api/dto"
 	"sync"
 	"time"
 
 	"gochat/clog"
-	"gochat/config"
 	"gochat/proto/logicproto"
 	"gochat/tools"
 )
@@ -54,7 +54,7 @@ func createContext() (context.Context, context.CancelFunc) {
 }
 
 // Login 处理用户登录
-func (l *LogicRPC) Login(name, password string) (int, string) {
+func (l *LogicRPC) Login(name, password string) (int, string, string, error) {
 	ctx, cancel := createContext()
 	defer cancel()
 
@@ -62,19 +62,18 @@ func (l *LogicRPC) Login(name, password string) (int, string) {
 		Name:     name,
 		Password: password,
 	}
-
 	reply, err := LogicClient.Login(ctx, req)
 	if err != nil {
 		clog.Error("[RPC] Login failed: %v", err)
-		return config.RPCCodeFailed, ""
+		return 0, "", "", err
 	}
 
-	clog.Info("[RPC] Login success: name=%s, code=%d", name, reply.Code)
-	return int(reply.Code), reply.AuthToken
+	clog.Info("[RPC] Login success: name=%s, id=%d", name, reply.UserId)
+	return int(reply.UserId), reply.UserName, reply.Token, nil
 }
 
 // Register 处理用户注册
-func (l *LogicRPC) Register(name, password string) int {
+func (l *LogicRPC) Register(name, password string) error {
 	ctx, cancel := createContext()
 	defer cancel()
 
@@ -86,116 +85,102 @@ func (l *LogicRPC) Register(name, password string) int {
 	reply, err := LogicClient.Register(ctx, req)
 	if err != nil {
 		clog.Error("[RPC] Register failed: %v", err)
-		return config.RPCCodeFailed
+		return err
 	}
 
 	clog.Info("[RPC] Register success: name=%s, code=%d", name, reply.Code)
-	return int(reply.Code)
+	return nil
 }
 
 // Logout 处理用户登出
-func (l *LogicRPC) Logout(authToken string) int {
+func (l *LogicRPC) Logout(Token string) error {
 	ctx, cancel := createContext()
 	defer cancel()
 
 	req := &logicproto.LogoutRequest{
-		AuthToken: authToken,
+		Token: Token,
 	}
 
 	reply, err := LogicClient.Logout(ctx, req)
 	if err != nil {
 		clog.Error("[RPC] Logout failed: %v", err)
-		return config.RPCCodeFailed
+		return err
 	}
 
 	clog.Info("[RPC] Logout success: code=%d", reply.Code)
-	return int(reply.Code)
+	return nil
 }
 
 // CheckAuth 检查用户认证状态
-func (l *LogicRPC) CheckAuth(authToken string) (int, int, string) {
+func (l *LogicRPC) CheckAuth(Token string) error {
 	ctx, cancel := createContext()
 	defer cancel()
 
 	req := &logicproto.CheckAuthRequest{
-		AuthToken: authToken,
+		Token: Token,
 	}
 
 	reply, err := LogicClient.CheckAuth(ctx, req)
 	if err != nil {
 		clog.Error("[RPC] CheckAuth failed: %v", err)
-		return config.RPCCodeFailed, 0, ""
+		return err
 	}
 
-	clog.Debug("[RPC] CheckAuth success: userID=%d, userName=%s", reply.UserId, reply.UserName)
-	return int(reply.Code), int(reply.UserId), reply.UserName
-}
-
-// GetUserNameByID 通过用户ID获取用户名
-func (l *LogicRPC) GetUserNameByID(userID int) (int, string) {
-	ctx, cancel := createContext()
-	defer cancel()
-
-	req := &logicproto.GetUserInfoRequest{
-		UserId: int32(userID),
-	}
-
-	reply, err := LogicClient.GetUserInfoByUserId(ctx, req)
-	if err != nil {
-		clog.Error("[RPC] GetUserNameByID failed: userID=%d, error=%v", userID, err)
-		return config.RPCCodeFailed, ""
-	}
-
-	clog.Debug("[RPC] GetUserNameByID success: userID=%d, userName=%s", userID, reply.UserName)
-	return int(reply.Code), reply.UserName
+	clog.Debug("[RPC] CheckAuth token: %v success, code=%d", Token, reply.Code)
+	return nil
 }
 
 // Push 发送单聊消息
-func (l *LogicRPC) Push(fromUserID, toUserID, roomID, Op int, msg, fromUserName, toUserName, createTime string) int {
+func (l *LogicRPC) Push(args *dto.PushRequest) error {
 	ctx, cancel := createContext()
 	defer cancel()
 
-	req := &logicproto.Send{
-		FromUserId:   int32(fromUserID),
-		FromUserName: fromUserName,
-		ToUserId:     int32(toUserID),
-		ToUserName:   toUserName,
-		RoomId:       int32(roomID),
-		Op:           int32(Op),
-		CreateTime:   createTime,
-		Msg:          msg,
+	req := &logicproto.PushRequest{
+		FromUserId:   int32(args.FromUserID),
+		FromUserName: args.FromUserName,
+		ToUserId:     int32(args.ToUserID),
+		ToUserName:   args.ToUserName,
+		RoomId:       int32(args.RoomID),
+		CreateTime:   getCurrentTime(),
+		Msg:          args.Msg,
 	}
 
 	reply, err := LogicClient.Push(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] Push failed: from=%d, to=%d, error=%v", fromUserID, toUserID, err)
-		return config.RPCCodeFailed
+		clog.Error("[RPC] Push failed: from=%d, to=%d, error=%v", args.FromUserID, args.ToUserID, err)
+		return err
 	}
 
-	clog.Info("[RPC] Push success: from=%d, to=%d", fromUserID, toUserID)
-	return int(reply.Code)
+	clog.Info("[RPC] Push success: from=%d, to=%d, code=%d", args.FromUserID, args.ToUserID, reply.Code)
+	return nil
 }
 
 // PushRoom 发送群聊消息
-func (l *LogicRPC) PushRoom(fromUserID, roomID, Op int, msg, fromUserName, createTime string) int {
+func (l *LogicRPC) PushRoom(args *dto.PushRequest) error {
 	ctx, cancel := createContext()
 	defer cancel()
 
-	req := &logicproto.Send{
-		FromUserId:   int32(fromUserID),
-		FromUserName: fromUserName,
-		RoomId:       int32(roomID),
-		Op:           int32(Op),
-		CreateTime:   createTime,
-		Msg:          msg,
+	req := &logicproto.PushRequest{
+		FromUserId:   int32(args.FromUserID),
+		FromUserName: args.FromUserName,
+		ToUserId:     int32(args.ToUserID),
+		ToUserName:   args.ToUserName,
+		RoomId:       int32(args.RoomID),
+		CreateTime:   getCurrentTime(),
+		Msg:          args.Msg,
 	}
 
 	reply, err := LogicClient.PushRoom(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] PushRoom failed: from=%d, room=%d, error=%v", fromUserID, roomID, err)
-		return config.RPCCodeFailed
+		clog.Error("[RPC] PushRoom failed: from=%d, to=%d, error=%v", args.FromUserID, args.ToUserID, err)
+		return err
 	}
 
-	clog.Info("[RPC] PushRoom success: from=%d, room=%d", fromUserID, roomID)
-	return int(reply.Code)
+	clog.Info("[RPC] PushRoom success: from=%d, to=%d, code=%d", args.FromUserID, args.ToUserID, reply.Code)
+	return nil
+}
+
+// 获取当前时间的格式化字符串
+func getCurrentTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
 }

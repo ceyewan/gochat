@@ -1,5 +1,6 @@
 package connect
 
+// todo 修改 PRC 逻辑
 import (
 	"context"
 	"sync"
@@ -59,9 +60,10 @@ func (l *LogicRPC) Connect(authToken, instanceID string, roomID int) (int, error
 	defer cancel()
 
 	req := &logicproto.ConnectRequest{
+		UserId:     0,
 		InstanceId: instanceID,
 		RoomId:     int32(roomID),
-		AuthToken:  authToken,
+		Token:      authToken,
 	}
 
 	reply, err := LogicClient.Connect(ctx, req)
@@ -70,8 +72,8 @@ func (l *LogicRPC) Connect(authToken, instanceID string, roomID int) (int, error
 		return 0, err
 	}
 
-	clog.Info("[RPC] Connect success, uid: %d", reply.UserId)
-	return int(reply.UserId), nil
+	clog.Info("[RPC] Connect success, uid: %d", reply.Code)
+	return int(reply.Code), nil
 }
 
 // Disconnect 处理用户断开连接

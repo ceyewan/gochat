@@ -19,15 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChatLogicService_Register_FullMethodName            = "/logicproto.ChatLogicService/Register"
-	ChatLogicService_Login_FullMethodName               = "/logicproto.ChatLogicService/Login"
-	ChatLogicService_CheckAuth_FullMethodName           = "/logicproto.ChatLogicService/CheckAuth"
-	ChatLogicService_Logout_FullMethodName              = "/logicproto.ChatLogicService/Logout"
-	ChatLogicService_GetUserInfoByUserId_FullMethodName = "/logicproto.ChatLogicService/GetUserInfoByUserId"
-	ChatLogicService_Connect_FullMethodName             = "/logicproto.ChatLogicService/Connect"
-	ChatLogicService_DisConnect_FullMethodName          = "/logicproto.ChatLogicService/DisConnect"
-	ChatLogicService_Push_FullMethodName                = "/logicproto.ChatLogicService/Push"
-	ChatLogicService_PushRoom_FullMethodName            = "/logicproto.ChatLogicService/PushRoom"
+	ChatLogicService_Register_FullMethodName   = "/logicproto.ChatLogicService/Register"
+	ChatLogicService_Login_FullMethodName      = "/logicproto.ChatLogicService/Login"
+	ChatLogicService_CheckAuth_FullMethodName  = "/logicproto.ChatLogicService/CheckAuth"
+	ChatLogicService_Logout_FullMethodName     = "/logicproto.ChatLogicService/Logout"
+	ChatLogicService_Connect_FullMethodName    = "/logicproto.ChatLogicService/Connect"
+	ChatLogicService_DisConnect_FullMethodName = "/logicproto.ChatLogicService/DisConnect"
+	ChatLogicService_Push_FullMethodName       = "/logicproto.ChatLogicService/Push"
+	ChatLogicService_PushRoom_FullMethodName   = "/logicproto.ChatLogicService/PushRoom"
 )
 
 // ChatLogicServiceClient is the client API for ChatLogicService service.
@@ -37,17 +36,16 @@ const (
 // ChatLogicService 定义聊天系统的核心业务逻辑服务
 type ChatLogicServiceClient interface {
 	// 用户认证相关
-	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterReply, error)
-	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	CheckAuth(ctx context.Context, in *CheckAuthRequest, opts ...grpc.CallOption) (*CheckAuthResponse, error)
-	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
-	GetUserInfoByUserId(ctx context.Context, in *GetUserInfoRequest, opts ...grpc.CallOption) (*GetUserInfoResponse, error)
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*CommonReply, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginReply, error)
+	CheckAuth(ctx context.Context, in *CheckAuthRequest, opts ...grpc.CallOption) (*CommonReply, error)
+	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*CommonReply, error)
 	// 连接管理相关
-	Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*ConnectReply, error)
-	DisConnect(ctx context.Context, in *DisConnectRequest, opts ...grpc.CallOption) (*DisConnectReply, error)
+	Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*CommonReply, error)
+	DisConnect(ctx context.Context, in *DisConnectRequest, opts ...grpc.CallOption) (*CommonReply, error)
 	// 消息推送相关
-	Push(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error)
-	PushRoom(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error)
+	Push(ctx context.Context, in *PushRequest, opts ...grpc.CallOption) (*CommonReply, error)
+	PushRoom(ctx context.Context, in *PushRequest, opts ...grpc.CallOption) (*CommonReply, error)
 }
 
 type chatLogicServiceClient struct {
@@ -58,9 +56,9 @@ func NewChatLogicServiceClient(cc grpc.ClientConnInterface) ChatLogicServiceClie
 	return &chatLogicServiceClient{cc}
 }
 
-func (c *chatLogicServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterReply, error) {
+func (c *chatLogicServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*CommonReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RegisterReply)
+	out := new(CommonReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_Register_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -68,9 +66,9 @@ func (c *chatLogicServiceClient) Register(ctx context.Context, in *RegisterReque
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+func (c *chatLogicServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LoginResponse)
+	out := new(LoginReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_Login_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -78,9 +76,9 @@ func (c *chatLogicServiceClient) Login(ctx context.Context, in *LoginRequest, op
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) CheckAuth(ctx context.Context, in *CheckAuthRequest, opts ...grpc.CallOption) (*CheckAuthResponse, error) {
+func (c *chatLogicServiceClient) CheckAuth(ctx context.Context, in *CheckAuthRequest, opts ...grpc.CallOption) (*CommonReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CheckAuthResponse)
+	out := new(CommonReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_CheckAuth_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -88,9 +86,9 @@ func (c *chatLogicServiceClient) CheckAuth(ctx context.Context, in *CheckAuthReq
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
+func (c *chatLogicServiceClient) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*CommonReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LogoutResponse)
+	out := new(CommonReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_Logout_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -98,19 +96,9 @@ func (c *chatLogicServiceClient) Logout(ctx context.Context, in *LogoutRequest, 
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) GetUserInfoByUserId(ctx context.Context, in *GetUserInfoRequest, opts ...grpc.CallOption) (*GetUserInfoResponse, error) {
+func (c *chatLogicServiceClient) Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*CommonReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetUserInfoResponse)
-	err := c.cc.Invoke(ctx, ChatLogicService_GetUserInfoByUserId_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *chatLogicServiceClient) Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*ConnectReply, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ConnectReply)
+	out := new(CommonReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_Connect_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -118,9 +106,9 @@ func (c *chatLogicServiceClient) Connect(ctx context.Context, in *ConnectRequest
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) DisConnect(ctx context.Context, in *DisConnectRequest, opts ...grpc.CallOption) (*DisConnectReply, error) {
+func (c *chatLogicServiceClient) DisConnect(ctx context.Context, in *DisConnectRequest, opts ...grpc.CallOption) (*CommonReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DisConnectReply)
+	out := new(CommonReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_DisConnect_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -128,9 +116,9 @@ func (c *chatLogicServiceClient) DisConnect(ctx context.Context, in *DisConnectR
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) Push(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error) {
+func (c *chatLogicServiceClient) Push(ctx context.Context, in *PushRequest, opts ...grpc.CallOption) (*CommonReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SuccessReply)
+	out := new(CommonReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_Push_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -138,9 +126,9 @@ func (c *chatLogicServiceClient) Push(ctx context.Context, in *Send, opts ...grp
 	return out, nil
 }
 
-func (c *chatLogicServiceClient) PushRoom(ctx context.Context, in *Send, opts ...grpc.CallOption) (*SuccessReply, error) {
+func (c *chatLogicServiceClient) PushRoom(ctx context.Context, in *PushRequest, opts ...grpc.CallOption) (*CommonReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SuccessReply)
+	out := new(CommonReply)
 	err := c.cc.Invoke(ctx, ChatLogicService_PushRoom_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -155,17 +143,16 @@ func (c *chatLogicServiceClient) PushRoom(ctx context.Context, in *Send, opts ..
 // ChatLogicService 定义聊天系统的核心业务逻辑服务
 type ChatLogicServiceServer interface {
 	// 用户认证相关
-	Register(context.Context, *RegisterRequest) (*RegisterReply, error)
-	Login(context.Context, *LoginRequest) (*LoginResponse, error)
-	CheckAuth(context.Context, *CheckAuthRequest) (*CheckAuthResponse, error)
-	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-	GetUserInfoByUserId(context.Context, *GetUserInfoRequest) (*GetUserInfoResponse, error)
+	Register(context.Context, *RegisterRequest) (*CommonReply, error)
+	Login(context.Context, *LoginRequest) (*LoginReply, error)
+	CheckAuth(context.Context, *CheckAuthRequest) (*CommonReply, error)
+	Logout(context.Context, *LogoutRequest) (*CommonReply, error)
 	// 连接管理相关
-	Connect(context.Context, *ConnectRequest) (*ConnectReply, error)
-	DisConnect(context.Context, *DisConnectRequest) (*DisConnectReply, error)
+	Connect(context.Context, *ConnectRequest) (*CommonReply, error)
+	DisConnect(context.Context, *DisConnectRequest) (*CommonReply, error)
 	// 消息推送相关
-	Push(context.Context, *Send) (*SuccessReply, error)
-	PushRoom(context.Context, *Send) (*SuccessReply, error)
+	Push(context.Context, *PushRequest) (*CommonReply, error)
+	PushRoom(context.Context, *PushRequest) (*CommonReply, error)
 	mustEmbedUnimplementedChatLogicServiceServer()
 }
 
@@ -176,31 +163,28 @@ type ChatLogicServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedChatLogicServiceServer struct{}
 
-func (UnimplementedChatLogicServiceServer) Register(context.Context, *RegisterRequest) (*RegisterReply, error) {
+func (UnimplementedChatLogicServiceServer) Register(context.Context, *RegisterRequest) (*CommonReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedChatLogicServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
+func (UnimplementedChatLogicServiceServer) Login(context.Context, *LoginRequest) (*LoginReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedChatLogicServiceServer) CheckAuth(context.Context, *CheckAuthRequest) (*CheckAuthResponse, error) {
+func (UnimplementedChatLogicServiceServer) CheckAuth(context.Context, *CheckAuthRequest) (*CommonReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckAuth not implemented")
 }
-func (UnimplementedChatLogicServiceServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
+func (UnimplementedChatLogicServiceServer) Logout(context.Context, *LogoutRequest) (*CommonReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
-func (UnimplementedChatLogicServiceServer) GetUserInfoByUserId(context.Context, *GetUserInfoRequest) (*GetUserInfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUserInfoByUserId not implemented")
-}
-func (UnimplementedChatLogicServiceServer) Connect(context.Context, *ConnectRequest) (*ConnectReply, error) {
+func (UnimplementedChatLogicServiceServer) Connect(context.Context, *ConnectRequest) (*CommonReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Connect not implemented")
 }
-func (UnimplementedChatLogicServiceServer) DisConnect(context.Context, *DisConnectRequest) (*DisConnectReply, error) {
+func (UnimplementedChatLogicServiceServer) DisConnect(context.Context, *DisConnectRequest) (*CommonReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DisConnect not implemented")
 }
-func (UnimplementedChatLogicServiceServer) Push(context.Context, *Send) (*SuccessReply, error) {
+func (UnimplementedChatLogicServiceServer) Push(context.Context, *PushRequest) (*CommonReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Push not implemented")
 }
-func (UnimplementedChatLogicServiceServer) PushRoom(context.Context, *Send) (*SuccessReply, error) {
+func (UnimplementedChatLogicServiceServer) PushRoom(context.Context, *PushRequest) (*CommonReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PushRoom not implemented")
 }
 func (UnimplementedChatLogicServiceServer) mustEmbedUnimplementedChatLogicServiceServer() {}
@@ -296,24 +280,6 @@ func _ChatLogicService_Logout_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatLogicService_GetUserInfoByUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetUserInfoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChatLogicServiceServer).GetUserInfoByUserId(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ChatLogicService_GetUserInfoByUserId_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatLogicServiceServer).GetUserInfoByUserId(ctx, req.(*GetUserInfoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ChatLogicService_Connect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ConnectRequest)
 	if err := dec(in); err != nil {
@@ -351,7 +317,7 @@ func _ChatLogicService_DisConnect_Handler(srv interface{}, ctx context.Context, 
 }
 
 func _ChatLogicService_Push_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Send)
+	in := new(PushRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -363,13 +329,13 @@ func _ChatLogicService_Push_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: ChatLogicService_Push_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatLogicServiceServer).Push(ctx, req.(*Send))
+		return srv.(ChatLogicServiceServer).Push(ctx, req.(*PushRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ChatLogicService_PushRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Send)
+	in := new(PushRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -381,7 +347,7 @@ func _ChatLogicService_PushRoom_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: ChatLogicService_PushRoom_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatLogicServiceServer).PushRoom(ctx, req.(*Send))
+		return srv.(ChatLogicServiceServer).PushRoom(ctx, req.(*PushRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -408,10 +374,6 @@ var ChatLogicService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Logout",
 			Handler:    _ChatLogicService_Logout_Handler,
-		},
-		{
-			MethodName: "GetUserInfoByUserId",
-			Handler:    _ChatLogicService_GetUserInfoByUserId_Handler,
 		},
 		{
 			MethodName: "Connect",
