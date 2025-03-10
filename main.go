@@ -8,6 +8,7 @@ import (
 	"gochat/clog"
 	"gochat/connect"
 	"gochat/logic"
+	"gochat/site"
 	"gochat/task"
 	"os"
 	"os/signal"
@@ -28,7 +29,7 @@ func main() {
 	// 解析命令行参数
 	var module string
 	var logDir string
-	flag.StringVar(&module, "module", "", "assign run module (logic, task, api, connect)")
+	flag.StringVar(&module, "module", "", "assign run module (logic, task, api, connect, site)")
 	flag.StringVar(&logDir, "logdir", "", "log output directory")
 	flag.Parse()
 
@@ -101,6 +102,8 @@ func getModuleRunner(module string) (ModuleRunner, error) {
 		return api.New(), nil
 	case "connect":
 		return connect.New(), nil
+	case "site":
+		return site.New(), nil
 	default:
 		return nil, fmt.Errorf("unknown module: %s", module)
 	}

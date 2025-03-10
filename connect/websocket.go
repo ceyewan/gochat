@@ -70,6 +70,7 @@ func InitWebSocket() error {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(DefaultWSServer, w, r)
 	})
+	clog.Info("WebSocket server started at %s", config.Conf.Connect.Websocket.Bind)
 	err := http.ListenAndServe(config.Conf.Connect.Websocket.Bind, nil)
 	if err != nil {
 		clog.Error("WebSocket server failed to start: %v", err)

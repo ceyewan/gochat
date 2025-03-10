@@ -1,5 +1,5 @@
 mysql:
-  host: mysql
+  host: localhost
   port: 3306
   username: ceyewan
   password: 888666
@@ -7,21 +7,21 @@ mysql:
   dbname: gochat
 
 redis:
-  addr: redis:6379
+  addr: localhost:6379
   password: ""
   db: 0
 
 rpc:
   port: 50051
 
-api:
+apiconfig:
   port: 8080
 
 etcd:
   addrs:
-    - etcd1:2379
-    - etcd2:2379
-    - etcd3:2379
+    - localhost:23791
+    - localhost:23792
+    - localhost:23793
 
 task:
   channelsize: 4

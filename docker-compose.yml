@@ -92,6 +92,8 @@ services:
     build: .
     container_name: api
     command: ./gochat.bin -module api
+    ports:
+      - "8080:8080"
     depends_on:
       - logic
     networks:
@@ -104,6 +106,11 @@ services:
     command: ./gochat.bin -module task
     depends_on:
       - logic
+      - connect
+      - redis
+      - etcd1
+      - etcd2
+      - etcd3
     networks:
       - etcd-net
       - app-net
@@ -112,8 +119,21 @@ services:
     build: .
     container_name: connect
     command: ./gochat.bin -module connect
+    ports:
+      - "8081:8081"
     depends_on:
       - logic
     networks:
       - etcd-net
+      - app-net
+
+  site:
+    build: .
+    container_name: site
+    command: ./gochat.bin -module site
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./site:/app/site
+    networks:
       - app-net

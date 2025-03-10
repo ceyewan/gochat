@@ -17,7 +17,7 @@ import (
 type User struct {
 	ID         uint      `gorm:"primaryKey;autoIncrement"`                         // 用户ID
 	UserName   string    `gorm:"size:20;not null;unique"`                          // 用户名
-	Password   string    `gorm:"type:char(40);not null"`                           // 密码(哈希值)
+	Password   string    `gorm:"type:char(128);not null"`                          // 密码(哈希值)
 	CreateTime time.Time `gorm:"type:datetime;not null;default:CURRENT_TIMESTAMP"` // 创建时间
 }
 

@@ -32,9 +32,9 @@ func InitRPCServer(ctx context.Context) (*grpc.Server, error) {
 	connectionManager = NewConnectionManager()
 
 	// 监听指定端口
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Conf.RPC.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Conf.RPC.Port+1))
 	if err != nil {
-		clog.Error("Failed to listen on port %d: %v", config.Conf.RPC.Port, err)
+		clog.Error("Failed to listen on port %d: %v", config.Conf.RPC.Port+1, err)
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func InitRPCServer(ctx context.Context) (*grpc.Server, error) {
 	// 生成实例ID和本机IP地址
 	instanceID := DefaultWSServer.InstanceID
 	splitInstanceID := strings.Split(instanceID, "-")
-	addr := fmt.Sprintf("%s:%d", splitInstanceID[len(splitInstanceID)-1], config.Conf.RPC.Port)
+	addr := fmt.Sprintf("%s:%d", splitInstanceID[len(splitInstanceID)-1], config.Conf.RPC.Port+1)
 
 	// 服务注册上下文
 	serviceCtx, cancel := context.WithCancel(context.Background())
@@ -65,7 +65,7 @@ func InitRPCServer(ctx context.Context) (*grpc.Server, error) {
 
 	// 启动gRPC服务器
 	go func() {
-		clog.Info("Connect RPC server starting on port %d", config.Conf.RPC.Port)
+		clog.Info("Connect RPC server starting on port %d", config.Conf.RPC.Port+1)
 		if err := s.Serve(lis); err != nil {
 			clog.Error("Failed to serve: %v", err)
 		}

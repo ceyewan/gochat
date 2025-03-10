@@ -1,208 +1,207 @@
-new Vue({
-    el: '#app',
-    data: {
-        isLoggedIn: false,
-        isLoginMode: true,
-        username: '',
-        password: '',
-        messages: [],
-        newMessage: '',
-        ws: null,
-        token: '',
-        userId: null,
-        roomId: 0, // 默认房间
-    },
+// 全局变量
+let ws = null;
+let authToken = null;
+let userId = null;
 
-    methods: {
-        // 认证相关方法
-        async login() {
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: this.username,
-                        password: this.password
-                    })
-                });
+// DOM元素
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const showRegister = document.getElementById('show-register');
+const showLogin = document.getElementById('show-login');
+const chatSection = document.getElementById('chat');
+const authSection = document.getElementById('auth');
+const messagesContainer = document.getElementById('messages');
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
+const userList = document.getElementById('user-list');
 
-                const data = await response.json();
-                if (data.code === 200) {
-                    this.token = data.data.token;
-                    await this.checkAuth();
-                    this.isLoggedIn = true;
-                    this.initWebSocket();
-                } else {
-                    alert('登录失败：' + (data.error || '未知错误'));
-                }
-            } catch (error) {
-                alert('登录失败：' + error.message);
-            }
-        },
+// 显示注册表单
+showRegister.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+});
 
-        async register() {
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: this.username,
-                        password: this.password
-                    })
-                });
+// 显示登录表单
+showLogin.addEventListener('click', (e) => {
+    e.preventDefault();
+    registerForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+});
 
-                const data = await response.json();
-                if (data.code === 200) {
-                    alert('注册成功！请登录');
-                    this.isLoginMode = true;
-                } else {
-                    alert('注册失败：' + (data.error || '未知错误'));
-                }
-            } catch (error) {
-                alert('注册失败：' + error.message);
-            }
-        },
+// 用户注册
+document.getElementById('register-button').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value;
+    const password = document.getElementById('register-password').value;
 
-        async logout() {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        token: this.token
-                    })
-                });
+    try {
+        const response = await fetch('http://localhost:8080/user/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
 
-                const data = await response.json();
-                if (data.code === 200) {
-                    this.isLoggedIn = false;
-                    this.token = '';
-                    this.userId = null;
-                    if (this.ws) {
-                        this.ws.close();
-                        this.ws = null;
-                    }
-                    this.messages = [];
-                } else {
-                    alert('登出失败：' + (data.error || '未知错误'));
-                }
-            } catch (error) {
-                alert('登出失败：' + error.message);
-            }
-        },
-
-        async checkAuth() {
-            try {
-                const response = await fetch('/api/checkAuth', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        token: this.token
-                    })
-                });
-
-                const data = await response.json();
-                if (data.code === 200) {
-                    this.userId = data.data.userid;
-                } else {
-                    throw new Error(data.error || '认证失败');
-                }
-            } catch (error) {
-                alert('认证检查失败：' + error.message);
-                this.isLoggedIn = false;
-            }
-        },
-
-        // WebSocket相关方法
-        initWebSocket() {
-            this.ws = new WebSocket('ws://' + window.location.host + '/ws');
-
-            this.ws.onopen = () => {
-                // 发送认证消息
-                this.ws.send(JSON.stringify({
-                    user_id: this.userId,
-                    room_id: this.roomId,
-                    token: this.token,
-                    message: 'connect'
-                }));
-            };
-
-            this.ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                // 处理接收到的消息
-                if (data.msg) {
-                    this.messages.push({
-                        content: data.msg,
-                        isSent: false
-                    });
-                    this.scrollToBottom();
-                }
-            };
-
-            this.ws.onerror = (error) => {
-                console.error('WebSocket错误:', error);
-            };
-
-            this.ws.onclose = () => {
-                console.log('WebSocket连接已关闭');
-            };
-        },
-
-        // 发送消息相关方法
-        async sendMessage() {
-            if (!this.newMessage.trim()) return;
-
-            // 发送到服务器
-            try {
-                const response = await fetch('/api/pushRoom', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        msg: this.newMessage,
-                        roomId: this.roomId,
-                        authToken: this.token
-                    })
-                });
-
-                const data = await response.json();
-                if (data.code === 200) {
-                    // 添加到本地消息列表
-                    this.messages.push({
-                        content: this.newMessage,
-                        isSent: true
-                    });
-                    this.newMessage = '';
-                    this.scrollToBottom();
-                } else {
-                    alert('发送失败：' + (data.error || '未知错误'));
-                }
-            } catch (error) {
-                alert('发送失败：' + error.message);
-            }
-        },
-
-        // UI相关方法
-        toggleAuthMode() {
-            this.isLoginMode = !this.isLoginMode;
-            this.username = '';
-            this.password = '';
-        },
-
-        scrollToBottom() {
-            this.$nextTick(() => {
-                const container = this.$refs.messageContainer;
-                container.scrollTop = container.scrollHeight;
-            });
+        if (response.ok) { // 检查 HTTP 状态码是否为 200-299 范围
+            alert('注册成功，请登录');
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        } else {
+            const data = await response.json();
+            console.log('注册失败:', data);
+            console.log('HTTP状态码:', response.status);
+            alert('注册失败：' + (data.error || '未知错误'));
         }
+    } catch (error) {
+        console.error('注册错误:', error);
+        alert('注册过程中发生错误');
+    }
+});
+
+// 用户登录
+document.getElementById('login-button').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value;
+    const password = document.getElementById('login-password').value;
+
+    try {
+        const response = await fetch('http://localhost:8080/user/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        if (response.ok) { // 检查 HTTP 状态码是否为 200-299 范围
+            const data = await response.json();
+            authToken = data.data.token;
+            await checkAuth();
+            connectWebSocket();
+            authSection.classList.add('hidden');
+            chatSection.classList.remove('hidden');
+        } else {
+            const data = await response.json();
+            console.log('登录失败:', data);
+            console.log('HTTP状态码:', response.status);
+            alert('登录失败：' + (data.error || '未知错误'));
+        }
+    } catch (error) {
+        console.error('登录错误:', error);
+        alert('登录过程中发生错误');
+    }
+});
+
+// 检查认证状态
+async function checkAuth() {
+    try {
+        const response = await fetch('http://localhost:8080/user/checkAuth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ authToken })
+        });
+
+        const data = await response.json();
+        if (data.code === 200) {
+            userId = data.data.userId;
+        } else {
+            throw new Error('认证失败');
+        }
+    } catch (error) {
+        console.error('认证检查错误:', error);
+        alert('认证检查失败');
+    }
+}
+
+// 建立WebSocket连接
+function connectWebSocket() {
+    ws = new WebSocket('ws://connect:8081/ws');
+
+    ws.onopen = () => {
+        // 发送认证消息
+        ws.send(JSON.stringify({
+            user_id: userId,
+            room_id: 0,
+            token: authToken,
+            message: 'connect'
+        }));
+    };
+
+    ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        handleMessage(msg);
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocket错误:', error);
+        alert('WebSocket连接错误');
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket连接关闭');
+        alert('连接已断开，请刷新页面重新连接');
+    };
+}
+
+// 处理接收到的消息
+function handleMessage(msg) {
+    if (msg.count !== -1) {
+        updateUserCount(msg.count);
+    }
+    if (msg.msg) {
+        displayMessage(msg.msg);
+    }
+    if (msg.room_user_info) {
+        updateUserList(msg.room_user_info);
+    }
+}
+
+// 更新在线用户数量
+function updateUserCount(count) {
+    const header = document.querySelector('header h1');
+    header.textContent = `GoChat (在线用户: ${count})`;
+}
+
+// 显示消息
+function displayMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
+    messageElement.textContent = message;
+    messagesContainer.appendChild(messageElement);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// 更新在线用户列表
+function updateUserList(users) {
+    userList.innerHTML = '';
+    for (const [userId, userInfo] of Object.entries(users)) {
+        const li = document.createElement('li');
+        li.textContent = userInfo;
+        userList.appendChild(li);
+    }
+}
+
+// 发送消息
+sendButton.addEventListener('click', () => {
+    const message = messageInput.value.trim();
+    if (message) {
+        ws.send(JSON.stringify({
+            user_id: userId,
+            room_id: 0,
+            token: authToken,
+            message: message
+        }));
+        messageInput.value = '';
+    }
+});
+
+// 回车键发送消息
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendButton.click();
     }
 });

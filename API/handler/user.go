@@ -28,7 +28,7 @@ type (
 
 	// TokenRequest 令牌请求结构
 	TokenRequest struct {
-		Token string `json:"token" binding:"required"`
+		Token string `json:"authToken" binding:"required"`
 	}
 
 	// 统一响应结构
