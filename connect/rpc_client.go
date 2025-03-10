@@ -54,13 +54,13 @@ func createContext() (context.Context, context.CancelFunc) {
 }
 
 // Connect 处理用户连接
-func (l *LogicRPC) Connect(authToken, instanceID string, roomID int) (int, error) {
+func (l *LogicRPC) Connect(authToken, instanceID string, userID, roomID int) error {
 	clog.Info("[RPC] Connect, instanceID: %s", instanceID)
 	ctx, cancel := createContext()
 	defer cancel()
 
 	req := &logicproto.ConnectRequest{
-		UserId:     0,
+		UserId:     int32(userID),
 		InstanceId: instanceID,
 		RoomId:     int32(roomID),
 		Token:      authToken,
@@ -69,11 +69,11 @@ func (l *LogicRPC) Connect(authToken, instanceID string, roomID int) (int, error
 	reply, err := LogicClient.Connect(ctx, req)
 	if err != nil {
 		clog.Error("[RPC] Connect failed: %v", err)
-		return 0, err
+		return err
 	}
 
-	clog.Info("[RPC] Connect success, uid: %d", reply.Code)
-	return int(reply.Code), nil
+	clog.Info("[RPC] Connect success, code: %d", reply.Code)
+	return nil
 }
 
 // Disconnect 处理用户断开连接
@@ -87,12 +87,12 @@ func (l *LogicRPC) Disconnect(userID, roomID int) error {
 		RoomId: int32(roomID),
 	}
 
-	_, err := LogicClient.DisConnect(ctx, req)
+	reply, err := LogicClient.DisConnect(ctx, req)
 	if err != nil {
 		clog.Error("[RPC] Disconnect failed: %v", err)
 		return err
 	}
 
-	clog.Info("[RPC] Disconnect success")
+	clog.Info("[RPC] Disconnect success, code: %d", reply.Code)
 	return nil
 }

@@ -21,7 +21,6 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ConnectService_PushSingleMsg_FullMethodName = "/connectproto.ConnectService/PushSingleMsg"
 	ConnectService_PushRoomMsg_FullMethodName   = "/connectproto.ConnectService/PushRoomMsg"
-	ConnectService_PushRoomCount_FullMethodName = "/connectproto.ConnectService/PushRoomCount"
 	ConnectService_PushRoomInfo_FullMethodName  = "/connectproto.ConnectService/PushRoomInfo"
 )
 
@@ -32,13 +31,11 @@ const (
 // 消息服务定义
 type ConnectServiceClient interface {
 	// 推送单个消息
-	PushSingleMsg(ctx context.Context, in *PushMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error)
+	PushSingleMsg(ctx context.Context, in *PushSingleMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error)
 	// 推送房间消息
 	PushRoomMsg(ctx context.Context, in *PushRoomMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error)
-	// 推送房间人数
-	PushRoomCount(ctx context.Context, in *PushRoomMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error)
 	// 推送房间信息
-	PushRoomInfo(ctx context.Context, in *PushRoomMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error)
+	PushRoomInfo(ctx context.Context, in *PushRoomInfoRequest, opts ...grpc.CallOption) (*SuccessReply, error)
 }
 
 type connectServiceClient struct {
@@ -49,7 +46,7 @@ func NewConnectServiceClient(cc grpc.ClientConnInterface) ConnectServiceClient {
 	return &connectServiceClient{cc}
 }
 
-func (c *connectServiceClient) PushSingleMsg(ctx context.Context, in *PushMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error) {
+func (c *connectServiceClient) PushSingleMsg(ctx context.Context, in *PushSingleMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SuccessReply)
 	err := c.cc.Invoke(ctx, ConnectService_PushSingleMsg_FullMethodName, in, out, cOpts...)
@@ -69,17 +66,7 @@ func (c *connectServiceClient) PushRoomMsg(ctx context.Context, in *PushRoomMsgR
 	return out, nil
 }
 
-func (c *connectServiceClient) PushRoomCount(ctx context.Context, in *PushRoomMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SuccessReply)
-	err := c.cc.Invoke(ctx, ConnectService_PushRoomCount_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *connectServiceClient) PushRoomInfo(ctx context.Context, in *PushRoomMsgRequest, opts ...grpc.CallOption) (*SuccessReply, error) {
+func (c *connectServiceClient) PushRoomInfo(ctx context.Context, in *PushRoomInfoRequest, opts ...grpc.CallOption) (*SuccessReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SuccessReply)
 	err := c.cc.Invoke(ctx, ConnectService_PushRoomInfo_FullMethodName, in, out, cOpts...)
@@ -96,13 +83,11 @@ func (c *connectServiceClient) PushRoomInfo(ctx context.Context, in *PushRoomMsg
 // 消息服务定义
 type ConnectServiceServer interface {
 	// 推送单个消息
-	PushSingleMsg(context.Context, *PushMsgRequest) (*SuccessReply, error)
+	PushSingleMsg(context.Context, *PushSingleMsgRequest) (*SuccessReply, error)
 	// 推送房间消息
 	PushRoomMsg(context.Context, *PushRoomMsgRequest) (*SuccessReply, error)
-	// 推送房间人数
-	PushRoomCount(context.Context, *PushRoomMsgRequest) (*SuccessReply, error)
 	// 推送房间信息
-	PushRoomInfo(context.Context, *PushRoomMsgRequest) (*SuccessReply, error)
+	PushRoomInfo(context.Context, *PushRoomInfoRequest) (*SuccessReply, error)
 	mustEmbedUnimplementedConnectServiceServer()
 }
 
@@ -113,16 +98,13 @@ type ConnectServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedConnectServiceServer struct{}
 
-func (UnimplementedConnectServiceServer) PushSingleMsg(context.Context, *PushMsgRequest) (*SuccessReply, error) {
+func (UnimplementedConnectServiceServer) PushSingleMsg(context.Context, *PushSingleMsgRequest) (*SuccessReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PushSingleMsg not implemented")
 }
 func (UnimplementedConnectServiceServer) PushRoomMsg(context.Context, *PushRoomMsgRequest) (*SuccessReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PushRoomMsg not implemented")
 }
-func (UnimplementedConnectServiceServer) PushRoomCount(context.Context, *PushRoomMsgRequest) (*SuccessReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PushRoomCount not implemented")
-}
-func (UnimplementedConnectServiceServer) PushRoomInfo(context.Context, *PushRoomMsgRequest) (*SuccessReply, error) {
+func (UnimplementedConnectServiceServer) PushRoomInfo(context.Context, *PushRoomInfoRequest) (*SuccessReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PushRoomInfo not implemented")
 }
 func (UnimplementedConnectServiceServer) mustEmbedUnimplementedConnectServiceServer() {}
@@ -147,7 +129,7 @@ func RegisterConnectServiceServer(s grpc.ServiceRegistrar, srv ConnectServiceSer
 }
 
 func _ConnectService_PushSingleMsg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PushMsgRequest)
+	in := new(PushSingleMsgRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -159,7 +141,7 @@ func _ConnectService_PushSingleMsg_Handler(srv interface{}, ctx context.Context,
 		FullMethod: ConnectService_PushSingleMsg_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConnectServiceServer).PushSingleMsg(ctx, req.(*PushMsgRequest))
+		return srv.(ConnectServiceServer).PushSingleMsg(ctx, req.(*PushSingleMsgRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -182,26 +164,8 @@ func _ConnectService_PushRoomMsg_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ConnectService_PushRoomCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PushRoomMsgRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ConnectServiceServer).PushRoomCount(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ConnectService_PushRoomCount_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConnectServiceServer).PushRoomCount(ctx, req.(*PushRoomMsgRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ConnectService_PushRoomInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PushRoomMsgRequest)
+	in := new(PushRoomInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -213,7 +177,7 @@ func _ConnectService_PushRoomInfo_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: ConnectService_PushRoomInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConnectServiceServer).PushRoomInfo(ctx, req.(*PushRoomMsgRequest))
+		return srv.(ConnectServiceServer).PushRoomInfo(ctx, req.(*PushRoomInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -232,10 +196,6 @@ var ConnectService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PushRoomMsg",
 			Handler:    _ConnectService_PushRoomMsg_Handler,
-		},
-		{
-			MethodName: "PushRoomCount",
-			Handler:    _ConnectService_PushRoomCount_Handler,
 		},
 		{
 			MethodName: "PushRoomInfo",

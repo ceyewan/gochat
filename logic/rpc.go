@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gochat/clog"
 	"gochat/config"
@@ -10,8 +11,6 @@ import (
 	"gochat/tools/queue"
 	"net"
 	"time"
-
-	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/grpc"
 )
@@ -174,8 +173,7 @@ func (s *server) CheckAuth(ctx context.Context, in *pb.CheckAuthRequest) (*pb.Co
 
 // Push 发送单聊消息
 func (s *server) Push(ctx context.Context, in *pb.PushRequest) (*pb.CommonReply, error) {
-	// 构建消息内容，使用protobuf序列化，后续也要使用protobuf反序列化
-	msgBytes, err := proto.Marshal(in)
+	msgBytes, err := convertPushRequestToMessage(in)
 	if err != nil {
 		clog.Error("[RPC] Failed to marshal message: %v", err)
 		return &pb.CommonReply{Code: config.RPCCodeFailed}, err
@@ -205,7 +203,7 @@ func (s *server) Push(ctx context.Context, in *pb.PushRequest) (*pb.CommonReply,
 // PushRoom 发送群聊消息
 func (s *server) PushRoom(ctx context.Context, in *pb.PushRequest) (*pb.CommonReply, error) {
 	// 构建消息内容
-	msgBytes, err := proto.Marshal(in)
+	msgBytes, err := convertPushRequestToMessage(in)
 	if err != nil {
 		clog.Error("[RPC] Failed to marshal room message: %v", err)
 		return &pb.CommonReply{Code: config.RPCCodeFailed}, err
@@ -314,29 +312,38 @@ func updateRoomInfo(roomID int) error {
 		return err
 	}
 
+	var roomInfo tools.RoomInfo
+	roomInfo.RoomID = roomID
+	roomInfo.Count = len(roomUserInfo)
+	roomInfo.UserInfo = roomUserInfo // 浅拷贝？
+	roomInfoBytes, _ := json.Marshal(roomInfo)
+
 	// 发送房间成员信息更新
 	infoQueueMsg := queue.QueueMsg{
-		Op:           config.OpRoomInfoSend,
-		RoomId:       roomID,
-		Count:        len(roomUserInfo),
-		RoomUserInfo: roomUserInfo,
+		Op:     config.OpRoomInfoSend,
+		RoomId: roomID,
+		Msg:    roomInfoBytes,
 	}
 	if err := queue.DefaultQueue.PublishMessage(&infoQueueMsg); err != nil {
 		clog.Error("[RPC] Failed to publish room info update: %v", err)
 		return err
 	}
 
-	// 发送房间人数更新
-	// countQueueMsg := queue.QueueMsg{
-	// 	Op:     config.OpRoomCountSend,
-	// 	RoomId: roomID,
-	// 	Count:  len(roomUserInfo),
-	// }
-	// if err := queue.DefaultQueue.PublishMessage(&countQueueMsg); err != nil {
-	// 	clog.Error("[RPC] Failed to publish room count update: %v", err)
-	// 	return err
-	// }
-
 	clog.Debug("[RPC] Room %d info updated: %d users", roomID, len(roomUserInfo))
 	return nil
+}
+
+func convertPushRequestToMessage(in *pb.PushRequest) ([]byte, error) {
+	// 构建消息内容
+	var chatMsg tools.ChatMessage
+	chatMsg.FromUserID = int(in.FromUserId)
+	chatMsg.FromUserName = in.FromUserName
+	chatMsg.ToUserID = int(in.ToUserId)
+	chatMsg.ToUserName = in.ToUserName
+	chatMsg.Message = in.Msg
+	chatMsg.CreateTime = in.CreateTime
+	chatMsg.RoomID = int(in.RoomId)
+	chatMsg.MessageID = int(tools.GetSnowflakeID())
+	chatMsgBytes, err := json.Marshal(chatMsg)
+	return chatMsgBytes, err
 }
