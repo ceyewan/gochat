@@ -75,7 +75,7 @@ func InitRPCServer(ctx context.Context) (*grpc.Server, error) {
 }
 
 // PushSingleMsg 向单个用户推送消息
-func (s *server) PushSingleMsg(ctx context.Context, in *pb.PushMsgRequest) (*pb.SuccessReply, error) {
+func (s *server) PushSingleMsg(ctx context.Context, in *pb.PushSingleMsgRequest) (*pb.SuccessReply, error) {
 	userID := int(in.UserId)
 	ch, exists := s.connMgr.GetUser(userID)
 
@@ -83,109 +83,67 @@ func (s *server) PushSingleMsg(ctx context.Context, in *pb.PushMsgRequest) (*pb.
 		clog.Debug("User %d not connected", userID)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
-			Msg:  "user not connected",
-		}, nil
+		}, fmt.Errorf("user %d not connected", userID)
 	}
-
-	ch.send <- in.Msg.Body
+	// 将 in.Msg 使用 json.Unmarshal 解析为 ChatMessage 结构体
+	var chatMsg tools.ChatMessage
+	if err := json.Unmarshal(in.Msg, &chatMsg); err != nil {
+		clog.Error("Failed to unmarshal chat message: %v", err)
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+		}, err
+	}
+	msgDataBytes, _ := json.Marshal(NewMessageData(&chatMsg))
+	ch.send <- msgDataBytes
 	clog.Debug("Message pushed to user %d", userID)
-	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push msg to user success"}, nil
+	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
 }
 
 // PushRoomMsg 向房间内所有用户推送消息
 func (s *server) PushRoomMsg(ctx context.Context, in *pb.PushRoomMsgRequest) (*pb.SuccessReply, error) {
 	roomID := int(in.RoomId)
-
-	if !s.connMgr.BroadcastToRoom(roomID, in.Msg.Body) {
+	// 将 in.Msg 使用 json.Unmarshal 解析为 ChatMessage 结构体
+	var chatMsg tools.ChatMessage
+	if err := json.Unmarshal(in.Msg, &chatMsg); err != nil {
+		clog.Error("Failed to unmarshal chat message: %v", err)
+		return &pb.SuccessReply{
+			Code: config.RPCCodeFailed,
+		}, err
+	}
+	msgDataBytes, _ := json.Marshal(NewMessageData(&chatMsg))
+	if !s.connMgr.BroadcastToRoom(roomID, msgDataBytes) {
 		clog.Warning("Room %d not found", roomID)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
-			Msg:  "room not found",
-		}, nil
+		}, fmt.Errorf("room %d not found", roomID)
 	}
 
 	clog.Debug("Message pushed to room %d", roomID)
-	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push msg to room success"}, nil
-}
-
-// PushRoomCount 向房间推送在线人数
-func (s *server) PushRoomCount(ctx context.Context, in *pb.PushRoomMsgRequest) (*pb.SuccessReply, error) {
-	roomID := int(in.RoomId)
-
-	// 解析房间计数消息
-	var roomCountMsg pb.RedisRoomCountMsg
-	if err := json.Unmarshal(in.Msg.Body, &roomCountMsg); err != nil {
-		clog.Error("Failed to unmarshal room count message: %v", err)
-		return &pb.SuccessReply{
-			Code: config.RPCCodeFailed,
-			Msg:  "failed to unmarshal room count message",
-		}, nil
-	}
-
-	// 构建发送消息
-	msgBytes, err := json.Marshal(&SendMsg{
-		Count:        int(roomCountMsg.Count),
-		Msg:          "",
-		RoomUserInfo: nil,
-	})
-	if err != nil {
-		clog.Error("Failed to marshal room count message: %v", err)
-		return &pb.SuccessReply{
-			Code: config.RPCCodeFailed,
-			Msg:  "failed to marshal room count message",
-		}, nil
-	}
-
-	// 广播到房间
-	if !s.connMgr.BroadcastToRoom(roomID, msgBytes) {
-		clog.Warning("Room %d not found for count update", roomID)
-		return &pb.SuccessReply{
-			Code: config.RPCCodeFailed,
-			Msg:  "room not found",
-		}, nil
-	}
-
-	clog.Debug("Room count pushed to room %d: %d", roomID, roomCountMsg.Count)
-	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push room count success"}, nil
+	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
 }
 
 // PushRoomInfo 向房间推送用户信息
-func (s *server) PushRoomInfo(ctx context.Context, in *pb.PushRoomMsgRequest) (*pb.SuccessReply, error) {
+func (s *server) PushRoomInfo(ctx context.Context, in *pb.PushRoomInfoRequest) (*pb.SuccessReply, error) {
 	roomID := int(in.RoomId)
 
-	// 解析房间信息消息
-	var roomInfoMsg pb.RedisRoomInfo
-	if err := json.Unmarshal(in.Msg.Body, &roomInfoMsg); err != nil {
-		clog.Error("Failed to unmarshal room info message: %v", err)
+	// 将 in.Msg 使用 json.Unmarshal 解析为 RoomInfo 结构体
+	var roomInfo tools.RoomInfo
+	if err := json.Unmarshal(in.Info, &roomInfo); err != nil {
+		clog.Error("Failed to unmarshal room info: %v", err)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
-			Msg:  "failed to unmarshal room info message",
-		}, nil
+		}, err
 	}
-
-	// 构建发送消息
-	msgBytes, err := json.Marshal(&SendMsg{
-		Count:        -1,
-		Msg:          "",
-		RoomUserInfo: roomInfoMsg.RoomUserInfo,
-	})
-	if err != nil {
-		clog.Error("Failed to marshal room info message: %v", err)
-		return &pb.SuccessReply{
-			Code: config.RPCCodeFailed,
-			Msg:  "failed to marshal room info message",
-		}, nil
-	}
+	roomInfobytes, _ := json.Marshal(NewRoomInfoData(&roomInfo))
 
 	// 广播到房间
-	if !s.connMgr.BroadcastToRoom(roomID, msgBytes) {
+	if !s.connMgr.BroadcastToRoom(roomID, roomInfobytes) {
 		clog.Warning("Room %d not found for info update", roomID)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
-			Msg:  "room not found",
-		}, nil
+		}, fmt.Errorf("room %d not found for info update", roomID)
 	}
 
 	clog.Debug("Room info pushed to room %d", roomID)
-	return &pb.SuccessReply{Code: config.RPCCodeSuccess, Msg: "push room info success"}, nil
+	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
 }

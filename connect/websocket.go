@@ -6,37 +6,66 @@ import (
 	"gochat/config"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-// ConnectMsg 定义连接相关的消息结构
-type ConnectMsg struct {
-	UserID  int    `json:"user_id"`
-	RoomID  int    `json:"room_id"`
-	Token   string `json:"token"`
-	Message string `json:"message"`
-}
+// 添加心跳相关常量
+const (
+	// 心跳间隔时间
+	heartbeatInterval = 30 * time.Second
 
-type SendMsg struct {
-	Count        int               `json:"count"`
-	Msg          string            `json:"msg"`
-	RoomUserInfo map[string]string `json:"room_user_info"`
-}
+	// 心跳超时时间
+	heartbeatTimeout = 60 * time.Second
+
+	// 消息类型常量
+	messageTypePing = "ping"
+	messageTypePong = "pong"
+)
 
 // Channel 封装了一个WebSocket连接和相关的元数据
 type Channel struct {
-	conn   *websocket.Conn
-	userID int
-	roomID int
-	send   chan []byte
+	conn         *websocket.Conn
+	userID       int
+	roomID       int
+	send         chan []byte
+	lastActivity time.Time  // 添加最后活动时间
+	closed       bool       // 标记通道是否已关闭
+	closeMutex   sync.Mutex // 保护closed字段
 }
 
 // NewChannel 创建一个新的Channel实例
 func NewChannel(bufferSize int) *Channel {
 	return &Channel{
-		send: make(chan []byte, bufferSize),
+		send:         make(chan []byte, bufferSize),
+		lastActivity: time.Now(),
+		closed:       false,
 	}
+}
+
+// 更新心跳时间
+func (ch *Channel) updateActivity() {
+	ch.lastActivity = time.Now()
+}
+
+// 检查通道是否应该关闭
+func (ch *Channel) shouldClose() bool {
+	return time.Since(ch.lastActivity) > heartbeatTimeout
+}
+
+// 安全关闭通道
+func (ch *Channel) safeClose() bool {
+	ch.closeMutex.Lock()
+	defer ch.closeMutex.Unlock()
+
+	if ch.closed {
+		return false
+	}
+
+	ch.closed = true
+	close(ch.send)
+	return true
 }
 
 // WSServer 定义WebSocket服务器配置和状态
@@ -96,14 +125,14 @@ func serveWs(server *WSServer, w http.ResponseWriter, r *http.Request) {
 	ch.conn = conn
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	defer func() {
+		ch.safeClose()
 		wg.Wait()
-		if ch.userID != 0 {
-			server.connMgr.RemoveUser(ch.userID, ch.roomID)
-			LogicRPCObj.Disconnect(ch.userID, ch.roomID)
-		}
+		server.connMgr.RemoveUser(ch.userID, ch.roomID)
+		LogicRPCObj.Disconnect(ch.userID, ch.roomID)
+		clog.Info("User %d disconnected from room %d", ch.userID, ch.roomID)
 		conn.Close()
 	}()
 
@@ -116,6 +145,40 @@ func serveWs(server *WSServer, w http.ResponseWriter, r *http.Request) {
 		defer wg.Done()
 		writeMessages(ch)
 	}()
+
+	go func() {
+		defer wg.Done()
+		heartbeat(ch)
+	}()
+}
+
+// 心跳检测
+func heartbeat(ch *Channel) {
+	ticker := time.NewTicker(heartbeatInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if ch.shouldClose() {
+				clog.Warning("Heartbeat timeout for user %d, closing connection", ch.userID)
+				ch.conn.Close()
+				return
+			}
+
+			// 发送ping消息
+			pingMessage, _ := json.Marshal(map[string]string{"type": messageTypePing})
+			err := ch.conn.WriteMessage(websocket.PingMessage, pingMessage)
+			if err != nil {
+				clog.Error("Failed to send ping: %v", err)
+				return
+			}
+		}
+
+		if ch.closed {
+			return
+		}
+	}
 }
 
 // readMessages 处理从WebSocket接收的消息
@@ -127,22 +190,43 @@ func readMessages(server *WSServer, ch *Channel) {
 			break
 		}
 
-		var msg ConnectMsg
+		var msg WSRequest
 		if err := json.Unmarshal(message, &msg); err != nil {
+			// 检查是否是ping/pong消息
+			var pingMsg map[string]string
+			if json.Unmarshal(message, &pingMsg) == nil {
+				if pingMsg["type"] == messageTypePing {
+					// 回复pong
+					pongMsg, _ := json.Marshal(map[string]string{"type": messageTypePong})
+					ch.conn.WriteMessage(websocket.PongMessage, pongMsg)
+					continue
+				}
+				if pingMsg["type"] == messageTypePong {
+					continue // 忽略客户端的pong响应
+				}
+			}
 			clog.Error("Unmarshal message error: %v", err)
 			continue
 		}
 
-		if msg.Message == "connect" {
-			userID, err := LogicRPCObj.Connect(msg.Token, server.InstanceID, msg.RoomID)
+		if msg.MsgType == MessageTypeConnect {
+			err := LogicRPCObj.Connect(msg.Token, server.InstanceID, msg.UserID, msg.RoomID)
 			if err != nil {
+				// 发送连接失败响应
+				failResp := NewWSResponse(ConnectFail, nil)
+				resp, _ := json.Marshal(failResp)
+				ch.send <- resp
 				clog.Error("Connect error: %v", err)
 				break
 			}
-			ch.userID = userID
+			ch.userID = msg.UserID
 			ch.roomID = msg.RoomID
-			server.connMgr.AddUser(userID, msg.RoomID, ch)
-			clog.Info("User %d connected to room %d", userID, msg.RoomID)
+			server.connMgr.AddUser(msg.UserID, msg.RoomID, ch)
+			// 发送连接成功响应
+			successResp := NewWSResponse(ConnectSuccess, nil)
+			resp, _ := json.Marshal(successResp)
+			ch.send <- resp
+			clog.Info("User %d connected to room %d", msg.UserID, msg.RoomID)
 		}
 	}
 }
@@ -150,9 +234,10 @@ func readMessages(server *WSServer, ch *Channel) {
 // writeMessages 处理向WebSocket发送的消息
 func writeMessages(ch *Channel) {
 	for message := range ch.send {
+		ch.updateActivity()
 		if err := ch.conn.WriteMessage(websocket.TextMessage, message); err != nil {
 			clog.Error("Write message error: %v", err)
-			return
+			break
 		}
 	}
 	ch.conn.WriteMessage(websocket.CloseMessage, []byte{})

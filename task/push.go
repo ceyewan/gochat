@@ -42,7 +42,7 @@ func (t *Task) processPush(c chan *queue.QueueMsg) {
 			case config.OpRoomSend:
 				t.broadcastRoomToConnect(msg.RoomId, msg.Msg)
 			case config.OpRoomInfoSend:
-				t.broadcastRoomInfoToConnect(msg.RoomId, msg.RoomUserInfo)
+				t.broadcastRoomInfoToConnect(msg.RoomId, msg.Msg)
 			}
 		case <-stopChan:
 			clog.Info("Stopping message processor")
