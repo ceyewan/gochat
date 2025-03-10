@@ -8,7 +8,7 @@
 
 ### 用户登录
 
-- 请求路径: `/api/login`
+- 请求路径: `/user/login`
 - 请求方法: POST
 - 请求参数:
 
@@ -30,9 +30,9 @@
   }
   ```
 
-### 用户注册  
+### 用户注册
 
-- 请求路径: `/api/register`
+- 请求路径: `/user/register`
 - 请求方法: POST
 - 请求参数:
 
@@ -56,13 +56,13 @@
 
 ### 用户登出
 
-- 请求路径: `/api/logout`
+- 请求路径: `/user/logout`
 - 请求方法: POST
 - 请求参数:
 
   ```json
   {
-    "token": "string"
+    "authToken": "string"
   }
   ```
 
@@ -76,13 +76,13 @@
 
 ### 认证状态检查
 
-- 请求路径: `/api/checkAuth`
+- 请求路径: `/user/checkAuth`
 - 请求方法: POST
 - 请求参数:
 
   ```json
   {
-    "token": "string"
+    "authToken": "string"
   }
   ```
 
@@ -92,7 +92,7 @@
   {
     "code": 200,
     "data": {
-      "userid": 123,
+      "userId": 123,
       "username": "string"
     }
   }
@@ -102,7 +102,7 @@
 
 ### 单聊消息推送
 
-- 请求路径: `/api/push`
+- 请求路径: `/push/push`
 - 请求方法: POST
 - 请求参数:
 
@@ -110,7 +110,6 @@
   {
     "msg": "string",
     "toUserId": 123,
-    "roomId": 456,
     "authToken": "string"
   }
   ```
@@ -125,7 +124,7 @@
 
 ### 群聊消息推送
 
-- 请求路径: `/api/pushRoom`
+- 请求路径: `/push/pushRoom`
 - 请求方法: POST
 - 请求参数:
 
@@ -144,6 +143,43 @@
     "code": 200
   }
   ```
+
+## 会话验证
+
+所有需要认证的API请求必须在请求体中包含authToken字段：
+
+```json
+{
+  "authToken": "string"
+}
+```
+
+会话验证中间件会：
+
+1. 验证authToken的有效性
+2. 将用户信息（userId, userName）添加到请求上下文
+3. 如果验证失败，返回401状态码
+
+## 跨域支持
+
+所有API均支持CORS跨域请求，响应头包含：
+
+```
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept
+Access-Control-Allow-Methods: GET, OPTIONS, POST, PUT, DELETE
+```
+
+## 404处理
+
+对于不存在的API路径，系统会返回404状态码，响应格式：
+
+```json
+{
+  "code": 404,
+  "error": "404 Not Found"
+}
+```
 
 ## 响应格式
 
@@ -164,4 +200,5 @@
 | 200    | 请求成功 |
 | 400    | 无效的请求参数 |
 | 401    | 认证失败 |
+| 404    | 资源未找到 |
 | 500    | 服务器内部错误 |
