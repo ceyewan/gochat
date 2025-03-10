@@ -47,11 +47,15 @@ func InitRPCServer(ctx context.Context) (*grpc.Server, error) {
 	instanceID := fmt.Sprintf("logic-server-%d-%s", config.Conf.RPC.Port, ip)
 	addr := fmt.Sprintf("%s:%d", ip, config.Conf.RPC.Port)
 
+	// 创建上下文，用于服务注册和取消注册
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// 注册服务到etcd
 	go func() {
 		err := tools.ServiceRegistry(ctx, "logic-service", instanceID, addr)
 		if err != nil {
 			clog.Error("[RPC] Failed to register service: %v", err)
+			cancel()
 			return
 		}
 		clog.Info("[RPC] Service registered with etcd: logic-service/%s at %s", instanceID, addr)

@@ -3,14 +3,27 @@ package logic
 import (
 	"gochat/clog"
 	"gochat/tools"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
-// 默认的数据库操作实例
-var dbIns = tools.GetDB()
+// dbIns 全局数据库实例
+var (
+	dbIns *gorm.DB
+	once  sync.Once
+)
+
+// getDB 获取数据库实例（懒加载）
+func getDB() *gorm.DB {
+	once.Do(func() {
+		dbIns = tools.GetDB()
+	})
+	return dbIns
+}
 
 // hashPassword 对密码进行哈希处理
 // 使用bcrypt算法，默认成本因子为10
@@ -47,7 +60,7 @@ func Add(userName, password string) error {
 	}
 
 	// 将用户记录插入数据库
-	if err := dbIns.Table(user.TableName()).Create(&user).Error; err != nil {
+	if err := getDB().Table(user.TableName()).Create(&user).Error; err != nil {
 		clog.Error("Failed to create user %s: %v", userName, err)
 		return errors.Wrap(err, "failed to create user")
 	}
@@ -62,7 +75,7 @@ func CheckHaveUserName(userName string) (tools.User, error) {
 	clog.Debug("Checking if username exists: %s", userName)
 
 	var user tools.User
-	if err := dbIns.Table(user.TableName()).
+	if err := getDB().Table(user.TableName()).
 		Where("user_name = ?", userName).
 		First(&user).Error; err != nil {
 
@@ -79,7 +92,7 @@ func GetUserNameByUserID(userID uint) (string, error) {
 	clog.Debug("Looking up username for user ID: %d", userID)
 
 	var user tools.User
-	if err := dbIns.Table(user.TableName()).
+	if err := getDB().Table(user.TableName()).
 		Where("id = ?", userID).
 		First(&user).Error; err != nil {
 
