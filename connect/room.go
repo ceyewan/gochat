@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"gochat/clog"
 	"sync"
 )
 
@@ -24,6 +25,7 @@ func (r *Room) AddChannel(userID int, ch *Channel) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.Channels[userID] = ch
+	clog.Debug("User %d added to room %d", userID, r.ID)
 }
 
 // RemoveChannel 从房间中移除用户通道
@@ -31,6 +33,7 @@ func (r *Room) RemoveChannel(userID int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.Channels, userID)
+	clog.Debug("User %d removed from room %d", userID, r.ID)
 }
 
 // Broadcast 向房间内所有用户广播消息
@@ -43,9 +46,10 @@ func (r *Room) Broadcast(message []byte) {
 		case ch.send <- message:
 			// 消息已发送
 		default:
-			// 通道已满或关闭，这里可以考虑其他处理方式
+			clog.Warning("Channel for user %d is full or closed", ch.userID)
 		}
 	}
+	clog.Debug("Broadcasted message to room %d", r.ID)
 }
 
 // GetUserList 获取房间内所有用户ID
