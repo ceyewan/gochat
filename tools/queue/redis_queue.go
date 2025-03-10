@@ -10,7 +10,7 @@ import (
 	"gochat/clog"
 	"gochat/tools"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 // 队列相关常量

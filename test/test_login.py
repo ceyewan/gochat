@@ -19,7 +19,7 @@ def generate_random_username(length=8):
 
 def print_response(response):
     """打印响应内容和状态码"""
-    print(f"Status Code: {response.status_code}")
+    print(f"Status Code: {response.json().get("code")}")
     print(
         f"Response: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
     print("-" * 50)
@@ -37,7 +37,7 @@ def test_register(username, password):
     try:
         response = requests.post(url, json=payload)
         print_response(response)
-        return response.status_code == 200
+        return response.json().get("code") == 200
     except Exception as e:
         print(f"注册请求异常: {e}")
         return False
@@ -56,7 +56,7 @@ def test_register_duplicate(username, password):
         response = requests.post(url, json=payload)
         print_response(response)
         # 预期返回400，因为用户名已存在
-        return response.status_code == 400
+        return response.json().get("code") == 400
     except Exception as e:
         print(f"重复注册请求异常: {e}")
         return False
@@ -75,7 +75,7 @@ def test_login(username, password):
         response = requests.post(url, json=payload)
         print_response(response)
 
-        if response.status_code == 200:
+        if response.json().get("code") == 200:
             data = response.json()
             return data.get("token"), data.get("user_id")
         return None, None
@@ -97,7 +97,7 @@ def test_login_invalid(username, wrong_password):
         response = requests.post(url, json=payload)
         print_response(response)
         # 预期返回400，因为密码错误
-        return response.status_code == 400
+        return response.json().get("code") == 400
     except Exception as e:
         print(f"无效登录请求异常: {e}")
         return False
@@ -114,7 +114,7 @@ def test_check_auth(token):
     try:
         response = requests.post(url, json=payload)
         print_response(response)
-        return response.status_code == 200
+        return response.json().get("code") == 200
     except Exception as e:
         print(f"验证检查请求异常: {e}")
         return False
@@ -132,7 +132,7 @@ def test_check_auth_invalid(invalid_token):
         response = requests.post(url, json=payload)
         print_response(response)
         # 预期返回400，因为令牌无效
-        return response.status_code == 400
+        return response.json().get("code") == 400
     except Exception as e:
         print(f"无效验证检查请求异常: {e}")
         return False
@@ -149,7 +149,7 @@ def test_logout(token):
     try:
         response = requests.post(url, json=payload)
         print_response(response)
-        return response.status_code == 200
+        return response.json().get("code") == 200
     except Exception as e:
         print(f"登出请求异常: {e}")
         return False
@@ -167,7 +167,7 @@ def test_logout_invalid(invalid_token):
         response = requests.post(url, json=payload)
         print_response(response)
         # 预期返回400，因为令牌无效或已过期
-        return response.status_code == 400
+        return response.json().get("code") == 400
     except Exception as e:
         print(f"无效登出请求异常: {e}")
         return False
@@ -185,7 +185,7 @@ def test_auth_after_logout(token):
         response = requests.post(url, json=payload)
         print_response(response)
         # 预期返回400，因为令牌已经被注销
-        return response.status_code == 400
+        return response.json().get("code") == 400
     except Exception as e:
         print(f"登出后验证请求异常: {e}")
         return False
