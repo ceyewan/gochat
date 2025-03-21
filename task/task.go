@@ -19,7 +19,7 @@ func (t *Task) Run() error {
 	// 启动消息队列
 	queue.InitRedisQueue()
 	// 消费消息
-	queue.DefaultQueue.ConsumeMessages(5*time.Second, Push)
+	go queue.DefaultQueue.ConsumeMessages(5*time.Second, Push)
 	// 启动推送
 	t.GoPush()
 	return nil
