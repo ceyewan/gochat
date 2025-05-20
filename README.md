@@ -12,7 +12,7 @@
 
 - **长连接层（Connect 层）**：使用 **WebSocket** 实现长连接通信，负责与客户端保持实时连接，并将消息推送给用户。Connect 层通过 **LogicRPC** 与 Logic 层通信，获取用户的消息并推送给客户端。
 
-![架构图](./gochat-all.png)
+![架构图](./res/gochat-all.png)
 
 ## 2. 服务发现与负载均衡
 

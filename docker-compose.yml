@@ -75,9 +75,9 @@ services:
       - app-net
 
   logic:
-    build: .
+    image: ceyewan/gochat:latest
     container_name: logic
-    command: ./gochat.bin -module logic
+    command: -module logic
     depends_on:
       - etcd1
       - etcd2
@@ -89,9 +89,9 @@ services:
       - app-net
 
   api:
-    build: .
+    image: ceyewan/gochat:latest
     container_name: api
-    command: ./gochat.bin -module api
+    command: -module api
     ports:
       - "8080:8080"
     depends_on:
@@ -101,9 +101,9 @@ services:
       - app-net
 
   task:
-    build: .
+    image: ceyewan/gochat:latest
     container_name: task
-    command: ./gochat.bin -module task
+    command: -module task
     depends_on:
       - logic
       - connect
@@ -116,9 +116,9 @@ services:
       - app-net
 
   connect:
-    build: .
+    image: ceyewan/gochat:latest
     container_name: connect
-    command: ./gochat.bin -module connect
+    command: -module connect
     ports:
       - "8081:8081"
     depends_on:
@@ -128,9 +128,9 @@ services:
       - app-net
 
   site:
-    build: .
+    image: ceyewan/gochat:latest
     container_name: site
-    command: ./gochat.bin -module site
+    command: -module site
     ports:
       - "8082:8082"
     volumes:
