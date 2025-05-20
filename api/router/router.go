@@ -23,7 +23,7 @@ func Register() *gin.Engine {
 
 	// 处理404请求
 	r.NoRoute(func(c *gin.Context) {
-		clog.Info("404 Not Found: %s %s", c.Request.Method, c.Request.URL.Path)
+		clog.Module("router").Infof("404 Not Found: %s %s", c.Request.Method, c.Request.URL.Path)
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "error": "404 Not Found"})
 	})
 
@@ -59,7 +59,7 @@ func CheckSessionId() gin.HandlerFunc {
 
 		// 解析请求体中的会话信息
 		if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
-			clog.Warning("Session check failed: invalid request format: %v", err)
+			clog.Module("router").Warnf("Session check failed: invalid request format: %v", err)
 			c.Abort()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的会话请求格式"})
 			return
@@ -70,12 +70,12 @@ func CheckSessionId() gin.HandlerFunc {
 		err := rpc.LogicRPCObj.CheckAuth(authToken)
 
 		if err != nil {
-			clog.Warning("Session check failed: token=%s, error=%v", authToken, err)
+			clog.Module("router").Warnf("Session check failed: token=%s, error=%v", authToken, err)
 			c.Abort()
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "会话无效"})
 			return
 		}
-		clog.Debug("Session check success: token=%s", authToken)
+		clog.Module("router").Debugf("Session check success: token=%s", authToken)
 		c.Next()
 	}
 }

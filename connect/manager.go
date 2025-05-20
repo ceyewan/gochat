@@ -30,11 +30,11 @@ func (cm *ConnectionManager) AddUser(userID int, roomID int, ch *Channel) {
 	if !exists {
 		room = NewRoom(roomID)
 		cm.rooms[roomID] = room
-		clog.Debug("Created new room %d", roomID)
+		clog.Module("connect").Debugf("Created new room %d", roomID)
 	}
 
 	room.AddChannel(userID, ch)
-	clog.Info("User %d added to room %d", userID, roomID)
+	clog.Module("connect").Infof("User %d added to room %d", userID, roomID)
 }
 
 // RemoveUser 从系统移除用户
@@ -47,10 +47,10 @@ func (cm *ConnectionManager) RemoveUser(userID int, roomID int) {
 		room.RemoveChannel(userID)
 		if room.GetUserCount() == 0 {
 			delete(cm.rooms, roomID)
-			clog.Debug("Deleted empty room %d", roomID)
+			clog.Module("connect").Debugf("Deleted empty room %d", roomID)
 		}
 	}
-	clog.Info("User %d removed from room %d", userID, roomID)
+	clog.Module("connect").Infof("User %d removed from room %d", userID, roomID)
 }
 
 // GetUser 获取用户连接
@@ -73,11 +73,11 @@ func (cm *ConnectionManager) GetRoom(roomID int) (*Room, bool) {
 func (cm *ConnectionManager) BroadcastToRoom(roomID int, message []byte) bool {
 	room, exists := cm.GetRoom(roomID)
 	if !exists {
-		clog.Warning("Room %d does not exist", roomID)
+		clog.Module("connect").Warnf("Room %d does not exist", roomID)
 		return false
 	}
 
 	room.Broadcast(message)
-	clog.Debug("Broadcasted message to room %d", roomID)
+	clog.Module("connect").Debugf("Broadcasted message to room %d", roomID)
 	return true
 }

@@ -31,11 +31,11 @@ func GetRedisClient() (*redis.Client, error) {
 		conf := config.Conf.Redis
 		if conf.Addr == "" {
 			redisErr = fmt.Errorf("redis address not configured")
-			clog.Error("Redis initialization failed: %v", redisErr)
+			clog.Module("redis").Errorf("Redis initialization failed: %v", redisErr)
 			return
 		}
 
-		clog.Debug("Initializing Redis client connection to %s", conf.Addr)
+		clog.Module("redis").Debugf("Initializing Redis client connection to %s", conf.Addr)
 
 		// 创建 Redis 客户端实例
 		redisClient = redis.NewClient(&redis.Options{
@@ -54,11 +54,11 @@ func GetRedisClient() (*redis.Client, error) {
 		if err := redisClient.Ping(ctx).Err(); err != nil {
 			redisErr = fmt.Errorf("redis connection failed: %v", err)
 			redisClient = nil
-			clog.Error("Failed to connect to Redis at %s: %v", conf.Addr, err)
+			clog.Module("redis").Errorf("Failed to connect to Redis at %s: %v", conf.Addr, err)
 			return
 		}
 
-		clog.Info("Redis client connected successfully to %s (DB: %d)", conf.Addr, conf.DB)
+		clog.Module("redis").Infof("Redis client connected successfully to %s (DB: %d)", conf.Addr, conf.DB)
 	})
 
 	// 返回初始化结果
@@ -72,12 +72,12 @@ func GetRedisClient() (*redis.Client, error) {
 // CloseRedisClient 关闭 Redis 连接
 func CloseRedisClient() error {
 	if redisClient != nil {
-		clog.Debug("Closing Redis client connection")
+		clog.Module("redis").Debugf("Closing Redis client connection")
 		if err := redisClient.Close(); err != nil {
-			clog.Error("Failed to close Redis connection: %v", err)
+			clog.Module("redis").Errorf("Failed to close Redis connection: %v", err)
 			return err
 		}
-		clog.Info("Redis connection closed successfully")
+		clog.Module("redis").Infof("Redis connection closed successfully")
 	}
 	return nil
 }

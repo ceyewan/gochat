@@ -12,7 +12,7 @@ import (
 func (t *Task) pushSingleToConnect(instanceID string, userID int, msg []byte) {
 	conn, err := tools.GetServiceInstanceConn("connect-service", instanceID)
 	if err != nil {
-		clog.Error("Failed to get connection, instanceID: %s, err: %v", instanceID, err)
+		clog.Module("task").Errorf("Failed to get connection, instanceID: %s, err: %v", instanceID, err)
 		return
 	}
 
@@ -25,22 +25,22 @@ func (t *Task) pushSingleToConnect(instanceID string, userID int, msg []byte) {
 	defer cancel()
 	reply, err := client.PushSingleMsg(ctx, req)
 	if err != nil {
-		clog.Error("Failed to push single message, instanceID: %s, userID: %d, err: %v", instanceID, userID, err)
+		clog.Module("task").Errorf("Failed to push single message, instanceID: %s, userID: %d, err: %v", instanceID, userID, err)
 		return
 	}
-	clog.Info("Successfully pushed single message, instanceID: %s, userID: %d, reply: %v", instanceID, userID, reply)
+	clog.Module("task").Infof("Successfully pushed single message, instanceID: %s, userID: %d, reply: %v", instanceID, userID, reply)
 }
 
 // broadcastRoomToConnect 向指定房间广播消息
 func (t *Task) broadcastRoomToConnect(roomID int, msg []byte) {
 	conns, err := tools.GetAllServiceInstanceConns("connect-service")
 	if err != nil {
-		clog.Error("Failed to get all connections: %v", err)
+		clog.Module("task").Errorf("Failed to get all connections: %v", err)
 		return
 	}
 
 	if len(conns) == 0 {
-		clog.Warning("No available connect-service instances")
+		clog.Module("task").Warnf("No available connect-service instances")
 		return
 	}
 
@@ -56,11 +56,11 @@ func (t *Task) broadcastRoomToConnect(roomID int, msg []byte) {
 		cancel()
 
 		if err != nil {
-			clog.Error("Failed to broadcast room message, instanceID: %s, roomID: %d, err: %v", instanceID, roomID, err)
+			clog.Module("task").Errorf("Failed to broadcast room message, instanceID: %s, roomID: %d, err: %v", instanceID, roomID, err)
 			continue
 		}
 
-		clog.Info("Successfully broadcasted room message, instanceID: %s, roomID: %d, reply: %v", instanceID, roomID, reply)
+		clog.Module("task").Infof("Successfully broadcasted room message, instanceID: %s, roomID: %d, reply: %v", instanceID, roomID, reply)
 	}
 }
 
@@ -68,12 +68,12 @@ func (t *Task) broadcastRoomToConnect(roomID int, msg []byte) {
 func (t *Task) broadcastRoomInfoToConnect(roomID int, roomUserInfo []byte) {
 	conns, err := tools.GetAllServiceInstanceConns("connect-service")
 	if err != nil {
-		clog.Error("Failed to get all connections: %v", err)
+		clog.Module("task").Errorf("Failed to get all connections: %v", err)
 		return
 	}
 
 	if len(conns) == 0 {
-		clog.Warning("No available connect-service instances")
+		clog.Module("task").Warnf("No available connect-service instances")
 		return
 	}
 
@@ -89,10 +89,10 @@ func (t *Task) broadcastRoomInfoToConnect(roomID int, roomUserInfo []byte) {
 		cancel()
 
 		if err != nil {
-			clog.Error("Failed to broadcast room info, instanceID: %s, roomID: %d, err: %v", instanceID, roomID, err)
+			clog.Module("task").Errorf("Failed to broadcast room info, instanceID: %s, roomID: %d, err: %v", instanceID, roomID, err)
 			continue
 		}
 
-		clog.Info("Successfully broadcasted room info, instanceID: %s, roomID: %d, reply: %v", instanceID, roomID, reply)
+		clog.Module("task").Infof("Successfully broadcasted room info, instanceID: %s, roomID: %d, reply: %v", instanceID, roomID, reply)
 	}
 }

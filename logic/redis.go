@@ -17,7 +17,7 @@ func InitRedisClient() error {
 	// 获取全局Redis客户端
 	client, err := tools.GetRedisClient()
 	if err != nil {
-		clog.Error("[Redis] Initialization failed: %v", err)
+		clog.Module("logic-redis").Errorf("[Redis] Initialization failed: %v", err)
 		return err
 	}
 	RedisClient = client
@@ -30,7 +30,7 @@ func InitRedisClient() error {
 		return err
 	}
 
-	clog.Info("[Redis] Connection successful")
+	clog.Module("logic-redis").Info("[Redis] Connection successful")
 	return nil
 }
 
@@ -38,9 +38,9 @@ func InitRedisClient() error {
 func testRedisConnection(ctx context.Context) error {
 	pong, err := RedisClient.Ping(ctx).Result()
 	if err != nil {
-		clog.Error("[Redis] Connection test failed: %v", err)
+		clog.Module("logic-redis").Errorf("[Redis] Connection test failed: %v", err)
 		return err
 	}
-	clog.Debug("[Redis] Ping response: %s", pong)
+	clog.Module("logic-redis").Debugf("[Redis] Ping response: %s", pong)
 	return nil
 }

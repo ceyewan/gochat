@@ -34,7 +34,7 @@ func InitRPCServer(ctx context.Context) (*grpc.Server, error) {
 	// 监听指定端口
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Conf.RPC.Port+1))
 	if err != nil {
-		clog.Error("Failed to listen on port %d: %v", config.Conf.RPC.Port+1, err)
+		clog.Module("connect").Errorf("Failed to listen on port %d: %v", config.Conf.RPC.Port+1, err)
 		return nil, err
 	}
 
@@ -56,18 +56,18 @@ func InitRPCServer(ctx context.Context) (*grpc.Server, error) {
 	// 注册服务到etcd
 	go func() {
 		if err := tools.ServiceRegistry(serviceCtx, "connect-service", instanceID, addr); err != nil {
-			clog.Error("Failed to register service: %v", err)
+			clog.Module("connect").Errorf("Failed to register service: %v", err)
 			cancel()
 			return
 		}
-		clog.Info("Service registered with etcd: connect-service/%s at %s", instanceID, addr)
+		clog.Module("connect").Infof("Service registered with etcd: connect-service/%s at %s", instanceID, addr)
 	}()
 
 	// 启动gRPC服务器
 	go func() {
-		clog.Info("Connect RPC server starting on port %d", config.Conf.RPC.Port+1)
+		clog.Module("connect").Infof("Connect RPC server starting on port %d", config.Conf.RPC.Port+1)
 		if err := s.Serve(lis); err != nil {
-			clog.Error("Failed to serve: %v", err)
+			clog.Module("connect").Errorf("Failed to serve: %v", err)
 		}
 	}()
 
@@ -80,7 +80,7 @@ func (s *server) PushSingleMsg(ctx context.Context, in *pb.PushSingleMsgRequest)
 	ch, exists := s.connMgr.GetUser(userID)
 
 	if !exists {
-		clog.Debug("User %d not connected", userID)
+		clog.Module("connect").Debugf("User %d not connected", userID)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
 		}, fmt.Errorf("user %d not connected", userID)
@@ -88,14 +88,14 @@ func (s *server) PushSingleMsg(ctx context.Context, in *pb.PushSingleMsgRequest)
 	// 将 in.Msg 使用 json.Unmarshal 解析为 ChatMessage 结构体
 	var chatMsg tools.ChatMessage
 	if err := json.Unmarshal(in.Msg, &chatMsg); err != nil {
-		clog.Error("Failed to unmarshal chat message: %v", err)
+		clog.Module("connect").Errorf("Failed to unmarshal chat message: %v", err)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
 		}, err
 	}
 	msgDataBytes, _ := json.Marshal(NewMessageData(&chatMsg))
 	ch.send <- msgDataBytes
-	clog.Debug("Message pushed to user %d", userID)
+	clog.Module("connect").Debugf("Message pushed to user %d", userID)
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
 }
 
@@ -105,20 +105,20 @@ func (s *server) PushRoomMsg(ctx context.Context, in *pb.PushRoomMsgRequest) (*p
 	// 将 in.Msg 使用 json.Unmarshal 解析为 ChatMessage 结构体
 	var chatMsg tools.ChatMessage
 	if err := json.Unmarshal(in.Msg, &chatMsg); err != nil {
-		clog.Error("Failed to unmarshal chat message: %v", err)
+		clog.Module("connect").Errorf("Failed to unmarshal chat message: %v", err)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
 		}, err
 	}
 	msgDataBytes, _ := json.Marshal(NewMessageData(&chatMsg))
 	if !s.connMgr.BroadcastToRoom(roomID, msgDataBytes) {
-		clog.Warning("Room %d not found", roomID)
+		clog.Module("connect").Warnf("Room %d not found", roomID)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
 		}, fmt.Errorf("room %d not found", roomID)
 	}
 
-	clog.Debug("Message pushed to room %d", roomID)
+	clog.Module("connect").Debugf("Message pushed to room %d", roomID)
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
 }
 
@@ -129,7 +129,7 @@ func (s *server) PushRoomInfo(ctx context.Context, in *pb.PushRoomInfoRequest) (
 	// 将 in.Msg 使用 json.Unmarshal 解析为 RoomInfo 结构体
 	var roomInfo tools.RoomInfo
 	if err := json.Unmarshal(in.Info, &roomInfo); err != nil {
-		clog.Error("Failed to unmarshal room info: %v", err)
+		clog.Module("connect").Errorf("Failed to unmarshal room info: %v", err)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
 		}, err
@@ -138,12 +138,12 @@ func (s *server) PushRoomInfo(ctx context.Context, in *pb.PushRoomInfoRequest) (
 
 	// 广播到房间
 	if !s.connMgr.BroadcastToRoom(roomID, roomInfobytes) {
-		clog.Warning("Room %d not found for info update", roomID)
+		clog.Module("connect").Warnf("Room %d not found for info update", roomID)
 		return &pb.SuccessReply{
 			Code: config.RPCCodeFailed,
 		}, fmt.Errorf("room %d not found for info update", roomID)
 	}
 
-	clog.Debug("Room info pushed to room %d", roomID)
+	clog.Module("connect").Debugf("Room info pushed to room %d", roomID)
 	return &pb.SuccessReply{Code: config.RPCCodeSuccess}, nil
 }

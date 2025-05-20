@@ -37,14 +37,14 @@ func InitLogicRPCClient() {
 
 		conn, err := tools.ServiceDiscovery(ctx, "logic-service")
 		if err != nil {
-			clog.Error("[RPC] Service discovery failed: %v", err)
+			clog.Module("connect").Errorf("[RPC] Service discovery failed: %v", err)
 			return
 		}
 
 		// 初始化客户端
 		LogicClient = logicproto.NewChatLogicServiceClient(conn)
 		LogicRPCObj = &LogicRPC{}
-		clog.Info("[RPC] Logic client initialized successfully")
+		clog.Module("connect").Infof("[RPC] Logic client initialized successfully")
 	})
 }
 
@@ -55,7 +55,7 @@ func createContext() (context.Context, context.CancelFunc) {
 
 // Connect 处理用户连接
 func (l *LogicRPC) Connect(authToken, instanceID string, userID, roomID int) error {
-	clog.Info("[RPC] Connect, instanceID: %s", instanceID)
+	clog.Module("connect").Infof("[RPC] Connect, instanceID: %s", instanceID)
 	ctx, cancel := createContext()
 	defer cancel()
 
@@ -68,17 +68,17 @@ func (l *LogicRPC) Connect(authToken, instanceID string, userID, roomID int) err
 
 	reply, err := LogicClient.Connect(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] Connect failed: %v", err)
+		clog.Module("connect").Errorf("[RPC] Connect failed: %v", err)
 		return err
 	}
 
-	clog.Info("[RPC] Connect success, code: %d", reply.Code)
+	clog.Module("connect").Infof("[RPC] Connect success, code: %d", reply.Code)
 	return nil
 }
 
 // Disconnect 处理用户断开连接
 func (l *LogicRPC) Disconnect(userID, roomID int) error {
-	clog.Info("[RPC] Disconnect, userID: %d", userID)
+	clog.Module("connect").Infof("[RPC] Disconnect, userID: %d", userID)
 	ctx, cancel := createContext()
 	defer cancel()
 
@@ -89,10 +89,10 @@ func (l *LogicRPC) Disconnect(userID, roomID int) error {
 
 	reply, err := LogicClient.DisConnect(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] Disconnect failed: %v", err)
+		clog.Module("connect").Errorf("[RPC] Disconnect failed: %v", err)
 		return err
 	}
 
-	clog.Info("[RPC] Disconnect success, code: %d", reply.Code)
+	clog.Module("connect").Infof("[RPC] Disconnect success, code: %d", reply.Code)
 	return nil
 }

@@ -37,14 +37,14 @@ func InitLogicRPCClient() {
 
 		conn, err := tools.ServiceDiscovery(ctx, "logic-service")
 		if err != nil {
-			clog.Error("[RPC] Service discovery failed: %v", err)
+			clog.Module("rpc").Errorf("[RPC] Service discovery failed: %v", err)
 			return
 		}
 
 		// 初始化客户端
 		LogicClient = logicproto.NewChatLogicServiceClient(conn)
 		LogicRPCObj = &LogicRPC{}
-		clog.Info("[RPC] Logic client initialized successfully")
+		clog.Module("rpc").Info("[RPC] Logic client initialized successfully")
 	})
 }
 
@@ -64,11 +64,11 @@ func (l *LogicRPC) Login(name, password string) (int, string, string, error) {
 	}
 	reply, err := LogicClient.Login(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] Login failed: %v", err)
+		clog.Module("rpc").Errorf("[RPC] Login failed: %v", err)
 		return 0, "", "", err
 	}
 
-	clog.Info("[RPC] Login success: name=%s, id=%d", name, reply.UserId)
+	clog.Module("rpc").Infof("[RPC] Login success: name=%s, id=%d", name, reply.UserId)
 	return int(reply.UserId), reply.UserName, reply.Token, nil
 }
 
@@ -84,11 +84,11 @@ func (l *LogicRPC) Register(name, password string) error {
 
 	reply, err := LogicClient.Register(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] Register failed: %v", err)
+		clog.Module("rpc").Errorf("[RPC] Register failed: %v", err)
 		return err
 	}
 
-	clog.Info("[RPC] Register success: name=%s, code=%d", name, reply.Code)
+	clog.Module("rpc").Infof("[RPC] Register success: name=%s, code=%d", name, reply.Code)
 	return nil
 }
 
@@ -103,11 +103,11 @@ func (l *LogicRPC) Logout(Token string) error {
 
 	reply, err := LogicClient.Logout(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] Logout failed: %v", err)
+		clog.Module("rpc").Errorf("[RPC] Logout failed: %v", err)
 		return err
 	}
 
-	clog.Info("[RPC] Logout success: code=%d", reply.Code)
+	clog.Module("rpc").Infof("[RPC] Logout success: code=%d", reply.Code)
 	return nil
 }
 
@@ -122,11 +122,11 @@ func (l *LogicRPC) CheckAuth(Token string) error {
 
 	reply, err := LogicClient.CheckAuth(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] CheckAuth failed: %v", err)
+		clog.Module("rpc").Errorf("[RPC] CheckAuth failed: %v", err)
 		return err
 	}
 
-	clog.Debug("[RPC] CheckAuth token: %v success, code=%d", Token, reply.Code)
+	clog.Module("rpc").Debugf("[RPC] CheckAuth token: %v success, code=%d", Token, reply.Code)
 	return nil
 }
 
@@ -147,11 +147,11 @@ func (l *LogicRPC) Push(args *dto.PushRequest) error {
 
 	reply, err := LogicClient.Push(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] Push failed: from=%d, to=%d, error=%v", args.FromUserID, args.ToUserID, err)
+		clog.Module("rpc").Errorf("[RPC] Push failed: from=%d, to=%d, error=%v", args.FromUserID, args.ToUserID, err)
 		return err
 	}
 
-	clog.Info("[RPC] Push success: from=%d, to=%d, code=%d", args.FromUserID, args.ToUserID, reply.Code)
+	clog.Module("rpc").Infof("[RPC] Push success: from=%d, to=%d, code=%d", args.FromUserID, args.ToUserID, reply.Code)
 	return nil
 }
 
@@ -172,11 +172,11 @@ func (l *LogicRPC) PushRoom(args *dto.PushRequest) error {
 
 	reply, err := LogicClient.PushRoom(ctx, req)
 	if err != nil {
-		clog.Error("[RPC] PushRoom failed: from=%d, to=%d, error=%v", args.FromUserID, args.ToUserID, err)
+		clog.Module("rpc").Errorf("[RPC] PushRoom failed: from=%d, to=%d, error=%v", args.FromUserID, args.ToUserID, err)
 		return err
 	}
 
-	clog.Info("[RPC] PushRoom success: from=%d, to=%d, code=%d", args.FromUserID, args.ToUserID, reply.Code)
+	clog.Module("rpc").Infof("[RPC] PushRoom success: from=%d, to=%d, code=%d", args.FromUserID, args.ToUserID, reply.Code)
 	return nil
 }
 

@@ -18,7 +18,7 @@ func Push(c *gin.Context) {
 	// 发送消息
 	err := rpc.LogicRPCObj.Push(&req)
 	if err != nil {
-		clog.Error("Message sending failed: from=%d, to=%d, error=%v",
+		clog.Module("push").Errorf("Message sending failed: from=%d, to=%d, error=%v",
 			req.FromUserID, req.ToUserID, err)
 		c.JSON(dto.StatusServerError, dto.ErrorResponse{
 			Code:  dto.CodeFail,
@@ -27,7 +27,7 @@ func Push(c *gin.Context) {
 		return
 	}
 
-	clog.Info("Message sent: from=%d(%s), to=%d(%s), room=%d",
+	clog.Module("push").Infof("Message sent: from=%d(%s), to=%d(%s), room=%d",
 		req.FromUserID, req.FromUserName, req.ToUserID, req.ToUserName, req.RoomID)
 	c.JSON(dto.StatusOK, dto.PushResponse{Code: dto.CodeSuccess})
 }
@@ -43,7 +43,7 @@ func PushRoom(c *gin.Context) {
 	err := rpc.LogicRPCObj.PushRoom(&req)
 
 	if err != nil {
-		clog.Error("Room message sending failed: from=%d, room=%d, error=%v",
+		clog.Module("push").Errorf("Room message sending failed: from=%d, room=%d, error=%v",
 			req.FromUserID, req.RoomID, err)
 		c.JSON(dto.StatusServerError, dto.ErrorResponse{
 			Code:  dto.CodeFail,
@@ -52,7 +52,7 @@ func PushRoom(c *gin.Context) {
 		return
 	}
 
-	clog.Info("Room message sent: from=%d(%s), room=%d",
+	clog.Module("push").Infof("Room message sent: from=%d(%s), room=%d",
 		req.FromUserID, req.FromUserName, req.RoomID)
 	c.JSON(dto.StatusOK, dto.PushResponse{Code: dto.CodeSuccess})
 }

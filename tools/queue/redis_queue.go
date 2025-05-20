@@ -53,7 +53,7 @@ func InitRedisQueue() error {
 		if initErr == nil {
 			DefaultQueue = queue
 		} else {
-			clog.Error("[RedisQueue] Initialization failed: %v", initErr)
+			clog.Module("queue").Errorf("[RedisQueue] Initialization failed: %v", initErr)
 		}
 	})
 	return initErr
@@ -73,7 +73,7 @@ func (q *RedisQueue) Initialize() error {
 	// 获取Redis客户端
 	client, err := tools.GetRedisClient()
 	if err != nil {
-		clog.Error("[RedisQueue] Initialization failed: %v", err)
+		clog.Module("queue").Errorf("[RedisQueue] Initialization failed: %v", err)
 		return err
 	}
 	q.client = client
@@ -86,11 +86,11 @@ func (q *RedisQueue) Initialize() error {
 	// 创建消费者组(如果不存在)
 	err = q.createConsumerGroupIfNotExist()
 	if err != nil {
-		clog.Error("[RedisQueue] Failed to create consumer group: %v", err)
+		clog.Module("queue").Errorf("[RedisQueue] Failed to create consumer group: %v", err)
 		return err
 	}
 
-	clog.Info("[RedisQueue] Connection and stream setup successful")
+	clog.Module("queue").Infof("[RedisQueue] Connection and stream setup successful")
 	return nil
 }
 
@@ -111,7 +111,7 @@ func (q *RedisQueue) PublishMessage(message *QueueMsg) error {
 	// 将消息使用 proto 序列化为字节
 	messageByte, err := json.Marshal(message)
 	if err != nil {
-		clog.Error("[RedisQueue] Message serialization failed: %v", err)
+		clog.Module("queue").Errorf("[RedisQueue] Message serialization failed: %v", err)
 		return err
 	}
 
@@ -126,7 +126,7 @@ func (q *RedisQueue) PublishMessage(message *QueueMsg) error {
 		MaxLen: DefaultMaxLen,
 		Values: values,
 	}).Err(); err != nil {
-		clog.Error("[RedisQueue] Message publishing failed: %v", err)
+		clog.Module("queue").Errorf("[RedisQueue] Message publishing failed: %v", err)
 		return err
 	}
 
@@ -158,12 +158,12 @@ func (q *RedisQueue) ConsumeMessages(timeout time.Duration, callback func(*Queue
 			if err == redis.Nil { // 超时，没有新消息
 				// 尝试处理pending消息（之前已读取但未确认的消息）
 				if err := q.processPendingMessages(callback); err != nil {
-					clog.Error("[RedisQueue] Failed to process pending messages: %v", err)
+					clog.Module("queue").Errorf("[RedisQueue] Failed to process pending messages: %v", err)
 				}
 				// 继续使用相同的lastID
 				continue
 			}
-			clog.Error("[RedisQueue] Failed to read messages from stream: %v", err)
+			clog.Module("queue").Errorf("[RedisQueue] Failed to read messages from stream: %v", err)
 			time.Sleep(1 * time.Second) // 出错后暂停一下再重试
 			continue
 		}
@@ -171,7 +171,7 @@ func (q *RedisQueue) ConsumeMessages(timeout time.Duration, callback func(*Queue
 		// 没有返回entries或者没有消息，尝试处理pending消息
 		if len(entries) == 0 || len(entries[0].Messages) == 0 {
 			if err := q.processPendingMessages(callback); err != nil {
-				clog.Error("[RedisQueue] Failed to process pending messages: %v", err)
+				clog.Module("queue").Errorf("[RedisQueue] Failed to process pending messages: %v", err)
 			}
 			// 更新为特殊标识符">"，表示只获取新消息
 			lastID = ">"
@@ -183,7 +183,7 @@ func (q *RedisQueue) ConsumeMessages(timeout time.Duration, callback func(*Queue
 			// 提取消息内容
 			messageStr, ok := message.Values["message"].(string)
 			if !ok {
-				clog.Warning("[RedisQueue] Received message with invalid format")
+				clog.Module("queue").Warnf("[RedisQueue] Received message with invalid format")
 				q.ackMessage(message.ID) // 确认并丢弃格式错误的消息
 				continue
 			}
@@ -191,14 +191,14 @@ func (q *RedisQueue) ConsumeMessages(timeout time.Duration, callback func(*Queue
 			// 解析消息
 			var queueMsg QueueMsg
 			if err := json.Unmarshal([]byte(messageStr), &queueMsg); err != nil {
-				clog.Error("[RedisQueue] Message deserialization failed: %v", err)
+				clog.Module("queue").Errorf("[RedisQueue] Message deserialization failed: %v", err)
 				q.ackMessage(message.ID) // 确认并丢弃解析失败的消息
 				continue
 			}
 
 			// 处理消息
 			if err := callback(&queueMsg); err != nil {
-				clog.Error("[RedisQueue] Message processing failed: %v", err)
+				clog.Module("queue").Errorf("[RedisQueue] Message processing failed: %v", err)
 				// 这里不确认消息，让它留在pending列表中，稍后重试
 
 				// 检查回调返回的错误是否是一个特殊标记，表示要停止消费
@@ -249,7 +249,7 @@ func (q *RedisQueue) processPendingMessages(callback func(*QueueMsg) error) erro
 		}).Result()
 
 		if err != nil {
-			clog.Error("[RedisQueue] Failed to claim message %s: %v", pendingMsg.ID, err)
+			clog.Module("queue").Errorf("[RedisQueue] Failed to claim message %s: %v", pendingMsg.ID, err)
 			continue
 		}
 
@@ -264,14 +264,14 @@ func (q *RedisQueue) processPendingMessages(callback func(*QueueMsg) error) erro
 			// 解析消息
 			var queueMsg QueueMsg
 			if err := json.Unmarshal([]byte(messageStr), &queueMsg); err != nil {
-				clog.Error("[RedisQueue] Pending message deserialization failed: %v", err)
+				clog.Module("queue").Errorf("[RedisQueue] Pending message deserialization failed: %v", err)
 				q.ackMessage(message.ID) // 确认并丢弃解析失败的消息
 				continue
 			}
 
 			// 重新处理消息
 			if err := callback(&queueMsg); err != nil {
-				clog.Error("[RedisQueue] Pending message processing failed: %v", err)
+				clog.Module("queue").Errorf("[RedisQueue] Pending message processing failed: %v", err)
 				// 不确认，让消息留在pending列表中
 			} else {
 				// 成功处理后确认消息
@@ -287,7 +287,7 @@ func (q *RedisQueue) processPendingMessages(callback func(*QueueMsg) error) erro
 func (q *RedisQueue) ackMessage(messageID string) {
 	err := q.client.XAck(q.ctx, q.streamName, q.consumerGroup, messageID).Err()
 	if err != nil {
-		clog.Error("[RedisQueue] Failed to acknowledge message %s: %v", messageID, err)
+		clog.Module("queue").Errorf("[RedisQueue] Failed to acknowledge message %s: %v", messageID, err)
 	}
 }
 
@@ -335,9 +335,9 @@ func (q *RedisQueue) createConsumerGroupIfNotExist() error {
 func (q *RedisQueue) testConnection() error {
 	pong, err := q.client.Ping(q.ctx).Result()
 	if err != nil {
-		clog.Error("[RedisQueue] Connection test failed: %v", err)
+		clog.Module("queue").Errorf("[RedisQueue] Connection test failed: %v", err)
 		return err
 	}
-	clog.Debug("[RedisQueue] Ping response: %s", pong)
+	clog.Module("queue").Debugf("[RedisQueue] Ping response: %s", pong)
 	return nil
 }

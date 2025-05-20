@@ -33,9 +33,9 @@ func (s *Site) Run() error {
 
 	// 启动服务器
 	go func() {
-		clog.Info("Starting static file server on port 8082")
+		clog.Module("site").Info("Starting static file server on port 8082")
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			clog.Error("Static file server failed: %v", err)
+			clog.Module("site").Errorf("Static file server failed: %v", err)
 		}
 	}()
 
@@ -57,10 +57,10 @@ func (s *Site) Shutdown(ctx context.Context) error {
 
 	// 关闭服务器
 	if err := s.server.Shutdown(shutdownCtx); err != nil {
-		clog.Error("Static file server shutdown error: %v", err)
+		clog.Module("site").Errorf("Static file server shutdown error: %v", err)
 		return err
 	}
 
-	clog.Info("Static file server shutdown completed")
+	clog.Module("site").Info("Static file server shutdown completed")
 	return nil
 }
