@@ -30,7 +30,7 @@ func getDB() *gorm.DB {
 func hashPassword(password string) (string, error) {
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		clog.Error("Failed to hash password: %v", err)
+		clog.Module("logic-user").Errorf("Failed to hash password: %v", err)
 		return "", errors.Wrap(err, "password hashing failed")
 	}
 	return string(hashedBytes), nil
@@ -44,7 +44,7 @@ func checkPasswordHash(password, hash string) bool {
 // Add 添加新用户
 // 接受用户名和原始密码，将用户信息存储到数据库
 func Add(userName, password string) error {
-	clog.Debug("Attempting to add new user: %s", userName)
+	clog.Module("logic-user").Debugf("Attempting to add new user: %s", userName)
 
 	// 对密码进行哈希处理
 	hashedPassword, err := hashPassword(password)
@@ -61,53 +61,53 @@ func Add(userName, password string) error {
 
 	// 将用户记录插入数据库
 	if err := getDB().Table(user.TableName()).Create(&user).Error; err != nil {
-		clog.Error("Failed to create user %s: %v", userName, err)
+		clog.Module("logic-user").Errorf("Failed to create user %s: %v", userName, err)
 		return errors.Wrap(err, "failed to create user")
 	}
 
-	clog.Info("User created successfully: %s (ID: %d)", userName, user.ID)
+	clog.Module("logic-user").Infof("User created successfully: %s (ID: %d)", userName, user.ID)
 	return nil
 }
 
 // CheckHaveUserName 检查用户名是否已存在
 // 存在则返回对应的用户信息
 func CheckHaveUserName(userName string) (tools.User, error) {
-	clog.Debug("Checking if username exists: %s", userName)
+	clog.Module("logic-user").Debugf("Checking if username exists: %s", userName)
 
 	var user tools.User
 	if err := getDB().Table(user.TableName()).
 		Where("user_name = ?", userName).
 		First(&user).Error; err != nil {
 
-		clog.Debug("User not found: %s (%v)", userName, err)
+		clog.Module("logic-user").Debugf("User not found: %s (%v)", userName, err)
 		return tools.User{}, errors.Wrap(err, "failed to query user")
 	}
 
-	clog.Debug("User found: %s (ID: %d)", userName, user.ID)
+	clog.Module("logic-user").Debugf("User found: %s (ID: %d)", userName, user.ID)
 	return user, nil
 }
 
 // GetUserNameByUserID 根据用户ID获取用户名
 func GetUserNameByUserID(userID uint) (string, error) {
-	clog.Debug("Looking up username for user ID: %d", userID)
+	clog.Module("logic-user").Debugf("Looking up username for user ID: %d", userID)
 
 	var user tools.User
 	if err := getDB().Table(user.TableName()).
 		Where("id = ?", userID).
 		First(&user).Error; err != nil {
 
-		clog.Error("Failed to find user with ID %d: %v", userID, err)
+		clog.Module("logic-user").Errorf("Failed to find user with ID %d: %v", userID, err)
 		return "", errors.Wrap(err, "failed to query user")
 	}
 
-	clog.Debug("Found username %s for ID %d", user.UserName, userID)
+	clog.Module("logic-user").Debugf("Found username %s for ID %d", user.UserName, userID)
 	return user.UserName, nil
 }
 
 // ValidateCredentials 验证用户凭据
 // 成功则返回用户信息，失败返回错误
 func ValidateCredentials(userName, password string) (tools.User, error) {
-	clog.Debug("Validating credentials for user: %s", userName)
+	clog.Module("logic-user").Debugf("Validating credentials for user: %s", userName)
 
 	user, err := CheckHaveUserName(userName)
 	if err != nil {
@@ -115,10 +115,10 @@ func ValidateCredentials(userName, password string) (tools.User, error) {
 	}
 
 	if !checkPasswordHash(password, user.Password) {
-		clog.Warning("Invalid password attempt for user: %s", userName)
+		clog.Module("logic-user").Warnf("Invalid password attempt for user: %s", userName)
 		return tools.User{}, errors.New("invalid credentials")
 	}
 
-	clog.Info("User authenticated successfully: %s", userName)
+	clog.Module("logic-user").Infof("User authenticated successfully: %s", userName)
 	return user, nil
 }

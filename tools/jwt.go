@@ -40,11 +40,11 @@ func GenerateToken(userID int, userName, passwordHash string, expiration time.Du
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
-		clog.Error("Failed to sign token: %v", err)
+		clog.Module("tools").Errorf("Failed to sign token: %v", err)
 		return "", err
 	}
 
-	clog.Info("Generated token for userID: %d", userID)
+	clog.Module("tools").Infof("Generated token for userID: %d", userID)
 	return tokenString, nil
 }
 
@@ -53,7 +53,7 @@ func RevokeToken(tokenString string) {
 	blacklistMutex.Lock()
 	defer blacklistMutex.Unlock()
 	blacklist[tokenString] = struct{}{}
-	clog.Info("Token revoked: %s", tokenString)
+	clog.Module("tools").Infof("Token revoked: %s", tokenString)
 }
 
 // ValidateToken 验证Token（包含过期检查）, 返回用户ID, 用户名, 密码哈希
@@ -61,7 +61,7 @@ func ValidateToken(tokenString string) (int, string, string, error) {
 	blacklistMutex.Lock()
 	if _, found := blacklist[tokenString]; found {
 		blacklistMutex.Unlock()
-		clog.Warning("Token is revoked: %s", tokenString)
+		clog.Module("tools").Warnf("Token is revoked: %s", tokenString)
 		return -1, "", "", fmt.Errorf("token is revoked")
 	}
 	blacklistMutex.Unlock()
@@ -69,22 +69,22 @@ func ValidateToken(tokenString string) (int, string, string, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			clog.Error("Unexpected signing method: %v", token.Header["alg"])
+			clog.Module("tools").Errorf("Unexpected signing method: %v", token.Header["alg"])
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return jwtKey, nil
 	})
 
 	if err != nil {
-		clog.Error("Failed to parse token: %v", err)
+		clog.Module("tools").Errorf("Failed to parse token: %v", err)
 		return -1, "", "", err
 	}
 
 	if !token.Valid {
-		clog.Warning("Invalid token: %s", tokenString)
+		clog.Module("tools").Warnf("Invalid token: %s", tokenString)
 		return -1, "", "", fmt.Errorf("invalid token")
 	}
 
-	clog.Info("Validated token for userID: %d", claims.UserID)
+	clog.Module("tools").Infof("Validated token for userID: %d", claims.UserID)
 	return claims.UserID, claims.UserName, claims.PasswordHash, nil
 }

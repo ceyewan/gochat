@@ -108,12 +108,12 @@ type Config struct {
 }
 
 func init() {
-	clog.Debug("Initializing configuration module")
+	clog.Module("config").Debug("Initializing configuration module")
 	err := LoadConfig()
 	if err != nil {
-		clog.Error("Failed to load configuration: %v", err)
+		clog.Module("config").Errorf("Failed to load configuration: %v", err)
 	} else {
-		clog.Info("Configuration loaded successfully")
+		clog.Module("config").Info("Configuration loaded successfully")
 	}
 }
 
@@ -125,35 +125,35 @@ func LoadConfig() error {
 	envConfigPath := os.Getenv("CONFIG_FILE")
 	if envConfigPath != "" {
 		configFile = envConfigPath
-		clog.Debug("Using configuration file from environment: %s", configFile)
+		clog.Module("config").Debugf("Using configuration file from environment: %s", configFile)
 	} else {
 		configFile = "config/config.yaml"
-		clog.Debug("Using default configuration file: %s", configFile)
+		clog.Module("config").Debugf("Using default configuration file: %s", configFile)
 	}
 
 	// 检查配置文件是否存在
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		clog.Warning("Configuration file %s does not exist", configFile)
+		clog.Module("config").Warnf("Configuration file %s does not exist", configFile)
 		return fmt.Errorf("configuration file not found: %s", configFile)
 	}
 
 	viper.SetConfigFile(configFile)
-	clog.Debug("Reading configuration from file: %s", configFile)
+	clog.Module("config").Debugf("Reading configuration from file: %s", configFile)
 
 	if err := viper.ReadInConfig(); err != nil {
-		clog.Error("Failed to read configuration file: %v", err)
+		clog.Module("config").Errorf("Failed to read configuration file: %v", err)
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	if err := viper.Unmarshal(&Conf); err != nil {
-		clog.Error("Failed to parse configuration: %v", err)
+		clog.Module("config").Errorf("Failed to parse configuration: %v", err)
 		return fmt.Errorf("failed to parse config file: %w", err)
 	}
 
 	// 补充配置，确保所有需要的值都有默认值
 	setDefaultConfig()
 
-	clog.Info("Configuration loaded successfully with mode: %s", GetMode())
+	clog.Module("config").Infof("Configuration loaded successfully with mode: %s", GetMode())
 	logConfigSummary()
 
 	return nil
@@ -164,13 +164,13 @@ func setDefaultConfig() {
 	// 设置默认运行模式
 	if Conf.Env.Mode == "" {
 		Conf.Env.Mode = ModeDev
-		clog.Debug("No environment mode specified, using default: %s", ModeDev)
+		clog.Module("config").Debugf("No environment mode specified, using default: %s", ModeDev)
 	}
 
 	// 设置默认Gin模式
 	if Conf.Env.GinMode == "" {
 		Conf.Env.GinMode = getGinModeFromEnvMode(Conf.Env.Mode)
-		clog.Debug("No GinMode specified, derived from env mode: %s", Conf.Env.GinMode)
+		clog.Module("config").Debugf("No GinMode specified, derived from env mode: %s", Conf.Env.GinMode)
 	}
 }
 
@@ -182,42 +182,42 @@ func getGinModeFromEnvMode(mode string) string {
 	case ModeRelease:
 		return "release"
 	default:
-		clog.Warning("Unknown environment mode: %s, falling back to 'debug'", mode)
+		clog.Module("config").Warnf("Unknown environment mode: %s, falling back to 'debug'", mode)
 		return "debug"
 	}
 }
 
 // logConfigSummary 输出配置摘要信息
 func logConfigSummary() {
-	clog.Debug("Configuration summary:")
-	clog.Debug("- Environment: %s (Gin: %s)", Conf.Env.Mode, Conf.Env.GinMode)
+	clog.Module("config").Debug("Configuration summary:")
+	clog.Module("config").Debugf("- Environment: %s (Gin: %s)", Conf.Env.Mode, Conf.Env.GinMode)
 
 	// 数据库配置摘要
 	if Conf.MySQL.Host != "" {
-		clog.Debug("- MySQL: %s:%d (user: %s)",
+		clog.Module("config").Debugf("- MySQL: %s:%d (user: %s)",
 			Conf.MySQL.Host, Conf.MySQL.Port, Conf.MySQL.Username)
 	}
 
 	if Conf.Redis.Addr != "" {
-		clog.Debug("- Redis: %s (DB: %d)", Conf.Redis.Addr, Conf.Redis.DB)
+		clog.Module("config").Debugf("- Redis: %s (DB: %d)", Conf.Redis.Addr, Conf.Redis.DB)
 	}
 
 	// 服务配置摘要
 	if Conf.APIConfig.Port > 0 {
-		clog.Debug("- API service: port %d", Conf.APIConfig.Port)
+		clog.Module("config").Debugf("- API service: port %d", Conf.APIConfig.Port)
 	}
 
 	if Conf.RPC.Port > 0 {
-		clog.Debug("- RPC service: port %d", Conf.RPC.Port)
+		clog.Module("config").Debugf("- RPC service: port %d", Conf.RPC.Port)
 	}
 
 	if len(Conf.Etcd.Addrs) > 0 {
-		clog.Debug("- Etcd: %v", Conf.Etcd.Addrs)
+		clog.Module("config").Debugf("- Etcd: %v", Conf.Etcd.Addrs)
 	}
 
 	// 连接服务配置
 	if Conf.Connect.Websocket.Bind != "" {
-		clog.Debug("- WebSocket binding: %s", Conf.Connect.Websocket.Bind)
+		clog.Module("config").Debugf("- WebSocket binding: %s", Conf.Connect.Websocket.Bind)
 	}
 }
 

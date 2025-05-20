@@ -37,7 +37,7 @@ func (c *Chat) Run() error {
 	// 配置Gin
 	runMode := config.GetGinRunMode()
 	gin.SetMode(runMode)
-	clog.Info("[API] Server running in %s mode", runMode)
+	clog.Module("api").Infof("[API] Server running in %s mode", runMode)
 
 	// 初始化路由
 	r := router.Register()
@@ -50,9 +50,9 @@ func (c *Chat) Run() error {
 
 	// 启动服务器
 	go func() {
-		clog.Info("[API] Server starting on port %d", config.Conf.APIConfig.Port)
+		clog.Module("api").Infof("[API] Server starting on port %d", config.Conf.APIConfig.Port)
 		if err := c.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			clog.Error("[API] Server failed to start: %v", err)
+			clog.Module("api").Errorf("[API] Server failed to start: %v", err)
 			os.Exit(1)
 		}
 	}()
@@ -64,15 +64,15 @@ func (c *Chat) Shutdown(ctx context.Context) error {
 	if c.server != nil {
 		// 关闭HTTP服务
 		if err := c.server.Shutdown(ctx); err != nil {
-			clog.Error("[API] Server shutdown error: %v", err)
+			clog.Module("api").Errorf("[API] Server shutdown error: %v", err)
 			return err
 		}
 	}
 
-	clog.Info("[API] Server shutdown complete")
+	clog.Module("api").Info("[API] Server shutdown complete")
 
 	// 关闭依赖服务
 	tools.CloseEtcdClient()
-	clog.Info("[API] Etcd client closed")
+	clog.Module("api").Info("[API] Etcd client closed")
 	return nil
 }

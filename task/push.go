@@ -35,7 +35,7 @@ func (t *Task) processPush(c chan *queue.QueueMsg) {
 	for {
 		select {
 		case msg := <-c:
-			clog.Info("Processing message, RoomID: %d, Op: %d", msg.RoomId, msg.Op)
+			clog.Module("task").Infof("Processing message, RoomID: %d, Op: %d", msg.RoomId, msg.Op)
 			switch msg.Op {
 			case config.OpSingleSend:
 				t.pushSingleToConnect(msg.InstanceId, msg.UserId, msg.Msg)
@@ -45,7 +45,7 @@ func (t *Task) processPush(c chan *queue.QueueMsg) {
 				t.broadcastRoomInfoToConnect(msg.RoomId, msg.Msg)
 			}
 		case <-stopChan:
-			clog.Info("Stopping message processor")
+			clog.Module("task").Infof("Stopping message processor")
 			return
 		}
 	}
@@ -55,10 +55,10 @@ func (t *Task) processPush(c chan *queue.QueueMsg) {
 func Push(msg *queue.QueueMsg) error {
 	select {
 	case pushChannels[rand.Intn(config.Conf.TaskConfig.ChannelSize)] <- msg:
-		clog.Info("Message pushed to channel, Op: %d", msg.Op)
+		clog.Module("task").Infof("Message pushed to channel, Op: %d", msg.Op)
 		return nil
 	default:
-		clog.Warning("All push channels are full, message dropped")
+		clog.Module("task").Warnf("All push channels are full, message dropped")
 		return errors.New("push channels are full")
 	}
 }
@@ -67,5 +67,5 @@ func Push(msg *queue.QueueMsg) error {
 func StopPush() {
 	close(stopChan)
 	wg.Wait()
-	clog.Info("All message processors stopped")
+	clog.Module("task").Infof("All message processors stopped")
 }

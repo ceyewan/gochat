@@ -99,10 +99,10 @@ func InitWebSocket() error {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(DefaultWSServer, w, r)
 	})
-	clog.Info("WebSocket server started at %s", config.Conf.Connect.Websocket.Bind)
+	clog.Module("connect").Infof("WebSocket server started at %s", config.Conf.Connect.Websocket.Bind)
 	err := http.ListenAndServe(config.Conf.Connect.Websocket.Bind, nil)
 	if err != nil {
-		clog.Error("WebSocket server failed to start: %v", err)
+		clog.Module("connect").Errorf("WebSocket server failed to start: %v", err)
 	}
 	return err
 }
@@ -117,7 +117,7 @@ func serveWs(server *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upGrader.Upgrade(w, r, nil)
 	if err != nil {
-		clog.Error("Failed to upgrade connection: %v", err)
+		clog.Module("connect").Errorf("Failed to upgrade connection: %v", err)
 		return
 	}
 
@@ -132,7 +132,7 @@ func serveWs(server *WSServer, w http.ResponseWriter, r *http.Request) {
 		wg.Wait()
 		server.connMgr.RemoveUser(ch.userID, ch.roomID)
 		LogicRPCObj.Disconnect(ch.userID, ch.roomID)
-		clog.Info("User %d disconnected from room %d", ch.userID, ch.roomID)
+		clog.Module("connect").Infof("User %d disconnected from room %d", ch.userID, ch.roomID)
 		conn.Close()
 	}()
 
@@ -161,7 +161,7 @@ func heartbeat(ch *Channel) {
 		select {
 		case <-ticker.C:
 			if ch.shouldClose() {
-				clog.Warning("Heartbeat timeout for user %d, closing connection", ch.userID)
+				clog.Module("connect").Warnf("Heartbeat timeout for user %d, closing connection", ch.userID)
 				ch.conn.Close()
 				return
 			}
@@ -170,7 +170,7 @@ func heartbeat(ch *Channel) {
 			pingMessage, _ := json.Marshal(map[string]string{"type": messageTypePing})
 			err := ch.conn.WriteMessage(websocket.PingMessage, pingMessage)
 			if err != nil {
-				clog.Error("Failed to send ping: %v", err)
+				clog.Module("connect").Errorf("Failed to send ping: %v", err)
 				return
 			}
 		}
@@ -186,7 +186,7 @@ func readMessages(server *WSServer, ch *Channel) {
 	for {
 		_, message, err := ch.conn.ReadMessage()
 		if err != nil {
-			clog.Error("Read message error: %v", err)
+			clog.Module("connect").Errorf("Read message error: %v", err)
 			break
 		}
 
@@ -205,7 +205,7 @@ func readMessages(server *WSServer, ch *Channel) {
 					continue // 忽略客户端的pong响应
 				}
 			}
-			clog.Error("Unmarshal message error: %v", err)
+			clog.Module("connect").Errorf("Unmarshal message error: %v", err)
 			continue
 		}
 
@@ -216,7 +216,7 @@ func readMessages(server *WSServer, ch *Channel) {
 				failResp := NewWSResponse(ConnectFail, nil)
 				resp, _ := json.Marshal(failResp)
 				ch.send <- resp
-				clog.Error("Connect error: %v", err)
+				clog.Module("connect").Errorf("Connect error: %v", err)
 				break
 			}
 			ch.userID = msg.UserID
@@ -226,7 +226,7 @@ func readMessages(server *WSServer, ch *Channel) {
 			successResp := NewWSResponse(ConnectSuccess, nil)
 			resp, _ := json.Marshal(successResp)
 			ch.send <- resp
-			clog.Info("User %d connected to room %d", msg.UserID, msg.RoomID)
+			clog.Module("connect").Infof("User %d connected to room %d", msg.UserID, msg.RoomID)
 		}
 	}
 }
@@ -236,7 +236,7 @@ func writeMessages(ch *Channel) {
 	for message := range ch.send {
 		ch.updateActivity()
 		if err := ch.conn.WriteMessage(websocket.TextMessage, message); err != nil {
-			clog.Error("Write message error: %v", err)
+			clog.Module("connect").Errorf("Write message error: %v", err)
 			break
 		}
 	}

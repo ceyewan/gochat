@@ -291,11 +291,7 @@ func startMockServers(t *testing.T, count int) []*mockServer {
 
 // setupTestConfig 设置测试配置
 func setupTestConfig() error {
-	// 初始化日志
-	if err := clog.SetLogPath(""); err != nil {
-		return fmt.Errorf("failed to initialize logger: %w", err)
-	}
-	clog.SetLogLevel(clog.LevelDebug)
+	clog.Module("etcd_test").Debugf("Set log level to debug")
 
 	// 设置etcd配置
 	config.Conf.Etcd.Addrs = []string{etcdEndpoint}

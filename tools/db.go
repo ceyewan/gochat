@@ -39,14 +39,14 @@ var (
 
 // initDB 初始化数据库连接和表结构
 func initDB() {
-	clog.Debug("Initializing database connection")
+	clog.Module("db").Debugf("Initializing database connection")
 
 	// 获取配置
 	dbConfig := config.Conf.MySQL
 	dbName := dbConfig.DbName
 
 	if dbName == "" {
-		clog.Error("Database name is empty")
+		clog.Module("db").Errorf("Database name is empty")
 		return
 	}
 
@@ -76,14 +76,14 @@ func initDB() {
 	})
 
 	if err != nil {
-		clog.Error("Failed to connect to database: %v", err)
+		clog.Module("db").Errorf("Failed to connect to database: %v", err)
 		return
 	}
 
 	// 配置连接池
 	sqlDB, err := dbMap[dbName].DB()
 	if err != nil {
-		clog.Error("Failed to get database instance: %v", err)
+		clog.Module("db").Errorf("Failed to get database instance: %v", err)
 		return
 	}
 
@@ -94,11 +94,11 @@ func initDB() {
 
 	// 自动迁移表结构
 	if err = dbMap[dbName].AutoMigrate(&User{}); err != nil {
-		clog.Error("Failed to migrate database schema: %v", err)
+		clog.Module("db").Errorf("Failed to migrate database schema: %v", err)
 		return
 	}
 
-	clog.Info("Database connection established and schema migrated successfully")
+	clog.Module("db").Infof("Database connection established and schema migrated successfully")
 }
 
 // GetDB 获取数据库连接
@@ -123,7 +123,7 @@ func GetDB() *gorm.DB {
 	dbLock.Unlock()
 
 	if db == nil {
-		clog.Warning("No database connection available for: %s", dbName)
+		clog.Module("db").Warnf("No database connection available for: %s", dbName)
 	}
 
 	return db
@@ -137,9 +137,9 @@ func CloseAllDBConnections() {
 	for name, db := range dbMap {
 		if sqlDB, err := db.DB(); err == nil {
 			if err = sqlDB.Close(); err != nil {
-				clog.Error("Failed to close database connection %s: %v", name, err)
+				clog.Module("db").Errorf("Failed to close database connection %s: %v", name, err)
 			} else {
-				clog.Info("Database connection %s closed successfully", name)
+				clog.Module("db").Infof("Database connection %s closed successfully", name)
 			}
 		}
 	}
