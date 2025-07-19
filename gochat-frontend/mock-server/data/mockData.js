@@ -5,28 +5,32 @@ const users = [
         username: '张三',
         avatar: '',
         email: 'zhangsan@example.com',
-        createTime: '2024-01-01T00:00:00.000Z'
+        createTime: '2024-01-01T00:00:00.000Z',
+        isGuest: false
     },
     {
         userId: 'user2',
         username: '李四',
         avatar: '',
         email: 'lisi@example.com',
-        createTime: '2024-01-02T00:00:00.000Z'
+        createTime: '2024-01-02T00:00:00.000Z',
+        isGuest: false
     },
     {
         userId: 'user3',
         username: '王五',
         avatar: '',
         email: 'wangwu@example.com',
-        createTime: '2024-01-03T00:00:00.000Z'
+        createTime: '2024-01-03T00:00:00.000Z',
+        isGuest: false
     },
     {
         userId: 'user4',
         username: '赵六',
         avatar: '',
         email: 'zhaoliu@example.com',
-        createTime: '2024-01-04T00:00:00.000Z'
+        createTime: '2024-01-04T00:00:00.000Z',
+        isGuest: false
     }
 ]
 
@@ -73,6 +77,39 @@ const conversations = [
 
 // 模拟消息数据
 const messages = {
+    // 世界聊天室消息
+    world: [
+        {
+            messageId: 'world_msg1',
+            conversationId: 'world',
+            senderId: 'system',
+            senderName: '系统',
+            content: '欢迎来到世界聊天室！这里是所有用户都可以参与的公共聊天空间。',
+            type: 'text',
+            sendTime: '2024-01-13T10:00:00.000Z',
+            status: 'sent'
+        },
+        {
+            messageId: 'world_msg2',
+            conversationId: 'world',
+            senderId: 'user2',
+            senderName: '李四',
+            content: '大家好！',
+            type: 'text',
+            sendTime: '2024-01-13T10:30:00.000Z',
+            status: 'sent'
+        },
+        {
+            messageId: 'world_msg3',
+            conversationId: 'world',
+            senderId: 'user3',
+            senderName: '王五',
+            content: '世界聊天室真不错，可以和所有人聊天！',
+            type: 'text',
+            sendTime: '2024-01-13T11:00:00.000Z',
+            status: 'sent'
+        }
+    ],
     conv1: [
         {
             messageId: 'msg1',

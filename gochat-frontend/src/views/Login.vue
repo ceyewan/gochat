@@ -28,6 +28,15 @@
                 <button type="submit" class="login-btn" :disabled="loading">
                     {{ loading ? '登录中...' : '登录' }}
                 </button>
+
+                <div class="divider">
+                    <span>或</span>
+                </div>
+
+                <button type="button" class="guest-btn" @click="handleGuestLogin" :disabled="loading">
+                    {{ loading ? '进入中...' : '游客登录' }}
+                </button>
+
                 <p class="register-link">
                     还没有账号？<router-link to="/register">注册</router-link>
                 </p>
@@ -55,28 +64,45 @@ export default {
         }
     },
     methods: {
-        ...mapActions('user', ['login']),
-        
+        ...mapActions('user', ['login', 'guestLogin']),
+
         async handleLogin() {
             if (!this.form.username.trim() || !this.form.password.trim()) {
                 this.errorMessage = '请填写用户名和密码'
                 return
             }
-            
+
             this.loading = true
             this.errorMessage = ''
-            
+
             try {
                 await this.login({
                     username: this.form.username.trim(),
                     password: this.form.password
                 })
-                
+
                 // 登录成功，路由守卫会自动跳转到聊天页面
                 this.$router.push('/chat')
             } catch (error) {
                 console.error('登录失败:', error)
                 this.errorMessage = error.response?.data?.message || '登录失败，请检查用户名和密码'
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async handleGuestLogin() {
+            this.loading = true
+            this.errorMessage = ''
+
+            try {
+                await this.guestLogin()
+
+                // 游客登录成功，跳转到聊天页面
+                this.$router.push('/chat')
+            } catch (error) {
+                console.error('游客登录失败:', error)
+                this.errorMessage = error.response?.data?.message || '游客登录失败，请稍后重试'
             } finally {
                 this.loading = false
             }
@@ -167,6 +193,52 @@ export default {
 }
 
 .login-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #ddd;
+}
+
+.divider span {
+    background-color: white;
+    padding: 0 15px;
+    color: #999;
+    font-size: 14px;
+}
+
+.guest-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-bottom: 20px;
+}
+
+.guest-btn:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+.guest-btn:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }

@@ -7,10 +7,36 @@ const { authenticateToken } = require('./auth')
 router.get('/', authenticateToken, (req, res) => {
     console.log('获取会话列表，用户:', req.user.username)
 
-    // 返回用户的会话列表
+    // 世界聊天室（所有用户都有）
+    const worldConversation = {
+        conversationId: 'world',
+        type: 'world',
+        target: {
+            groupId: 'world',
+            groupName: '世界聊天室',
+            avatar: '',
+            description: '所有用户都可以参与的公共聊天室'
+        },
+        lastMessage: '欢迎来到世界聊天室！',
+        lastMessageTime: new Date().toISOString(),
+        unreadCount: 0
+    }
+
+    // 如果是游客，只返回世界聊天室
+    if (req.user.isGuest) {
+        res.json({
+            success: true,
+            data: [worldConversation]
+        })
+        return
+    }
+
+    // 注册用户返回世界聊天室 + 其他会话
+    const userConversations = [worldConversation, ...conversations]
+
     res.json({
         success: true,
-        data: conversations
+        data: userConversations
     })
 })
 

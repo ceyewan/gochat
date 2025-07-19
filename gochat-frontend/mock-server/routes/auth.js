@@ -94,7 +94,8 @@ router.post('/register', (req, res) => {
         username,
         avatar: '',
         email: `${username}@example.com`,
-        createTime: new Date().toISOString()
+        createTime: new Date().toISOString(),
+        isGuest: false
     }
 
     // 添加到用户列表（实际项目中应该保存到数据库）
@@ -108,7 +109,50 @@ router.post('/register', (req, res) => {
                 userId: newUser.userId,
                 username: newUser.username,
                 avatar: newUser.avatar,
-                email: newUser.email
+                email: newUser.email,
+                isGuest: false
+            }
+        }
+    })
+})
+
+// 游客登录
+router.post('/guest', (req, res) => {
+    const { guestName } = req.body
+
+    console.log('游客登录请求:', { guestName })
+
+    // 生成游客用户名
+    const timestamp = Date.now()
+    const randomNum = Math.floor(Math.random() * 1000)
+    const username = guestName || `游客${randomNum}`
+
+    // 创建游客用户
+    const guestUser = {
+        userId: `guest_${timestamp}`,
+        username,
+        avatar: '',
+        email: '',
+        createTime: new Date().toISOString(),
+        isGuest: true
+    }
+
+    // 添加到用户列表（游客用户也需要在内存中保存，用于WebSocket连接）
+    users.push(guestUser)
+
+    // 生成token
+    const token = generateToken(guestUser.userId)
+
+    res.json({
+        success: true,
+        message: '游客登录成功',
+        data: {
+            token,
+            user: {
+                userId: guestUser.userId,
+                username: guestUser.username,
+                avatar: guestUser.avatar,
+                isGuest: true
             }
         }
     })
@@ -144,8 +188,15 @@ function authenticateToken(req, res, next) {
     }
 
     // 从token中提取用户ID
+    // token格式: mock_token_{userId}_{timestamp}
     const parts = token.split('_')
-    const userId = parts[2]
+    // 对于游客用户，userId是guest_{timestamp}，所以需要重新组合
+    let userId
+    if (parts[2] === 'guest') {
+        userId = `guest_${parts[3]}`
+    } else {
+        userId = parts[2]
+    }
 
     const user = users.find(u => u.userId === userId)
     if (!user) {

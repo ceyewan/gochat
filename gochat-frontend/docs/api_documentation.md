@@ -1,15 +1,15 @@
-# API接口对接文档
+# GoChat 即时通讯系统 API 文档
 
-## 接口概览
+## 概述
 
-本文档描述了即时通讯系统的RESTful API接口和WebSocket实时通信协议，供后端开发者对接使用。
+本文档定义了 GoChat 即时通讯系统的 RESTful API 接口和 WebSocket 实时通信协议，供后端开发者实现使用。
 
-## 基础信息
+## 基础配置
 
-- **Base URL**: `http://localhost:8080/api` (开发环境)
-- **WebSocket URL**: `ws://localhost:8080/ws` (开发环境)
+- **Base URL**: `http://localhost:8080/api`
+- **WebSocket URL**: `ws://localhost:8080/ws`
 - **Content-Type**: `application/json`
-- **认证方式**: Bearer Token
+- **认证方式**: Bearer Token (JWT)
 
 ## 通用响应格式
 
@@ -32,19 +32,18 @@
 ```
 
 ### HTTP状态码
-- `200` - 请求成功
+- `200` - 成功
 - `201` - 创建成功
-- `400` - 请求参数错误
+- `400` - 参数错误
 - `401` - 未认证
 - `403` - 无权限
 - `404` - 资源不存在
-- `409` - 资源冲突
 - `500` - 服务器错误
 
-## 认证接口
+## 1. 认证接口
 
-### 1. 用户登录
-**接口**: `POST /auth/login`
+### 用户登录
+`POST /auth/login`
 
 **请求参数**:
 ```json
@@ -58,32 +57,25 @@
 ```json
 {
   "success": true,
-  "message": "登录成功",
   "data": {
     "token": "string",     // JWT token
     "user": {
       "userId": "string",
       "username": "string",
-      "avatar": "string",
-      "email": "string"
+      "avatar": "string"
     }
   }
 }
 ```
 
-**错误码**:
-- `INVALID_CREDENTIALS` - 用户名或密码错误
-- `USER_NOT_FOUND` - 用户不存在
-
-### 2. 用户注册
-**接口**: `POST /auth/register`
+### 用户注册
+`POST /auth/register`
 
 **请求参数**:
 ```json
 {
   "username": "string",    // 用户名，3-20字符
-  "password": "string",    // 密码，6-50字符
-  "email": "string"        // 邮箱，可选
+  "password": "string"     // 密码，6-50字符
 }
 ```
 
@@ -91,30 +83,46 @@
 ```json
 {
   "success": true,
-  "message": "注册成功",
   "data": {
     "user": {
       "userId": "string",
       "username": "string",
-      "avatar": "string",
-      "email": "string"
+      "avatar": "string"
     }
   }
 }
 ```
 
-**错误码**:
-- `USERNAME_EXISTS` - 用户名已存在
-- `INVALID_USERNAME` - 用户名格式错误
-- `INVALID_PASSWORD` - 密码格式错误
+### 游客登录
+`POST /auth/guest`
 
-### 3. 用户登出
-**接口**: `POST /auth/logout`
+**请求参数**:
+```json
+{
+  "guestName": "string"    // 游客昵称，可选，默认生成随机昵称
+}
+```
 
-**请求头**:
+**响应数据**:
+```json
+{
+  "success": true,
+  "data": {
+    "token": "string",     // JWT token
+    "user": {
+      "userId": "string",
+      "username": "string",
+      "avatar": "string",
+      "isGuest": true
+    }
+  }
+}
 ```
-Authorization: Bearer <token>
-```
+
+### 用户登出
+`POST /auth/logout`
+
+**请求头**: `Authorization: Bearer <token>`
 
 **响应数据**:
 ```json
@@ -124,15 +132,12 @@ Authorization: Bearer <token>
 }
 ```
 
-## 用户管理接口
+## 2. 用户管理接口
 
-### 1. 获取当前用户信息
-**接口**: `GET /users/info`
+### 获取当前用户信息
+`GET /users/info`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **响应数据**:
 ```json
@@ -142,22 +147,15 @@ Authorization: Bearer <token>
     "userId": "string",
     "username": "string",
     "avatar": "string",
-    "email": "string",
-    "createTime": "string"
+    "isGuest": "boolean"
   }
 }
 ```
 
-### 2. 搜索用户
-**接口**: `GET /users/{username}`
+### 搜索用户
+`GET /users/{username}`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
-
-**路径参数**:
-- `username` - 要搜索的用户名
+**请求头**: `Authorization: Bearer <token>`
 
 **响应数据**:
 ```json
@@ -166,54 +164,17 @@ Authorization: Bearer <token>
   "data": {
     "userId": "string",
     "username": "string",
-    "avatar": "string",
-    "email": "string"
+    "avatar": "string"
   }
 }
 ```
 
-**错误码**:
-- `USER_NOT_FOUND` - 用户不存在
+## 3. 会话管理接口
 
-### 3. 更新用户信息
-**接口**: `PUT /users/profile`
+### 获取会话列表
+`GET /conversations`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
-
-**请求参数**:
-```json
-{
-  "username": "string",    // 新用户名，可选
-  "avatar": "string"       // 头像URL，可选
-}
-```
-
-**响应数据**:
-```json
-{
-  "success": true,
-  "message": "更新成功",
-  "data": {
-    "userId": "string",
-    "username": "string",
-    "avatar": "string",
-    "email": "string"
-  }
-}
-```
-
-## 会话管理接口
-
-### 1. 获取会话列表
-**接口**: `GET /conversations`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **响应数据**:
 ```json
@@ -221,14 +182,34 @@ Authorization: Bearer <token>
   "success": true,
   "data": [
     {
-      "conversationId": "string",
-      "type": "single|group",    // 会话类型
+      "conversationId": "world",
+      "type": "world",
       "target": {
-        // 单聊时
+        "groupId": "world",
+        "groupName": "世界聊天室",
+        "avatar": "string",
+        "description": "所有用户都可以参与的公共聊天室"
+      },
+      "lastMessage": "string",
+      "lastMessageTime": "string",
+      "unreadCount": "number"
+    },
+    {
+      "conversationId": "string",
+      "type": "single",
+      "target": {
         "userId": "string",
         "username": "string",
-        "avatar": "string",
-        // 群聊时
+        "avatar": "string"
+      },
+      "lastMessage": "string",
+      "lastMessageTime": "string",
+      "unreadCount": "number"
+    },
+    {
+      "conversationId": "string",
+      "type": "group",
+      "target": {
         "groupId": "string",
         "groupName": "string",
         "avatar": "string",
@@ -242,39 +223,10 @@ Authorization: Bearer <token>
 }
 ```
 
-### 2. 获取会话详情
-**接口**: `GET /conversations/{conversationId}`
+### 获取会话消息
+`GET /conversations/{conversationId}/messages`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
-
-**路径参数**:
-- `conversationId` - 会话ID
-
-**响应数据**:
-```json
-{
-  "success": true,
-  "data": {
-    "conversationId": "string",
-    "type": "single|group",
-    "target": {},
-    "lastMessage": "string",
-    "lastMessageTime": "string",
-    "unreadCount": "number"
-  }
-}
-```
-
-### 3. 获取会话消息
-**接口**: `GET /conversations/{conversationId}/messages`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **查询参数**:
 - `page` - 页码，默认1
@@ -291,9 +243,8 @@ Authorization: Bearer <token>
       "senderId": "string",
       "senderName": "string",
       "content": "string",
-      "type": "text|image|file",
-      "sendTime": "string",
-      "status": "sent|delivered|read"
+      "type": "text",
+      "sendTime": "string"
     }
   ],
   "pagination": {
@@ -305,34 +256,20 @@ Authorization: Bearer <token>
 }
 ```
 
-### 4. 标记会话已读
-**接口**: `PUT /conversations/{conversationId}/read`
+### 标记会话已读
+`PUT /conversations/{conversationId}/read`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
-**响应数据**:
-```json
-{
-  "success": true,
-  "message": "标记已读成功"
-}
-```
+### 创建私聊会话
+`POST /conversations`
 
-### 5. 创建会话
-**接口**: `POST /conversations`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **请求参数**:
 ```json
 {
-  "targetUserId": "string"    // 目标用户ID（私聊）
+  "targetUserId": "string"    // 目标用户ID
 }
 ```
 
@@ -340,7 +277,6 @@ Authorization: Bearer <token>
 ```json
 {
   "success": true,
-  "message": "会话创建成功",
   "data": {
     "conversationId": "string",
     "type": "single",
@@ -353,15 +289,14 @@ Authorization: Bearer <token>
 }
 ```
 
-## 好友管理接口
 
-### 1. 添加好友
-**接口**: `POST /friends`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+## 4. 好友管理接口
+
+### 添加好友
+`POST /friends`
+
+**请求头**: `Authorization: Bearer <token>`
 
 **请求参数**:
 ```json
@@ -374,29 +309,24 @@ Authorization: Bearer <token>
 ```json
 {
   "success": true,
-  "message": "好友添加成功",
   "data": {
-    "friendship": {
-      "userId": "string",
-      "friendId": "string",
-      "status": "accepted"
-    },
     "conversation": {
       "conversationId": "string",
       "type": "single",
-      "target": {}
+      "target": {
+        "userId": "string",
+        "username": "string",
+        "avatar": "string"
+      }
     }
   }
 }
 ```
 
-### 2. 获取好友列表
-**接口**: `GET /friends`
+### 获取好友列表
+`GET /friends`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **响应数据**:
 ```json
@@ -413,34 +343,12 @@ Authorization: Bearer <token>
 }
 ```
 
-### 3. 删除好友
-**接口**: `DELETE /friends/{friendId}`
+## 5. 群聊管理接口
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+### 创建群聊
+`POST /groups`
 
-**路径参数**:
-- `friendId` - 好友用户ID
-
-**响应数据**:
-```json
-{
-  "success": true,
-  "message": "好友删除成功"
-}
-```
-
-## 群聊管理接口
-
-### 1. 创建群聊
-**接口**: `POST /groups`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **请求参数**:
 ```json
@@ -454,21 +362,17 @@ Authorization: Bearer <token>
 ```json
 {
   "success": true,
-  "message": "群聊创建成功",
   "data": {
     "group": {
       "groupId": "string",
       "groupName": "string",
       "avatar": "string",
-      "description": "string",
       "members": [
         {
           "userId": "string",
-          "role": "admin|member",
-          "joinTime": "string"
+          "role": "admin|member"
         }
-      ],
-      "createTime": "string"
+      ]
     },
     "conversation": {
       "conversationId": "string",
@@ -478,13 +382,10 @@ Authorization: Bearer <token>
 }
 ```
 
-### 2. 获取群聊信息
-**接口**: `GET /groups/{groupId}`
+### 获取群聊信息
+`GET /groups/{groupId}`
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **响应数据**:
 ```json
@@ -494,87 +395,31 @@ Authorization: Bearer <token>
     "groupId": "string",
     "groupName": "string",
     "avatar": "string",
-    "description": "string",
     "members": [
       {
         "userId": "string",
         "username": "string",
         "avatar": "string",
-        "role": "admin|member",
-        "joinTime": "string"
+        "role": "admin|member"
       }
-    ],
-    "createTime": "string"
+    ]
   }
 }
 ```
 
-### 3. 添加群成员
-**接口**: `POST /groups/{groupId}/members`
+## 6. 消息管理接口
 
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+### 发送消息（HTTP方式）
+`POST /messages`
 
-**请求参数**:
-```json
-{
-  "memberIds": ["string"]    // 新成员用户ID数组
-}
-```
-
-**响应数据**:
-```json
-{
-  "success": true,
-  "message": "成功添加 2 名成员",
-  "data": [
-    {
-      "userId": "string",
-      "role": "member",
-      "joinTime": "string"
-    }
-  ]
-}
-```
-
-### 4. 移除群成员
-**接口**: `DELETE /groups/{groupId}/members/{userId}`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
-
-**路径参数**:
-- `groupId` - 群聊ID
-- `userId` - 要移除的用户ID
-
-**响应数据**:
-```json
-{
-  "success": true,
-  "message": "移除成员成功"
-}
-```
-
-## 消息管理接口
-
-### 1. 发送消息（HTTP方式）
-**接口**: `POST /messages`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
+**请求头**: `Authorization: Bearer <token>`
 
 **请求参数**:
 ```json
 {
   "conversationId": "string",
   "content": "string",
-  "type": "text|image|file"
+  "type": "text"
 }
 ```
 
@@ -582,7 +427,6 @@ Authorization: Bearer <token>
 ```json
 {
   "success": true,
-  "message": "消息发送成功",
   "data": {
     "messageId": "string",
     "conversationId": "string",
@@ -590,90 +434,19 @@ Authorization: Bearer <token>
     "senderName": "string",
     "content": "string",
     "type": "text",
-    "sendTime": "string",
-    "status": "sent"
+    "sendTime": "string"
   }
 }
 ```
 
-### 2. 撤回消息
-**接口**: `DELETE /messages/{messageId}`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
-
-**路径参数**:
-- `messageId` - 消息ID
-
-**响应数据**:
-```json
-{
-  "success": true,
-  "message": "消息撤回成功",
-  "data": {
-    "messageId": "string",
-    "content": "消息已撤回",
-    "type": "recalled",
-    "recallTime": "string"
-  }
-}
-```
-
-**错误码**:
-- `MESSAGE_NOT_FOUND` - 消息不存在
-- `NO_PERMISSION` - 无权限撤回
-- `TIME_LIMIT_EXCEEDED` - 超过撤回时间限制
-
-### 3. 搜索消息
-**接口**: `GET /messages/search/{keyword}`
-
-**请求头**:
-```
-Authorization: Bearer <token>
-```
-
-**查询参数**:
-- `conversationId` - 限制搜索范围到特定会话（可选）
-
-**响应数据**:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "messageId": "string",
-      "conversationId": "string",
-      "senderId": "string",
-      "senderName": "string",
-      "content": "string",
-      "type": "text",
-      "sendTime": "string"
-    }
-  ],
-  "total": "number"
-}
-```
-
-## WebSocket实时通信协议
+## 7. WebSocket 实时通信协议
 
 ### 连接建立
 **URL**: `ws://localhost:8080/ws?token={jwt_token}`
 
-**连接确认**:
-```json
-{
-  "type": "connected",
-  "data": {
-    "message": "WebSocket连接成功"
-  }
-}
-```
-
 ### 消息类型
 
-#### 1. 发送消息
+#### 发送消息
 **客户端发送**:
 ```json
 {
@@ -681,7 +454,7 @@ Authorization: Bearer <token>
   "data": {
     "conversationId": "string",
     "content": "string",
-    "messageType": "text|image|file",
+    "messageType": "text",
     "tempMessageId": "string"    // 客户端临时ID
   }
 }
@@ -698,7 +471,7 @@ Authorization: Bearer <token>
 }
 ```
 
-#### 2. 接收新消息
+#### 接收新消息
 **服务器推送**:
 ```json
 {
@@ -712,14 +485,13 @@ Authorization: Bearer <token>
       "senderName": "string",
       "content": "string",
       "type": "text",
-      "sendTime": "string",
-      "status": "sent"
+      "sendTime": "string"
     }
   }
 }
 ```
 
-#### 3. 在线状态更新
+#### 在线状态更新
 **服务器推送**:
 ```json
 {
@@ -731,51 +503,11 @@ Authorization: Bearer <token>
 }
 ```
 
-#### 4. 群成员在线状态
-**服务器推送**:
-```json
-{
-  "type": "group-member-online",
-  "data": {
-    "groupId": "string",
-    "userId": "string",
-    "online": "boolean"
-  }
-}
-```
+#### 心跳检测
+**客户端发送**: `{"type": "ping"}`
+**服务器响应**: `{"type": "pong"}`
 
-#### 5. 会话更新
-**服务器推送**:
-```json
-{
-  "type": "conversation-update",
-  "data": {
-    "conversationId": "string",
-    "updates": {
-      "lastMessage": "string",
-      "lastMessageTime": "string",
-      "unreadCount": "number"
-    }
-  }
-}
-```
-
-#### 6. 心跳检测
-**客户端发送**:
-```json
-{
-  "type": "ping"
-}
-```
-
-**服务器响应**:
-```json
-{
-  "type": "pong"
-}
-```
-
-## 数据模型
+## 8. 数据模型
 
 ### User（用户）
 ```json
@@ -783,9 +515,7 @@ Authorization: Bearer <token>
   "userId": "string",      // 用户ID
   "username": "string",    // 用户名
   "avatar": "string",      // 头像URL
-  "email": "string",       // 邮箱
-  "createTime": "string",  // 创建时间
-  "online": "boolean"      // 在线状态
+  "isGuest": "boolean"     // 是否为游客
 }
 ```
 
@@ -793,14 +523,15 @@ Authorization: Bearer <token>
 ```json
 {
   "conversationId": "string",    // 会话ID
-  "type": "single|group",        // 会话类型
+  "type": "single|group|world",  // 会话类型
   "target": {                    // 目标对象
     "userId": "string",          // 单聊：对方用户ID
     "username": "string",        // 单聊：对方用户名
-    "groupId": "string",         // 群聊：群ID
-    "groupName": "string",       // 群聊：群名称
+    "groupId": "string",         // 群聊/世界聊天室：群ID
+    "groupName": "string",       // 群聊/世界聊天室：群名称
     "avatar": "string",          // 头像
-    "memberCount": "number"      // 群聊：成员数量
+    "memberCount": "number",     // 群聊：成员数量（世界聊天室无此字段）
+    "description": "string"      // 世界聊天室：描述信息
   },
   "lastMessage": "string",       // 最后消息
   "lastMessageTime": "string",   // 最后消息时间
@@ -816,78 +547,30 @@ Authorization: Bearer <token>
   "senderId": "string",          // 发送者ID
   "senderName": "string",        // 发送者姓名
   "content": "string",           // 消息内容
-  "type": "text|image|file|recalled",  // 消息类型
-  "sendTime": "string",          // 发送时间
-  "status": "sending|sent|delivered|read|failed"  // 消息状态
+  "type": "text",                // 消息类型
+  "sendTime": "string"           // 发送时间
 }
 ```
 
-### Group（群聊）
-```json
-{
-  "groupId": "string",           // 群ID
-  "groupName": "string",         // 群名称
-  "avatar": "string",            // 群头像
-  "description": "string",       // 群描述
-  "members": [                   // 群成员
-    {
-      "userId": "string",
-      "role": "admin|member",
-      "joinTime": "string"
-    }
-  ],
-  "createTime": "string"         // 创建时间
-}
-```
+## 9. 特殊说明
 
-## 错误处理
+### 世界聊天室
+- 世界聊天室是一个特殊的群聊，`conversationId` 固定为 `"world"`
+- 所有用户（包括游客）在获取会话列表时都会包含世界聊天室
+- 世界聊天室不需要维护成员关系，所有用户都能发送和接收消息
+- 消息推送时，需要向所有在线用户推送世界聊天室的消息
 
-### 常见错误码
-- `INVALID_TOKEN` - 无效的认证令牌
-- `TOKEN_EXPIRED` - 令牌已过期
-- `PERMISSION_DENIED` - 权限不足
-- `RESOURCE_NOT_FOUND` - 资源不存在
-- `DUPLICATE_RESOURCE` - 资源重复
-- `VALIDATION_ERROR` - 参数验证失败
-- `RATE_LIMIT_EXCEEDED` - 请求频率超限
-- `SERVER_ERROR` - 服务器内部错误
+### 游客限制
+- 游客用户 `isGuest` 字段为 `true`
+- 游客不能添加好友（前端隐藏添加好友按钮）
+- 游客不能创建群聊（前端隐藏创建群聊按钮）
+- 游客可以参与世界聊天室和接受其他用户发起的私聊
 
-### 错误响应示例
-```json
-{
-  "success": false,
-  "message": "用户名已存在",
-  "code": "USERNAME_EXISTS",
-  "timestamp": "2025-01-13T15:30:00.000Z"
-}
-```
-
-## 开发注意事项
-
-### 1. 认证和安全
-- 所有需要认证的接口必须在请求头中包含有效的JWT token
-- Token应设置合理的过期时间，建议7天
-- 敏感操作应进行二次验证
-
-### 2. 分页处理
-- 消息历史、好友列表等大数据量接口需要支持分页
-- 建议每页数量限制在50以内
-- 提供hasMore字段指示是否有更多数据
-
-### 3. 实时性要求
-- 消息发送/接收应优先使用WebSocket
-- HTTP接口作为WebSocket的备用方案
-- 在线状态更新应实时推送
-
-### 4. 性能优化
-- 支持消息内容压缩
-- 实现适当的缓存策略
-- 提供CDN支持用于文件上传
-
-### 5. 数据一致性
-- 确保会话列表与消息列表的一致性
-- 处理并发操作的冲突
-- 实现适当的数据备份机制
+### 实现要点
+- 后端在返回会话列表时，始终包含世界聊天室作为第一个会话
+- 游客用户的会话列表中，只显示世界聊天室和被动创建的私聊会话
+- 世界聊天室消息使用与群聊相同的推送机制，但推送给所有在线用户
+- 前端根据用户的 `isGuest` 字段控制功能按钮的显示
 
 ---
-更新时间：2025-01-13 23:59
+更新时间：2025-01-19

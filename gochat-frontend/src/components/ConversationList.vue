@@ -28,7 +28,7 @@
         </div>
         
         <!-- 底部操作按钮 -->
-        <div class="list-footer">
+        <div class="list-footer" v-if="!isGuest">
             <button class="action-btn" @click="showAddFriend">
                 <span class="btn-icon">+</span>
                 <span class="btn-text">添加好友</span>
@@ -37,6 +37,14 @@
                 <span class="btn-icon">👥</span>
                 <span class="btn-text">创建群聊</span>
             </button>
+        </div>
+
+        <!-- 游客提示 -->
+        <div class="guest-tip" v-if="isGuest">
+            <p class="tip-text">游客模式下只能使用世界聊天室</p>
+            <p class="tip-link">
+                <a href="#" @click.prevent="goToRegister">注册账号</a> 解锁更多功能
+            </p>
         </div>
     </div>
 </template>
@@ -54,10 +62,12 @@ export default {
         ...mapState('conversations', ['loading']),
         ...mapState('currentChat', ['currentConversation']),
         ...mapGetters('conversations', ['conversationList', 'totalUnreadCount']),
+        ...mapGetters('user', ['isGuest']),
     },
     methods: {
         ...mapActions('currentChat', ['selectConversation']),
-        
+        ...mapActions('user', ['logout']),
+
         async handleSelectConversation(conversation) {
             try {
                 await this.selectConversation(conversation)
@@ -65,15 +75,27 @@ export default {
                 console.error('选择会话失败:', error)
             }
         },
-        
+
         showAddFriend() {
             // 触发全局事件显示添加好友弹窗
             window.dispatchEvent(new Event('show-add-friend-modal'))
         },
-        
+
         showCreateGroup() {
             // 触发全局事件显示创建群聊弹窗
             window.dispatchEvent(new Event('show-create-group-modal'))
+        },
+
+        async goToRegister() {
+            try {
+                // 游客需要先登出，然后跳转到注册页面
+                await this.logout()
+                this.$router.push('/register')
+            } catch (error) {
+                console.error('跳转注册页面失败:', error)
+                // 如果登出失败，直接跳转
+                this.$router.push('/register')
+            }
         }
     }
 }
@@ -164,6 +186,35 @@ export default {
 .btn-text {
     color: #495057;
     font-weight: 500;
+}
+
+.guest-tip {
+    padding: 15px 20px;
+    border-top: 1px solid #e5e5e5;
+    text-align: center;
+    background-color: #f8f9fa;
+}
+
+.tip-text {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.tip-link {
+    margin: 0;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.tip-link a {
+    color: #0078ff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.tip-link a:hover {
+    text-decoration: underline;
 }
 
 /* 滚动条样式 */

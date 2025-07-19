@@ -68,6 +68,32 @@ const actions = {
         }
     },
 
+    // 游客登录
+    async guestLogin({ commit, dispatch }) {
+        try {
+            const response = await request.post('/auth/guest', {
+                guestName: '' // 让后端自动生成游客昵称
+            })
+
+            const { token, user } = response.data
+
+            // 保存用户信息
+            commit('setToken', token)
+            commit('setUserInfo', user)
+
+            // 初始化WebSocket连接
+            initWebSocket(token)
+
+            // 加载会话列表（包含世界聊天室）
+            await dispatch('conversations/fetchConversations', null, { root: true })
+
+            return response
+        } catch (error) {
+            console.error('游客登录失败:', error)
+            throw error
+        }
+    },
+
     // 登出
     async logout({ commit }) {
         try {
@@ -115,6 +141,7 @@ const getters = {
     userId: state => state.userInfo?.userId,
     username: state => state.userInfo?.username,
     avatar: state => state.userInfo?.avatar,
+    isGuest: state => state.userInfo?.isGuest || false,
 }
 
 export default {
