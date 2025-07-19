@@ -45,6 +45,29 @@ const mutations = {
 }
 
 const actions = {
+    // 获取在线状态（从API）
+    async fetchOnlineStatus({ commit }) {
+        try {
+            const response = await import('@/utils/request').then(module => module.default.get('/users/status/online'))
+            const onlineStatusData = response.data || {}
+
+            // 转换为数组格式进行批量更新
+            const statusList = Object.entries(onlineStatusData).map(([userId, online]) => ({
+                userId,
+                online
+            }))
+
+            if (statusList.length > 0) {
+                commit('updateFriendStatusBatch', statusList)
+            }
+
+            return response
+        } catch (error) {
+            console.error('获取在线状态失败:', error)
+            throw error
+        }
+    },
+
     // 更新好友在线状态（WebSocket接收）
     updateFriendStatus({ commit }, statusData) {
         if (Array.isArray(statusData)) {

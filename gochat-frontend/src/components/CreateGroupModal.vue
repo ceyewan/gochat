@@ -194,26 +194,29 @@ export default {
         // 创建群聊
         async handleCreateGroup() {
             if (!this.canCreate || this.creating) return
-            
+
             this.creating = true
             this.errorMessage = ''
             this.successMessage = ''
-            
+
             try {
                 const memberIds = this.selectedMembers.map(member => member.userId)
-                
+
                 await this.createGroup({
                     groupName: this.groupName.trim(),
                     memberIds
                 })
-                
+
                 this.successMessage = '群聊创建成功！'
-                
-                // 延迟关闭弹窗
+
+                // 刷新会话列表
+                await this.$store.dispatch('conversations/fetchConversations')
+
+                // 缩短延迟时间，提升用户体验
                 setTimeout(() => {
                     this.closeModal()
-                }, 2000)
-                
+                }, 1000)
+
             } catch (error) {
                 console.error('创建群聊失败:', error)
                 this.errorMessage = error.response?.data?.message || '创建群聊失败，请重试'

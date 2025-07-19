@@ -115,19 +115,25 @@ export default {
         
         async addFriend() {
             if (!this.searchResult || this.adding) return
-            
+
             this.adding = true
             this.searchError = ''
-            
+
             try {
-                await this.addFriend({ username: this.searchResult.username })
+                const result = await this.$store.dispatch('conversations/addFriend', {
+                    username: this.searchResult.username
+                })
+
                 this.successMessage = '好友添加成功！'
-                
+
+                // 刷新会话列表以显示新的会话
+                await this.$store.dispatch('conversations/fetchConversations')
+
                 // 延迟关闭弹窗
                 setTimeout(() => {
                     this.closeModal()
-                }, 2000)
-                
+                }, 1500)
+
             } catch (error) {
                 console.error('添加好友失败:', error)
                 this.searchError = error.response?.data?.message || '添加好友失败，请重试'

@@ -109,9 +109,13 @@ const actions = {
                 friendId: friendInfo.userId
             })
 
+            console.log('添加好友响应:', addResponse.data)
+
             // 如果返回了会话信息，添加到会话列表
-            if (addResponse.data.conversation) {
-                commit('addConversation', addResponse.data.conversation)
+            if (addResponse.data && addResponse.data.data && addResponse.data.data.conversation) {
+                const conversation = addResponse.data.data.conversation
+                console.log('添加会话到列表:', conversation)
+                commit('addConversation', conversation)
             }
 
             return addResponse
@@ -129,9 +133,13 @@ const actions = {
                 members: memberIds
             })
 
+            console.log('创建群聊响应:', response.data)
+
             // 添加群聊会话到列表
-            if (response.data.conversation) {
-                commit('addConversation', response.data.conversation)
+            if (response.data && response.data.data && response.data.data.conversation) {
+                const conversation = response.data.data.conversation
+                console.log('添加群聊会话到列表:', conversation)
+                commit('addConversation', conversation)
             }
 
             return response

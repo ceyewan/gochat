@@ -245,6 +245,8 @@ export default {
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0; /* 确保flex子元素可以收缩 */
+    overflow: hidden;
 }
 
 .chat-header {
@@ -286,6 +288,7 @@ export default {
     flex: 1;
     overflow-y: auto;
     background-color: #f8f9fa;
+    min-height: 0; /* 确保可以收缩 */
 }
 
 .no-conversation {
@@ -357,6 +360,7 @@ export default {
     padding: 15px 20px;
     border-top: 1px solid #e5e5e5;
     background-color: #fff;
+    flex-shrink: 0; /* 防止输入区域被压缩 */
 }
 
 .input-container {
@@ -430,21 +434,46 @@ export default {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+    .chat-main {
+        height: calc(100vh - 250px); /* 减去header和会话列表高度 */
+        height: calc(100dvh - 250px);
+    }
+
     .chat-header {
         padding: 10px 15px;
+        flex-shrink: 0;
     }
-    
+
+    .message-area {
+        flex: 1;
+        min-height: 0;
+    }
+
     .message-list {
         padding: 15px;
     }
-    
+
     .input-area {
         padding: 10px 15px;
+        flex-shrink: 0;
+        /* 确保输入区域在移动端可见 */
+        position: relative;
+        z-index: 1;
     }
-    
+
+    .input-container {
+        gap: 8px;
+    }
+
+    .input-container textarea {
+        min-height: 36px;
+        font-size: 16px; /* 防止iOS缩放 */
+    }
+
     .send-button {
         padding: 8px 16px;
         font-size: 13px;
+        min-width: 60px;
     }
 }
 </style>

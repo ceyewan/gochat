@@ -11,6 +11,9 @@ const messageRoutes = require('./routes/messages')
 const friendRoutes = require('./routes/friends')
 const groupRoutes = require('./routes/groups')
 
+// 导入mock数据
+const { users, onlineStatus } = require('./data/mockData')
+
 const app = express()
 const server = http.createServer(app)
 
@@ -50,21 +53,18 @@ wss.on('connection', (ws, req) => {
             token.includes('user2') ? 'user2' : 'testuser'
         clients.set(ws, { userId, token })
 
+        // 更新在线状态
+        onlineStatus[userId] = true
+
         // 发送连接成功消息
         ws.send(JSON.stringify({
             type: 'connected',
             data: { message: 'WebSocket连接成功' }
         }))
 
-        // 模拟在线状态更新
+        // 广播用户上线状态给其他用户
         setTimeout(() => {
-            ws.send(JSON.stringify({
-                type: 'friend-online',
-                data: {
-                    userId: 'user2',
-                    online: true
-                }
-            }))
+            broadcastOnlineStatus(userId, true)
         }, 1000)
     }
 
@@ -83,6 +83,13 @@ wss.on('connection', (ws, req) => {
         const clientInfo = clients.get(ws)
         if (clientInfo) {
             console.log('WebSocket连接关闭，用户:', clientInfo.userId)
+
+            // 更新离线状态
+            onlineStatus[clientInfo.userId] = false
+
+            // 广播用户离线状态
+            broadcastOnlineStatus(clientInfo.userId, false)
+
             clients.delete(ws)
         }
     })
@@ -101,11 +108,16 @@ function handleWebSocketMessage(ws, data) {
         case 'send-message':
             // 模拟消息发送
             const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+            // 根据用户ID查找真实用户名
+            const sender = users.find(u => u.userId === clientInfo.userId)
+            const senderName = sender ? sender.username : '未知用户'
+
             const message = {
                 messageId,
                 conversationId: data.data.conversationId,
                 senderId: clientInfo.userId,
-                senderName: clientInfo.userId === 'user1' ? '测试用户1' : '测试用户',
+                senderName: senderName,
                 content: data.data.content,
                 type: data.data.messageType || 'text',
                 sendTime: new Date().toISOString(),
@@ -141,6 +153,30 @@ function handleWebSocketMessage(ws, data) {
             ws.send(JSON.stringify({ type: 'pong' }))
             break
     }
+}
+
+// 广播在线状态
+function broadcastOnlineStatus(userId, isOnline) {
+    const statusMessage = {
+        type: 'friend-online',
+        data: {
+            userId: userId,
+            online: isOnline
+        }
+    }
+
+    // 向所有连接的客户端广播状态更新
+    clients.forEach((clientInfo, clientWs) => {
+        if (clientInfo.userId !== userId) { // 不向自己发送
+            try {
+                clientWs.send(JSON.stringify(statusMessage))
+            } catch (error) {
+                console.error('发送在线状态失败:', error)
+            }
+        }
+    })
+
+    console.log(`广播用户 ${userId} ${isOnline ? '上线' : '离线'} 状态`)
 }
 
 // 启动服务器

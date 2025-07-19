@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { users } = require('../data/mockData')
+const { users, onlineStatus } = require('../data/mockData')
 const { authenticateToken } = require('./auth')
 
 // 获取当前用户信息
@@ -38,7 +38,8 @@ router.get('/:username', authenticateToken, (req, res) => {
             userId: user.userId,
             username: user.username,
             avatar: user.avatar,
-            email: user.email
+            email: user.email,
+            online: onlineStatus[user.userId] || false
         }
     })
 })
@@ -97,6 +98,28 @@ router.put('/profile', authenticateToken, (req, res) => {
             username: users[userIndex].username,
             avatar: users[userIndex].avatar,
             email: users[userIndex].email
+        }
+    })
+})
+
+// 获取在线状态
+router.get('/status/online', authenticateToken, (req, res) => {
+    res.json({
+        success: true,
+        data: onlineStatus
+    })
+})
+
+// 获取特定用户的在线状态
+router.get('/:userId/status', authenticateToken, (req, res) => {
+    const { userId } = req.params
+    const isOnline = onlineStatus[userId] || false
+
+    res.json({
+        success: true,
+        data: {
+            userId: userId,
+            online: isOnline
         }
     })
 })

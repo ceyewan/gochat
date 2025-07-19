@@ -93,9 +93,13 @@ export class IMWebSocket {
                 break
             case 'message-ack':
                 // 消息确认
+                const ackData = data.data
+                // 使用临时消息ID或真实消息ID来更新状态
+                const messageIdToUpdate = ackData.tempMessageId || ackData.messageId
                 store.dispatch('currentChat/updateMessageStatus', {
-                    messageId: data.data.messageId,
-                    status: 'sent'
+                    messageId: messageIdToUpdate,
+                    status: 'sent',
+                    realMessageId: ackData.messageId // 如果有真实ID，也保存
                 })
                 break
             case 'friend-online':

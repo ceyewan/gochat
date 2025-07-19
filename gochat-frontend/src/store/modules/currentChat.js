@@ -41,10 +41,14 @@ const mutations = {
             Object.assign(message, updates)
         }
     },
-    updateMessageStatus(state, { messageId, status }) {
+    updateMessageStatus(state, { messageId, status, realMessageId }) {
         const message = state.messages.find(msg => msg.messageId === messageId)
         if (message) {
             message.status = status
+            // 如果有真实的消息ID，更新消息ID
+            if (realMessageId && realMessageId !== messageId) {
+                message.messageId = realMessageId
+            }
         }
     },
     setLoading(state, loading) {
@@ -156,7 +160,8 @@ const actions = {
             data: {
                 conversationId: state.currentConversation.conversationId,
                 content,
-                messageType: type
+                messageType: type,
+                tempMessageId: tempMessageId // 传递临时消息ID用于确认
             }
         })
 
@@ -168,6 +173,17 @@ const actions = {
             })
             throw new Error('消息发送失败')
         }
+
+        // 设置超时处理，如果5秒内没有收到确认，标记为失败
+        setTimeout(() => {
+            const currentMessage = state.messages.find(msg => msg.messageId === tempMessageId)
+            if (currentMessage && currentMessage.status === 'sending') {
+                commit('updateMessageStatus', {
+                    messageId: tempMessageId,
+                    status: 'failed'
+                })
+            }
+        }, 5000)
 
         return message
     },
