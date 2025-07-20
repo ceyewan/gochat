@@ -25,15 +25,17 @@
 
 我们将使用以下 Go 语言社区中最成熟、最流行的库来构建 `im-gateway`：
 
-| 用途 | 库/工具 | 学习重点 |
-| :--- | :--- | :--- |
-| **HTTP 框架** | `github.com/gin-gonic/gin` | 路由、中间件、参数绑定、JSON响应 |
-| **WebSocket** | `github.com/gorilla/websocket` | 连接升级（Upgrade）、读/写消息、Ping/Pong |
-| **gRPC 客户端** | `google.golang.org/grpc` | 创建客户端连接、调用远程方法、处理上下文(Context) |
-| **Kafka 客户端** | `github.com/segmentio/kafka-go` | 生产者(Producer)和消费者(Reader)的配置与使用 |
-| **配置管理** | `github.com/spf13/viper` | 从文件/环境变量读取配置 |
-| **日志** | `go.uber.org/zap` | 结构化日志、日志分级 |
-| **服务发现** | `go.etcd.io/etcd/client/v3` | 连接etcd、注册服务、发现其他服务 |
+| 用途 | 库/工具 | 版本要求 | 学习重点 |
+| :--- | :--- | :--- | :--- |
+| **基础库** | `im-infra` | 内部模块 | 统一的基础能力封装，配置、日志、RPC等 |
+| **HTTP 框架** | `github.com/gin-gonic/gin` | v1.9+ | 路由、中间件、参数绑定、JSON响应 |
+| **WebSocket** | `github.com/gorilla/websocket` | v1.5+ | 连接升级（Upgrade）、读/写消息、Ping/Pong |
+| **gRPC 客户端** | `google.golang.org/grpc` | v1.50+ | 创建客户端连接、调用远程方法、处理上下文(Context) |
+| **Kafka 客户端** | `github.com/segmentio/kafka-go` | v0.4+ | 生产者(Producer)和消费者(Reader)的配置与使用 |
+| **JWT认证** | `github.com/golang-jwt/jwt/v4` | v4.4+ | JWT Token的生成、验证和解析 |
+| **链路追踪** | OpenTelemetry | v1.0+ | 分布式链路追踪，集成在im-infra中 |
+
+**注意**: 所有外部依赖都应通过`im-infra`基础库进行封装，避免在业务代码中直接使用第三方库。
 
 ### **3. 项目结构 (The "Blueprint")**
 
@@ -45,18 +47,29 @@ im-gateway/
 │   └── main.go              # 程序入口：初始化、启动服务
 ├── internal/
 │   ├── config/              # 配置加载与定义
+│   │   ├── config.go        # 配置结构体定义
+│   │   └── config.yaml      # 默认配置文件
 │   ├── handler/
-│   │   ├── http_handler.go    # 所有 HTTP API 的处理器
-│   │   └── ws_handler.go      # WebSocket 的核心处理器
+│   │   ├── http_handler.go  # HTTP API 处理器
+│   │   ├── ws_handler.go    # WebSocket 处理器
+│   │   └── health_handler.go # 健康检查处理器
 │   ├── middleware/
-│   │   └── auth.go            # JWT 认证中间件
+│   │   ├── auth.go          # JWT 认证中间件
+│   │   ├── cors.go          # 跨域处理中间件
+│   │   ├── logging.go       # 日志中间件
+│   │   └── tracing.go       # 链路追踪中间件
 │   ├── service/
-│   │   ├── kafka_consumer.go  # Kafka 消费者逻辑
-│   │   └── ws_conn.go         # WebSocket 连接的封装
+│   │   ├── kafka_consumer.go # Kafka 消费者逻辑
+│   │   ├── ws_conn.go       # WebSocket 连接封装
+│   │   ├── ws_manager.go    # WebSocket 连接管理器
+│   │   └── message_router.go # 消息路由逻辑
 │   ├── router/
-│   │   └── router.go          # 注册所有路由
+│   │   └── router.go        # 路由注册和配置
 │   └── rpc/
-│       └── logic_client.go    # im-logic 的 gRPC 客户端封装
+│       ├── logic_client.go  # im-logic gRPC 客户端
+│       └── client_pool.go   # gRPC 连接池管理
+├── pkg/
+│   └── proto/               # 引用im-infra中的proto定义
 ├── go.mod
 └── go.sum
 ```

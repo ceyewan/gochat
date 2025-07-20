@@ -6,10 +6,16 @@
 
 ## 基础配置
 
-- **Base URL**: `http://localhost:8080/api`
-- **WebSocket URL**: `ws://localhost:8080/ws`
+- **Base URL**: `http://localhost:8080/api` (im-gateway服务)
+- **WebSocket URL**: `ws://localhost:8080/ws` (im-gateway服务)
 - **Content-Type**: `application/json`
 - **认证方式**: Bearer Token (JWT)
+- **API版本**: v1
+- **字符编码**: UTF-8
+
+## 架构说明
+
+本API由GoChat微服务架构中的`im-gateway`服务对外提供，内部通过gRPC调用`im-logic`服务处理业务逻辑，通过Kafka进行异步消息处理。所有数据访问通过`im-repo`服务统一管理。
 
 ## 通用响应格式
 
@@ -452,22 +458,26 @@
 {
   "type": "send-message",
   "data": {
-    "conversationId": "string",
-    "content": "string",
-    "messageType": "text",
-    "tempMessageId": "string"    // 客户端临时ID
-  }
+    "conversationId": "string",     // 会话ID
+    "content": "string",            // 消息内容
+    "messageType": "text",          // 消息类型 (text/image/file)
+    "clientMsgId": "string"         // 客户端消息ID (用于幂等性)
+  },
+  "traceId": "string"               // 可选：链路追踪ID
 }
 ```
 
-**服务器确认**:
+**服务器确认** (立即返回，优化UI体验):
 ```json
 {
   "type": "message-ack",
   "data": {
-    "messageId": "string",      // 服务器生成的消息ID
-    "tempMessageId": "string"   // 对应的临时ID
-  }
+    "messageId": "string",          // 服务器生成的消息ID
+    "clientMsgId": "string",        // 对应的客户端消息ID
+    "seqId": "number",              // 会话内序列号
+    "sendTime": "string"            // 服务器处理时间
+  },
+  "traceId": "string"
 }
 ```
 
@@ -522,19 +532,20 @@
 ### Conversation（会话）
 ```json
 {
-  "conversationId": "string",    // 会话ID
+  "conversationId": "string",    // 会话ID，格式：single_xxx/group_xxx/world
   "type": "single|group|world",  // 会话类型
   "target": {                    // 目标对象
-    "userId": "string",          // 单聊：对方用户ID
+    "userId": "string",          // 单聊：对方用户ID (BIGINT UNSIGNED)
     "username": "string",        // 单聊：对方用户名
-    "groupId": "string",         // 群聊/世界聊天室：群ID
+    "groupId": "string",         // 群聊/世界聊天室：群ID (BIGINT UNSIGNED)
     "groupName": "string",       // 群聊/世界聊天室：群名称
-    "avatar": "string",          // 头像
+    "avatar": "string",          // 头像URL
     "memberCount": "number",     // 群聊：成员数量（世界聊天室无此字段）
     "description": "string"      // 世界聊天室：描述信息
   },
-  "lastMessage": "string",       // 最后消息
-  "lastMessageTime": "string",   // 最后消息时间
+  "lastMessage": "string",       // 最后消息内容
+  "lastMessageTime": "string",   // 最后消息时间 (ISO 8601格式)
+  "lastMessageSeq": "number",    // 最后消息序列号
   "unreadCount": "number"        // 未读消息数
 }
 ```
@@ -542,13 +553,15 @@
 ### Message（消息）
 ```json
 {
-  "messageId": "string",         // 消息ID
+  "messageId": "string",         // 消息ID (BIGINT UNSIGNED，Snowflake生成)
   "conversationId": "string",    // 会话ID
-  "senderId": "string",          // 发送者ID
-  "senderName": "string",        // 发送者姓名
+  "senderId": "string",          // 发送者ID (BIGINT UNSIGNED)
+  "senderName": "string",        // 发送者用户名
   "content": "string",           // 消息内容
-  "type": "text",                // 消息类型
-  "sendTime": "string"           // 发送时间
+  "type": "text|image|file",     // 消息类型 (1:文本, 2:图片, 3:文件)
+  "seqId": "number",             // 会话内序列号
+  "sendTime": "string",          // 发送时间 (ISO 8601格式)
+  "clientMsgId": "string"        // 客户端消息ID (用于去重)
 }
 ```
 

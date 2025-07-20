@@ -19,15 +19,19 @@
 
 ### **2. 技术栈与依赖 (The "Tools")**
 
-| 用途 | 库/工具 | 学习重点 |
-| :--- | :--- | :--- |
-| **gRPC 框架** | `google.golang.org/grpc` | 定义 `.proto` 服务、实现 gRPC Server、错误处理 |
-| **Kafka 客户端** | `github.com/segmentio/kafka-go` | 生产者和消费者组（ReaderGroup）的配置与使用 |
-| **gRPC 客户端** | `google.golang.org/grpc` | 调用 `im-repo` 服务的 gRPC 接口 |
-| **分布式ID** | (来自 `im-infra`) | Snowflake 算法的使用 |
-| **配置管理** | `github.com/spf13/viper` | 加载服务配置 |
-| **日志** | `go.uber.org/zap` | 结构化日志 |
-| **服务发现** | `go.etcd.io/etcd/client/v3` | 注册服务、发现 `im-repo` |
+| 用途 | 库/工具 | 版本要求 | 学习重点 |
+| :--- | :--- | :--- | :--- |
+| **基础库** | `im-infra` | 内部模块 | 统一的基础能力，ID生成、配置、日志、RPC等 |
+| **gRPC 框架** | `google.golang.org/grpc` | v1.50+ | 定义 `.proto` 服务、实现 gRPC Server、错误处理 |
+| **Kafka 客户端** | 通过`im-infra.mq` | - | 生产者和消费者组的配置与使用，消息序列化 |
+| **gRPC 客户端** | 通过`im-infra.rpc` | - | 调用 `im-repo` 服务的 gRPC 接口，连接池管理 |
+| **分布式ID** | `im-infra.idgen` | - | Snowflake 算法的使用，机器ID管理 |
+| **配置管理** | `im-infra.config` | - | 多源配置加载，热更新支持 |
+| **日志** | `im-infra.logger` | - | 结构化日志，链路追踪集成 |
+| **服务发现** | `im-infra.etcd` | - | 服务注册发现，健康检查 |
+| **缓存操作** | `im-infra.redis` | - | Redis操作封装，分布式锁支持 |
+
+**架构原则**: `im-logic`作为核心业务服务，应专注于业务逻辑实现，所有基础设施能力通过`im-infra`统一提供。
 
 ### **3. 项目结构 (The "Blueprint")**
 
