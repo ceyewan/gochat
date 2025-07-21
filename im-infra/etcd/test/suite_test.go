@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"myetcd/etcd"
+	"github.com/ceyewan/gochat/im-infra/etcd"
 )
 
 // MockLogger 模拟日志器

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ceyewan/gochat/im-infra/clog"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,10 +24,20 @@ type etcdServiceDiscovery struct {
 
 // NewServiceDiscoveryWithManager 使用连接管理器创建服务发现组件
 func NewServiceDiscoveryWithManager(connMgr ConnectionManager, logger Logger, options *ManagerOptions) (ServiceDiscovery, error) {
+	etcdLogger := clog.Module("etcd")
+	etcdLogger.Info("创建服务发现组件")
+
 	if connMgr == nil {
+		etcdLogger.Error("连接管理器为空")
 		return nil, WrapConfigurationError(ErrInvalidConfiguration, "connection manager cannot be nil")
 	}
 
+	if logger == nil {
+		etcdLogger.Info("日志器为空，使用 clog 适配器")
+		logger = NewClogAdapter(etcdLogger)
+	}
+
+	etcdLogger.Info("服务发现组件创建成功")
 	return &etcdServiceDiscovery{
 		connMgr: connMgr,
 		logger:  logger,
@@ -36,6 +47,8 @@ func NewServiceDiscoveryWithManager(connMgr ConnectionManager, logger Logger, op
 
 // GetConnection 获取服务的 gRPC 连接
 func (sd *etcdServiceDiscovery) GetConnection(ctx context.Context, serviceName string, options ...DiscoveryOption) (*grpc.ClientConn, error) {
+	sd.logger.Infof("开始获取服务连接: %s", serviceName)
+
 	opts := &DiscoveryOptions{
 		LoadBalancer: "round_robin",
 		Timeout:      5 * time.Second,
@@ -46,19 +59,27 @@ func (sd *etcdServiceDiscovery) GetConnection(ctx context.Context, serviceName s
 		opt(opts)
 	}
 
+	sd.logger.Debugf("连接选项: LoadBalancer=%s, Timeout=%v", opts.LoadBalancer, opts.Timeout)
+
 	// 获取服务端点
+	sd.logger.Debugf("获取服务端点: %s", serviceName)
 	endpoints, err := sd.GetServiceEndpoints(ctx, serviceName)
 	if err != nil {
+		sd.logger.Errorf("获取服务端点失败: %v, service: %s", err, serviceName)
 		return nil, WrapDiscoveryError(err, "failed to get service endpoints")
 	}
 
 	if len(endpoints) == 0 {
+		sd.logger.Warnf("服务无可用实例: %s", serviceName)
 		return nil, WrapDiscoveryError(ErrNoAvailableInstances, "no available instances for service: "+serviceName)
 	}
+
+	sd.logger.Infof("发现 %d 个服务端点: %v", len(endpoints), endpoints)
 
 	// 创建 gRPC 连接
 	// 简单实现：使用第一个可用的端点
 	target := endpoints[0]
+	sd.logger.Infof("尝试连接到主端点: %s", target)
 
 	dialCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	defer cancel()
@@ -68,45 +89,65 @@ func (sd *etcdServiceDiscovery) GetConnection(ctx context.Context, serviceName s
 		grpc.WithBlock(),
 	)
 	if err != nil {
+		sd.logger.Warnf("连接主端点失败: %v, target: %s", err, target)
 		// 如果第一个端点失败，尝试其他端点
+		sd.logger.Infof("尝试连接其他端点，共 %d 个备选", len(endpoints)-1)
 		for i := 1; i < len(endpoints); i++ {
+			target = endpoints[i]
+			sd.logger.Debugf("尝试连接备选端点 %d: %s", i, target)
+
 			dialCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
-			conn, err = grpc.DialContext(dialCtx, endpoints[i],
+			conn, err = grpc.DialContext(dialCtx, target,
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
 				grpc.WithBlock(),
 			)
 			cancel()
 			if err == nil {
+				sd.logger.Infof("成功连接到备选端点: %s", target)
 				break
 			}
+			sd.logger.Warnf("连接备选端点失败: %v, target: %s", err, target)
 		}
 
 		if err != nil {
+			sd.logger.Errorf("连接所有端点都失败: %v, service: %s", err, serviceName)
 			return nil, WrapDiscoveryError(err, "failed to connect to any service instance")
 		}
+	} else {
+		sd.logger.Infof("成功连接到主端点: %s", target)
 	}
 
+	sd.logger.Infof("gRPC 连接创建成功，服务: %s, 端点: %s", serviceName, target)
 	return conn, nil
 }
 
 // GetServiceEndpoints 获取服务的所有端点
 func (sd *etcdServiceDiscovery) GetServiceEndpoints(ctx context.Context, serviceName string) ([]string, error) {
+	sd.logger.Debugf("获取服务端点: %s", serviceName)
+
 	client := sd.connMgr.GetClient()
 	if client == nil {
+		sd.logger.Error("etcd 客户端为空")
 		return nil, ErrNotConnected
 	}
 
 	// 构建服务前缀
 	prefix := fmt.Sprintf("%s/%s/", sd.options.ServicePrefix, serviceName)
+	sd.logger.Debugf("查询前缀: %s", prefix)
 
 	// 获取服务实例
 	resp, err := client.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
+		sd.logger.Errorf("从 etcd 获取服务实例失败: %v, prefix: %s", err, prefix)
 		return nil, WrapDiscoveryError(err, "failed to get service instances from etcd")
 	}
 
+	sd.logger.Debugf("从 etcd 获取到 %d 个键值对", len(resp.Kvs))
+
 	var endpoints []string
 	for _, kv := range resp.Kvs {
+		sd.logger.Debugf("解析服务实例: key=%s, value=%s", string(kv.Key), string(kv.Value))
+
 		// 解析服务信息
 		var serviceInstance struct {
 			Address  string            `json:"address"`
@@ -114,46 +155,61 @@ func (sd *etcdServiceDiscovery) GetServiceEndpoints(ctx context.Context, service
 		}
 
 		if err := json.Unmarshal(kv.Value, &serviceInstance); err != nil {
-			sd.logger.Warnf("Failed to parse service instance: %v", err)
+			sd.logger.Warnf("解析服务实例失败: %v, key: %s, value: %s", err, string(kv.Key), string(kv.Value))
 			continue
 		}
 
+		sd.logger.Debugf("解析到服务端点: %s", serviceInstance.Address)
 		endpoints = append(endpoints, serviceInstance.Address)
 	}
 
 	if len(endpoints) == 0 {
+		sd.logger.Warnf("未找到服务: %s", serviceName)
 		return nil, WrapDiscoveryError(ErrServiceNotFound, "service not found: "+serviceName)
 	}
 
+	sd.logger.Infof("获取服务端点成功: %s, 端点数量: %d, 端点列表: %v", serviceName, len(endpoints), endpoints)
 	return endpoints, nil
 }
 
 // WatchService 监听服务变化
 func (sd *etcdServiceDiscovery) WatchService(ctx context.Context, serviceName string) (<-chan ServiceEvent, error) {
+	sd.logger.Infof("开始监听服务变化: %s", serviceName)
+
 	client := sd.connMgr.GetClient()
 	if client == nil {
+		sd.logger.Error("etcd 客户端为空")
 		return nil, ErrNotConnected
 	}
 
 	eventCh := make(chan ServiceEvent, 10)
 	prefix := fmt.Sprintf("%s/%s/", sd.options.ServicePrefix, serviceName)
+	sd.logger.Debugf("监听前缀: %s", prefix)
 
 	go func() {
-		defer close(eventCh)
+		defer func() {
+			close(eventCh)
+			sd.logger.Infof("服务监听协程结束: %s", serviceName)
+		}()
 
+		sd.logger.Debugf("启动 etcd watch: %s", prefix)
 		watchCh := client.Watch(ctx, prefix, clientv3.WithPrefix())
 		for watchResp := range watchCh {
 			if watchResp.Err() != nil {
-				sd.logger.Errorf("Watch error: %v", watchResp.Err())
+				sd.logger.Errorf("监听错误: %v, service: %s", watchResp.Err(), serviceName)
 				return
 			}
 
+			sd.logger.Debugf("收到 %d 个监听事件, service: %s", len(watchResp.Events), serviceName)
 			for _, event := range watchResp.Events {
 				serviceEvent := sd.parseWatchEvent(event, serviceName)
 				if serviceEvent != nil {
+					sd.logger.Infof("服务事件: type=%d, service=%s, instance=%s",
+						serviceEvent.Type, serviceEvent.Service, serviceEvent.Instance.ID)
 					select {
 					case eventCh <- *serviceEvent:
 					case <-ctx.Done():
+						sd.logger.Debug("监听上下文取消")
 						return
 					}
 				}
@@ -161,6 +217,7 @@ func (sd *etcdServiceDiscovery) WatchService(ctx context.Context, serviceName st
 		}
 	}()
 
+	sd.logger.Infof("服务监听启动成功: %s", serviceName)
 	return eventCh, nil
 }
 

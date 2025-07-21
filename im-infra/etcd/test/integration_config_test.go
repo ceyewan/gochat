@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"myetcd/etcd"
+	"github.com/ceyewan/gochat/im-infra/etcd"
 )
 
 func TestConfigurationIntegration(t *testing.T) {

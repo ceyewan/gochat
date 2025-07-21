@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"myetcd/etcd"
+	"github.com/ceyewan/gochat/im-infra/etcd"
 )
 
 // TestEdgeCases 测试边界条件

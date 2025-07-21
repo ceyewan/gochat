@@ -6,17 +6,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ceyewan/gochat/im-infra/clog"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 // etcdDistributedLock 实现 DistributedLock 接口
 type etcdDistributedLock struct {
-	connMgr     ConnectionManager
-	leaseMgr    LeaseManager
-	logger      Logger
-	lockPrefix  string
-	
+	connMgr    ConnectionManager
+	leaseMgr   LeaseManager
+	logger     Logger
+	lockPrefix string
+
 	// 锁管理
 	locks map[string]*lockEntry
 	mu    sync.RWMutex
@@ -35,6 +36,13 @@ type lockEntry struct {
 
 // NewDistributedLock 创建新的分布式锁管理器
 func NewDistributedLock(connMgr ConnectionManager, leaseMgr LeaseManager, logger Logger, lockPrefix string) DistributedLock {
+	etcdLogger := clog.Module("etcd")
+	etcdLogger.Info("创建分布式锁管理器", clog.String("lock_prefix", lockPrefix))
+
+	if logger == nil {
+		logger = NewClogAdapter(etcdLogger)
+	}
+
 	return &etcdDistributedLock{
 		connMgr:    connMgr,
 		leaseMgr:   leaseMgr,
@@ -46,34 +54,45 @@ func NewDistributedLock(connMgr ConnectionManager, leaseMgr LeaseManager, logger
 
 // Lock 获取分布式锁
 func (dl *etcdDistributedLock) Lock(ctx context.Context, key string, ttl time.Duration) error {
+	dl.logger.Infof("尝试获取分布式锁: %s, TTL: %v", key, ttl)
+
 	if !dl.connMgr.IsConnected() {
+		dl.logger.Error("etcd 连接未建立")
 		return ErrNotConnected
 	}
 
 	lockKey := dl.getLockKey(key)
-	
+	dl.logger.Debugf("锁键: %s", lockKey)
+
 	// 检查是否已经持有锁
 	dl.mu.RLock()
 	if _, exists := dl.locks[lockKey]; exists {
 		dl.mu.RUnlock()
+		dl.logger.Warnf("锁已被持有: %s", key)
 		return WrapLockError(ErrLockAlreadyHeld, fmt.Sprintf("lock already held for key: %s", key))
 	}
 	dl.mu.RUnlock()
 
 	client := dl.connMgr.GetClient()
 	if client == nil {
+		dl.logger.Error("etcd 客户端为空")
 		return ErrNotConnected
 	}
 
 	// 创建租约
+	dl.logger.Debugf("为锁创建租约: %s, TTL: %d 秒", key, int64(ttl.Seconds()))
 	leaseID, err := dl.leaseMgr.CreateLease(ctx, int64(ttl.Seconds()))
 	if err != nil {
+		dl.logger.Errorf("创建锁租约失败: %v, key: %s", err, key)
 		return WrapLockError(err, "failed to create lease for lock")
 	}
+	dl.logger.Debugf("锁租约创建成功: %s, lease: %d", key, leaseID)
 
 	// 启动租约保活
+	dl.logger.Debug("启动锁租约保活")
 	_, err = dl.leaseMgr.KeepAlive(ctx, leaseID)
 	if err != nil {
+		dl.logger.Errorf("启动锁租约保活失败: %v, key: %s", err, key)
 		dl.leaseMgr.RevokeLease(ctx, leaseID)
 		return WrapLockError(err, "failed to start lease keepalive")
 	}
@@ -120,7 +139,7 @@ func (dl *etcdDistributedLock) TryLock(ctx context.Context, key string, ttl time
 	}
 
 	lockKey := dl.getLockKey(key)
-	
+
 	// 检查是否已经持有锁
 	dl.mu.RLock()
 	if _, exists := dl.locks[lockKey]; exists {
@@ -158,7 +177,7 @@ func (dl *etcdDistributedLock) TryLock(ctx context.Context, key string, ttl time
 	if err != nil {
 		session.Close()
 		dl.leaseMgr.RevokeLease(ctx, leaseID)
-		
+
 		// 检查是否是超时错误
 		if tryCtx.Err() == context.DeadlineExceeded {
 			return false, nil // 锁被其他进程持有，但不是错误
@@ -195,7 +214,7 @@ func (dl *etcdDistributedLock) TryLock(ctx context.Context, key string, ttl time
 // Unlock 释放分布式锁
 func (dl *etcdDistributedLock) Unlock(ctx context.Context, key string) error {
 	lockKey := dl.getLockKey(key)
-	
+
 	dl.mu.Lock()
 	entry, exists := dl.locks[lockKey]
 	if !exists {
@@ -230,7 +249,7 @@ func (dl *etcdDistributedLock) Unlock(ctx context.Context, key string) error {
 // Refresh 刷新锁的TTL
 func (dl *etcdDistributedLock) Refresh(ctx context.Context, key string, ttl time.Duration) error {
 	lockKey := dl.getLockKey(key)
-	
+
 	dl.mu.RLock()
 	entry, exists := dl.locks[lockKey]
 	dl.mu.RUnlock()
@@ -261,7 +280,7 @@ func (dl *etcdDistributedLock) IsLocked(ctx context.Context, key string) (bool, 
 	}
 
 	lockKey := dl.getLockKey(key)
-	
+
 	// 先检查本地是否持有锁
 	dl.mu.RLock()
 	_, locallyHeld := dl.locks[lockKey]
@@ -288,7 +307,7 @@ func (dl *etcdDistributedLock) IsLocked(ctx context.Context, key string) (bool, 
 // GetLockInfo 获取锁的详细信息
 func (dl *etcdDistributedLock) GetLockInfo(ctx context.Context, key string) (*LockInfo, error) {
 	lockKey := dl.getLockKey(key)
-	
+
 	dl.mu.RLock()
 	entry, exists := dl.locks[lockKey]
 	dl.mu.RUnlock()
@@ -357,12 +376,12 @@ func (dl *etcdDistributedLock) CleanupExpiredLocks(ctx context.Context) error {
 	// 清理过期锁
 	for _, lockKey := range expiredKeys {
 		entry := dl.locks[lockKey]
-		
+
 		// 关闭会话
 		if entry.Session != nil {
 			entry.Session.Close()
 		}
-		
+
 		delete(dl.locks, lockKey)
 		dl.logger.Infof("Cleaned up expired lock: %s", lockKey)
 	}
@@ -388,7 +407,7 @@ func (dl *etcdDistributedLock) Close() error {
 
 	// 清空锁映射
 	dl.locks = make(map[string]*lockEntry)
-	
+
 	dl.logger.Info("Distributed lock manager closed")
 	return nil
 }

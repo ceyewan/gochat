@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/ceyewan/gochat/im-infra/clog"
+
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -116,10 +118,13 @@ func (l *DefaultLogger) Errorf(format string, args ...interface{}) {
 
 // DefaultManagerOptions 返回默认的管理器选项
 func DefaultManagerOptions() *ManagerOptions {
+	// 创建 etcd 模块的 clog 日志器
+	etcdLogger := clog.Module("etcd")
+
 	return &ManagerOptions{
 		Endpoints:   []string{"localhost:23791", "localhost:23792", "localhost:23793"},
 		DialTimeout: 5 * time.Second,
-		Logger:      &DefaultLogger{Logger: log.Default()},
+		Logger:      NewClogAdapter(etcdLogger),
 		RetryConfig: &RetryConfig{
 			MaxRetries:      3,
 			InitialInterval: 100 * time.Millisecond,
@@ -301,4 +306,54 @@ func WithDiscoveryMetadata(metadata map[string]string) DiscoveryOption {
 	return func(opts *DiscoveryOptions) {
 		opts.Metadata = metadata
 	}
+}
+
+// ClogAdapter 将 clog.Logger 适配为 etcd.Logger 接口
+type ClogAdapter struct {
+	logger clog.Logger
+}
+
+// NewClogAdapter 创建新的 clog 适配器
+func NewClogAdapter(logger clog.Logger) Logger {
+	return &ClogAdapter{logger: logger}
+}
+
+// Debug 实现 Logger 接口
+func (c *ClogAdapter) Debug(args ...interface{}) {
+	c.logger.Debug("etcd debug", clog.Any("args", args))
+}
+
+// Info 实现 Logger 接口
+func (c *ClogAdapter) Info(args ...interface{}) {
+	c.logger.Info("etcd info", clog.Any("args", args))
+}
+
+// Warn 实现 Logger 接口
+func (c *ClogAdapter) Warn(args ...interface{}) {
+	c.logger.Warn("etcd warn", clog.Any("args", args))
+}
+
+// Error 实现 Logger 接口
+func (c *ClogAdapter) Error(args ...interface{}) {
+	c.logger.Error("etcd error", clog.Any("args", args))
+}
+
+// Debugf 实现 Logger 接口
+func (c *ClogAdapter) Debugf(format string, args ...interface{}) {
+	c.logger.Debugf("etcd debug: "+format, args...)
+}
+
+// Infof 实现 Logger 接口
+func (c *ClogAdapter) Infof(format string, args ...interface{}) {
+	c.logger.Infof("etcd info: "+format, args...)
+}
+
+// Warnf 实现 Logger 接口
+func (c *ClogAdapter) Warnf(format string, args ...interface{}) {
+	c.logger.Warnf("etcd warn: "+format, args...)
+}
+
+// Errorf 实现 Logger 接口
+func (c *ClogAdapter) Errorf(format string, args ...interface{}) {
+	c.logger.Errorf("etcd error: "+format, args...)
 }

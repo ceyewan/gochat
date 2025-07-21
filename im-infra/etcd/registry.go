@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
+	"github.com/ceyewan/gochat/im-infra/clog"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -22,35 +22,52 @@ type EtcdRegistry struct {
 
 // NewServiceRegistry 创建服务注册实例（向后兼容）
 func NewServiceRegistry(client *Client) (*EtcdRegistry, error) {
+	etcdLogger := clog.Module("etcd")
+	etcdLogger.Info("创建服务注册实例")
+
 	if client == nil {
+		etcdLogger.Info("客户端为空，使用默认客户端")
 		var err error
 		client, err = GetDefaultClient()
 		if err != nil {
+			etcdLogger.Error("获取默认客户端失败", clog.Err(err))
 			return nil, err
 		}
 	}
 
+	etcdLogger.Info("服务注册实例创建成功", clog.String("service_prefix", "/services"))
 	return &EtcdRegistry{
 		client:        client,
 		servicePrefix: "/services",
-		logger:        &DefaultLogger{Logger: log.Default()},
+		logger:        NewClogAdapter(etcdLogger),
 	}, nil
 }
 
 // NewServiceRegistryWithManager 使用管理器创建服务注册实例
 func NewServiceRegistryWithManager(connMgr ConnectionManager, leaseMgr LeaseManager, logger Logger, options *ManagerOptions) (ServiceRegistry, error) {
+	etcdLogger := clog.Module("etcd")
+	etcdLogger.Info("使用管理器创建服务注册实例")
+
 	if connMgr == nil {
+		etcdLogger.Error("连接管理器为空")
 		return nil, WrapRegistryError(ErrInvalidConfiguration, "connection manager is required")
 	}
 	if leaseMgr == nil {
+		etcdLogger.Error("租约管理器为空")
 		return nil, WrapRegistryError(ErrInvalidConfiguration, "lease manager is required")
 	}
 	if logger == nil {
-		logger = &DefaultLogger{Logger: log.Default()}
+		etcdLogger.Info("日志器为空，使用默认日志器")
+		logger = NewClogAdapter(etcdLogger)
 	}
 	if options == nil {
+		etcdLogger.Info("选项为空，使用默认选项")
 		options = DefaultManagerOptions()
 	}
+
+	etcdLogger.Info("服务注册实例创建成功",
+		clog.String("service_prefix", options.ServicePrefix),
+		clog.Int64("default_ttl", options.DefaultTTL))
 
 	return &EtcdRegistry{
 		connMgr:       connMgr,
@@ -73,6 +90,8 @@ func (r *EtcdRegistry) RegisterLegacy(ctx context.Context, serviceName, instance
 
 // RegisterWithOptions 使用选项注册服务
 func (r *EtcdRegistry) RegisterWithOptions(ctx context.Context, serviceName, instanceID, addr string, options ...RegisterOption) error {
+	r.logger.Infof("开始注册服务: %s/%s at %s", serviceName, instanceID, addr)
+
 	// 解析选项
 	opts := &RegisterOptions{
 		TTL: r.getDefaultTTL(),
@@ -81,6 +100,9 @@ func (r *EtcdRegistry) RegisterWithOptions(ctx context.Context, serviceName, ins
 		opt(opts)
 	}
 
+	r.logger.Infof("服务注册选项: TTL=%d, LeaseID=%d, Metadata=%v",
+		opts.TTL, opts.LeaseID, opts.Metadata)
+
 	var client *clientv3.Client
 	var leaseID clientv3.LeaseID
 	var err error
@@ -88,54 +110,72 @@ func (r *EtcdRegistry) RegisterWithOptions(ctx context.Context, serviceName, ins
 	// 使用新的管理器或旧的客户端
 	if r.connMgr != nil && r.leaseMgr != nil {
 		// 新的管理器方式
+		r.logger.Debug("使用连接管理器方式注册服务")
 		if !r.connMgr.IsConnected() {
+			r.logger.Error("etcd 连接未建立")
 			return WrapRegistryError(ErrNotConnected, "not connected to etcd")
 		}
 		client = r.connMgr.GetClient()
+		r.logger.Debug("获取 etcd 客户端成功")
 
 		// 创建或使用现有租约
 		if opts.LeaseID != 0 {
 			leaseID = opts.LeaseID
+			r.logger.Infof("使用现有租约: %d", leaseID)
 		} else {
+			r.logger.Infof("创建新租约，TTL: %d 秒", opts.TTL)
 			leaseID, err = r.leaseMgr.CreateLease(ctx, opts.TTL)
 			if err != nil {
+				r.logger.Errorf("创建租约失败: %v", err)
 				return WrapRegistryError(err, "failed to create lease")
 			}
+			r.logger.Infof("租约创建成功: %d", leaseID)
 
 			// 启动租约保活
+			r.logger.Debug("启动租约保活")
 			_, err = r.leaseMgr.KeepAlive(ctx, leaseID)
 			if err != nil {
+				r.logger.Errorf("启动租约保活失败: %v", err)
 				r.leaseMgr.RevokeLease(ctx, leaseID)
 				return WrapRegistryError(err, "failed to start lease keepalive")
 			}
+			r.logger.Debug("租约保活启动成功")
 		}
 	} else {
 		// 旧的客户端方式（向后兼容）
+		r.logger.Debug("使用旧客户端方式注册服务")
 		client = r.client.client
+
+		r.logger.Infof("创建租约，TTL: %d 秒", opts.TTL)
 		lease, err := client.Grant(ctx, opts.TTL)
 		if err != nil {
+			r.logger.Errorf("创建租约失败: %v", err)
 			return fmt.Errorf("failed to create lease: %w", err)
 		}
 		leaseID = lease.ID
+		r.logger.Infof("租约创建成功: %d", leaseID)
 
 		// 设置保持活动
+		r.logger.Debug("设置租约保活")
 		keepAliveCh, err := client.KeepAlive(ctx, leaseID)
 		if err != nil {
+			r.logger.Errorf("设置租约保活失败: %v", err)
 			return fmt.Errorf("failed to setup keepalive: %w", err)
 		}
 
 		// 处理keepalive响应
 		go func() {
+			r.logger.Debug("启动租约保活协程")
 			for {
 				select {
 				case resp, ok := <-keepAliveCh:
 					if !ok {
-						log.Printf("Keepalive channel closed for service %s/%s", serviceName, instanceID)
+						r.logger.Warnf("租约保活通道关闭，服务: %s/%s", serviceName, instanceID)
 						return
 					}
-					log.Printf("Lease renewed for service %s/%s, TTL: %d", serviceName, instanceID, resp.TTL)
+					r.logger.Debugf("租约续期成功，服务: %s/%s, TTL: %d", serviceName, instanceID, resp.TTL)
 				case <-ctx.Done():
-					log.Printf("Service registry context canceled for %s/%s", serviceName, instanceID)
+					r.logger.Infof("服务注册上下文取消: %s/%s", serviceName, instanceID)
 					return
 				}
 			}
@@ -146,39 +186,51 @@ func (r *EtcdRegistry) RegisterWithOptions(ctx context.Context, serviceName, ins
 	key := fmt.Sprintf("%s/%s/%s", r.servicePrefix, serviceName, instanceID)
 	value := r.buildServiceValue(addr, opts.Metadata)
 
+	r.logger.Infof("准备写入服务信息到 etcd, key: %s, value: %s", key, value)
+
 	// 写入服务信息
 	_, err = client.Put(ctx, key, value, clientv3.WithLease(leaseID))
 	if err != nil {
+		r.logger.Errorf("写入服务信息失败: %v, key: %s", err, key)
 		if r.leaseMgr != nil {
+			r.logger.Debug("撤销租约")
 			r.leaseMgr.RevokeLease(ctx, leaseID)
 		}
 		return WrapRegistryError(err, "failed to register service")
 	}
 
-	r.logger.Infof("Service registered successfully: %s/%s at %s", serviceName, instanceID, addr)
+	r.logger.Infof("服务注册成功: %s/%s at %s, lease: %d", serviceName, instanceID, addr, leaseID)
 	return nil
 }
 
 // Deregister 注销服务
 func (r *EtcdRegistry) Deregister(ctx context.Context, serviceName, instanceID string) error {
+	r.logger.Infof("开始注销服务: %s/%s", serviceName, instanceID)
+
 	key := fmt.Sprintf("%s/%s/%s", r.servicePrefix, serviceName, instanceID)
+	r.logger.Debugf("服务注销 key: %s", key)
 
 	var client *clientv3.Client
 	if r.connMgr != nil {
+		r.logger.Debug("使用连接管理器获取客户端")
 		if !r.connMgr.IsConnected() {
+			r.logger.Error("etcd 连接未建立")
 			return WrapRegistryError(ErrNotConnected, "not connected to etcd")
 		}
 		client = r.connMgr.GetClient()
 	} else {
+		r.logger.Debug("使用旧客户端方式")
 		client = r.client.client
 	}
 
+	r.logger.Debugf("准备删除服务键: %s", key)
 	_, err := client.Delete(ctx, key)
 	if err != nil {
+		r.logger.Errorf("删除服务失败: %v, key: %s", err, key)
 		return WrapRegistryError(err, "failed to deregister service")
 	}
 
-	r.logger.Infof("Service deregistered: %s/%s", serviceName, instanceID)
+	r.logger.Infof("服务注销成功: %s/%s", serviceName, instanceID)
 	return nil
 }
 

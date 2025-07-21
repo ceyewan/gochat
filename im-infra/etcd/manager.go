@@ -5,25 +5,27 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ceyewan/gochat/im-infra/clog"
 )
 
 // etcdManager 实现 EtcdManager 接口
 type etcdManager struct {
 	options *ManagerOptions
 	logger  Logger
-	
+
 	// 组件管理
 	connMgr   ConnectionManager
 	leaseMgr  LeaseManager
 	registry  ServiceRegistry
 	discovery ServiceDiscovery
 	lock      DistributedLock
-	
+
 	// 状态管理
-	ready   int32 // 原子操作标志
-	closed  int32 // 原子操作标志
-	mu      sync.RWMutex
-	
+	ready  int32 // 原子操作标志
+	closed int32 // 原子操作标志
+	mu     sync.RWMutex
+
 	// 健康检查
 	healthTicker *time.Ticker
 	stopHealth   chan struct{}
@@ -31,9 +33,19 @@ type etcdManager struct {
 
 // NewEtcdManager 创建新的 etcd 管理器
 func NewEtcdManager(options *ManagerOptions) (EtcdManager, error) {
+	etcdLogger := clog.Module("etcd")
+	etcdLogger.Info("开始创建 etcd 管理器")
+
 	if options == nil {
+		etcdLogger.Info("选项为空，使用默认选项")
 		options = DefaultManagerOptions()
 	}
+
+	etcdLogger.Info("etcd 管理器配置",
+		clog.Any("endpoints", options.Endpoints),
+		clog.Duration("dial_timeout", options.DialTimeout),
+		clog.String("service_prefix", options.ServicePrefix),
+		clog.Int64("default_ttl", options.DefaultTTL))
 
 	manager := &etcdManager{
 		options:    options,
@@ -42,52 +54,73 @@ func NewEtcdManager(options *ManagerOptions) (EtcdManager, error) {
 	}
 
 	// 初始化组件
+	etcdLogger.Info("开始初始化组件")
 	if err := manager.initializeComponents(); err != nil {
+		etcdLogger.Error("初始化组件失败", clog.Err(err))
 		return nil, WrapConfigurationError(err, "failed to initialize manager components")
 	}
+	etcdLogger.Info("组件初始化成功")
 
 	// 启动健康检查
+	etcdLogger.Info("启动健康检查")
 	manager.startHealthCheck()
 
 	atomic.StoreInt32(&manager.ready, 1)
-	manager.logger.Info("EtcdManager initialized successfully")
-	
+	manager.logger.Info("etcd 管理器初始化成功")
+	etcdLogger.Info("etcd 管理器创建完成")
+
 	return manager, nil
 }
 
 // initializeComponents 初始化所有组件
 func (m *etcdManager) initializeComponents() error {
+	m.logger.Info("开始初始化 etcd 组件")
+
 	// 创建连接管理器
+	m.logger.Debug("创建连接管理器")
 	m.connMgr = NewConnectionManager(m.options)
-	
+
 	// 建立连接
+	m.logger.Info("建立 etcd 连接", clog.Any("endpoints", m.options.Endpoints))
 	ctx, cancel := context.WithTimeout(context.Background(), m.options.DialTimeout)
 	defer cancel()
-	
+
 	if err := m.connMgr.Connect(ctx); err != nil {
+		m.logger.Error("连接 etcd 失败", clog.Err(err))
 		return WrapConnectionError(err, "failed to connect to etcd")
 	}
+	m.logger.Info("etcd 连接建立成功")
 
 	// 创建租约管理器
+	m.logger.Debug("创建租约管理器")
 	m.leaseMgr = NewLeaseManager(m.connMgr, m.logger)
 
 	// 创建服务注册组件
+	m.logger.Debug("创建服务注册组件")
 	registry, err := NewServiceRegistryWithManager(m.connMgr, m.leaseMgr, m.logger, m.options)
 	if err != nil {
+		m.logger.Error("创建服务注册组件失败", clog.Err(err))
 		return WrapRegistryError(err, "failed to create service registry")
 	}
 	m.registry = registry
+	m.logger.Debug("服务注册组件创建成功")
 
 	// 创建服务发现组件
+	m.logger.Debug("创建服务发现组件")
 	discovery, err := NewServiceDiscoveryWithManager(m.connMgr, m.logger, m.options)
 	if err != nil {
+		m.logger.Error("创建服务发现组件失败", clog.Err(err))
 		return WrapDiscoveryError(err, "failed to create service discovery")
 	}
 	m.discovery = discovery
+	m.logger.Debug("服务发现组件创建成功")
 
 	// 创建分布式锁组件
+	m.logger.Debug("创建分布式锁组件")
 	m.lock = NewDistributedLock(m.connMgr, m.leaseMgr, m.logger, m.options.LockPrefix)
+	m.logger.Debug("分布式锁组件创建成功")
 
+	m.logger.Info("所有 etcd 组件初始化完成")
 	return nil
 }
 
@@ -145,9 +178,10 @@ func (m *etcdManager) Close() error {
 		return nil // 已经关闭
 	}
 
-	m.logger.Info("Closing EtcdManager...")
+	m.logger.Info("开始关闭 etcd 管理器")
 
 	// 停止健康检查
+	m.logger.Debug("停止健康检查")
 	m.stopHealthCheck()
 
 	// 关闭各组件
@@ -155,34 +189,47 @@ func (m *etcdManager) Close() error {
 
 	// 关闭分布式锁
 	if m.lock != nil {
+		m.logger.Debug("关闭分布式锁组件")
 		if lockCloser, ok := m.lock.(*etcdDistributedLock); ok {
 			if err := lockCloser.Close(); err != nil {
-				m.logger.Errorf("Error closing distributed lock: %v", err)
+				m.logger.Errorf("关闭分布式锁失败: %v", err)
 				lastErr = err
+			} else {
+				m.logger.Debug("分布式锁组件关闭成功")
 			}
 		}
 	}
 
 	// 关闭租约管理器
 	if m.leaseMgr != nil {
+		m.logger.Debug("关闭租约管理器")
 		if leaseCloser, ok := m.leaseMgr.(*etcdLeaseManager); ok {
 			if err := leaseCloser.Close(); err != nil {
-				m.logger.Errorf("Error closing lease manager: %v", err)
+				m.logger.Errorf("关闭租约管理器失败: %v", err)
 				lastErr = err
+			} else {
+				m.logger.Debug("租约管理器关闭成功")
 			}
 		}
 	}
 
 	// 关闭连接管理器
 	if m.connMgr != nil {
+		m.logger.Debug("关闭连接管理器")
 		if err := m.connMgr.Close(); err != nil {
-			m.logger.Errorf("Error closing connection manager: %v", err)
+			m.logger.Errorf("关闭连接管理器失败: %v", err)
 			lastErr = err
+		} else {
+			m.logger.Debug("连接管理器关闭成功")
 		}
 	}
 
 	atomic.StoreInt32(&m.ready, 0)
-	m.logger.Info("EtcdManager closed")
+	if lastErr != nil {
+		m.logger.Warnf("etcd 管理器关闭完成，但有错误: %v", lastErr)
+	} else {
+		m.logger.Info("etcd 管理器关闭成功")
+	}
 
 	return lastErr
 }
@@ -194,10 +241,10 @@ func (m *etcdManager) startHealthCheck() {
 	}
 
 	m.healthTicker = time.NewTicker(m.options.HealthCheckInterval)
-	
+
 	go func() {
 		defer m.healthTicker.Stop()
-		
+
 		for {
 			select {
 			case <-m.healthTicker.C:
@@ -224,7 +271,7 @@ func (m *etcdManager) performHealthCheck() {
 
 	if err := m.HealthCheck(ctx); err != nil {
 		m.logger.Warnf("Health check failed: %v", err)
-		
+
 		// 尝试重连
 		if IsConnectionError(err) {
 			m.logger.Info("Attempting to reconnect...")
@@ -322,14 +369,14 @@ func (m *etcdManager) isConnectionConfigSame(old, new *ManagerOptions) bool {
 	if len(old.Endpoints) != len(new.Endpoints) {
 		return false
 	}
-	
+
 	for i, endpoint := range old.Endpoints {
 		if endpoint != new.Endpoints[i] {
 			return false
 		}
 	}
-	
+
 	return old.DialTimeout == new.DialTimeout &&
-		   old.Username == new.Username &&
-		   old.Password == new.Password
+		old.Username == new.Username &&
+		old.Password == new.Password
 }
