@@ -293,7 +293,7 @@ func TestConcurrentProducer(t *testing.T) {
 	}
 
 	cfg := DefaultProducerConfig()
-	cfg.Brokers = []string{"localhost:9092"}
+	cfg.Brokers = []string{"localhost:19092"}
 	cfg.ClientID = "concurrent-producer"
 
 	producer, err := NewProducer(cfg)

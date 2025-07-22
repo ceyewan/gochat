@@ -289,7 +289,7 @@ type MonitoringConfig struct {
 // 默认配置适用于大多数开发和测试场景，针对即时通讯场景优化。
 func DefaultConfig() Config {
 	return Config{
-		Brokers:          []string{"localhost:9092"},
+		Brokers:          []string{"localhost:19092"},
 		ClientID:         "gochat-mq-client",
 		SecurityProtocol: "PLAINTEXT",
 		SASL:             DefaultSASLConfig(),
@@ -339,13 +339,13 @@ func DefaultConnectionConfig() ConnectionConfig {
 // 针对即时通讯场景优化：低延迟、高吞吐量、小消息优化
 func DefaultProducerConfig() ProducerConfig {
 	return ProducerConfig{
-		Brokers:             []string{"localhost:9092"},
+		Brokers:             []string{"localhost:19092"},
 		ClientID:            "gochat-producer",
 		Compression:         "lz4",   // LZ4压缩，低延迟
 		BatchSize:           16384,   // 16KB批次大小
 		LingerMs:            5,       // 5毫秒等待时间，微秒级延迟优化
 		MaxMessageBytes:     1048576, // 1MB最大消息大小
-		RequiredAcks:        1,       // 等待leader确认
+		RequiredAcks:        -1,      // 等待所有ISR确认（幂等性要求）
 		RequestTimeout:      30 * time.Second,
 		EnableIdempotence:   true, // 启用幂等性保证
 		MaxInFlightRequests: 5,
@@ -358,7 +358,7 @@ func DefaultProducerConfig() ProducerConfig {
 // 针对即时通讯场景优化：高吞吐量、低延迟
 func DefaultConsumerConfig() ConsumerConfig {
 	return ConsumerConfig{
-		Brokers:            []string{"localhost:9092"},
+		Brokers:            []string{"localhost:19092"},
 		ClientID:           "gochat-consumer",
 		GroupID:            "", // 必须由用户设置
 		AutoOffsetReset:    "latest",

@@ -27,7 +27,7 @@ type ChatMessage struct {
 func main() {
 	// 创建自定义配置
 	cfg := mq.Config{
-		Brokers:  []string{"localhost:9092"},
+		Brokers:  []string{"localhost:19092"},
 		ClientID: "chat-example",
 		ProducerConfig: mq.ProducerConfig{
 			Compression:       "lz4",
@@ -76,11 +76,11 @@ func main() {
 	<-sigChan
 
 	log.Println("收到关闭信号，开始优雅关闭...")
-	
+
 	// 这里可以添加优雅关闭逻辑
 	// 等待所有协程完成
 	wg.Wait()
-	
+
 	log.Println("程序已退出")
 }
 
@@ -118,7 +118,7 @@ func startConsumer(mqInstance mq.MQ) {
 	}
 
 	log.Println("消费者已启动，等待消息...")
-	
+
 	// 保持消费者运行
 	select {}
 }

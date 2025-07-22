@@ -119,8 +119,10 @@ func NewProducer(cfg ProducerConfig) (Producer, error) {
 		opts = append(opts, kgo.ProducerBatchCompression(kgo.NoCompression()))
 	}
 
-	// 配置最大飞行中请求数
-	opts = append(opts, kgo.MaxProduceRequestsInflightPerBroker(cfg.MaxInFlightRequests))
+	// 配置最大飞行中请求数（仅在未启用幂等性时设置）
+	if !cfg.EnableIdempotence {
+		opts = append(opts, kgo.MaxProduceRequestsInflightPerBroker(cfg.MaxInFlightRequests))
+	}
 
 	client, err := kgo.NewClient(opts...)
 	if err != nil {
