@@ -1,6 +1,0 @@
-endpoints:
-  - localhost:23791
-  - localhost:23792
-  - localhost:23793
-dial_timeout: 5s
-log_level: info

@@ -3,6 +3,8 @@ module github.com/ceyewan/gochat
 go 1.24
 
 require (
+	github.com/bwmarrin/snowflake v0.3.0
+	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.11.0
 	go.etcd.io/etcd/client/v3 v3.5.19
 	google.golang.org/grpc v1.71.0
@@ -12,11 +14,11 @@ require (
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.30.0
+	gorm.io/sharding v0.6.2
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
@@ -50,5 +52,4 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
-	gorm.io/sharding v0.6.2 // indirect
 )

@@ -106,6 +106,11 @@ func Set(ctx context.Context, key string, value interface{}, expiration time.Dur
 	return getDefaultCache().Set(ctx, key, value, expiration)
 }
 
+// SetNX 使用全局默认缓存仅在键不存在时设置值
+func SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {
+	return getDefaultCache().SetNX(ctx, key, value, expiration)
+}
+
 // Incr 使用全局默认缓存递增整数值
 func Incr(ctx context.Context, key string) (int64, error) {
 	return getDefaultCache().Incr(ctx, key)

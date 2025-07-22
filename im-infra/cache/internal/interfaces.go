@@ -11,6 +11,7 @@ type Cache interface {
 	// String operations - Redis 字符串操作
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error)
 	Incr(ctx context.Context, key string) (int64, error)
 	Decr(ctx context.Context, key string) (int64, error)
 	Expire(ctx context.Context, key string, expiration time.Duration) error
@@ -51,16 +52,16 @@ type Cache interface {
 type Lock interface {
 	// Unlock 释放锁
 	Unlock(ctx context.Context) error
-	
+
 	// Refresh 续期锁的过期时间
 	Refresh(ctx context.Context, expiration time.Duration) error
-	
+
 	// Key 返回锁的键名
 	Key() string
-	
+
 	// IsLocked 检查锁是否仍然有效
 	IsLocked(ctx context.Context) (bool, error)
-	
+
 	// Value 返回锁的值（用于验证锁的所有权）
 	Value() string
 }
@@ -69,6 +70,7 @@ type Lock interface {
 type StringOperations interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error)
 	Incr(ctx context.Context, key string) (int64, error)
 	Decr(ctx context.Context, key string) (int64, error)
 	Expire(ctx context.Context, key string, expiration time.Duration) error

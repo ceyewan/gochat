@@ -20,6 +20,7 @@
 // 基础全局缓存方法
 func Get(ctx context.Context, key string) (string, error)
 func Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+func SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error)
 func Incr(ctx context.Context, key string) (int64, error)
 func Decr(ctx context.Context, key string) (int64, error)
 func Expire(ctx context.Context, key string, expiration time.Duration) error
