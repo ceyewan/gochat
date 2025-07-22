@@ -1,0 +1,154 @@
+package internal
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"log/slog"
+
+	"github.com/ceyewan/gochat/im-infra/clog/internal/slogx"
+)
+
+// Logger 定义结构化日志操作的接口。
+// 提供不同级别的结构化日志方法。
+type Logger interface {
+	// Debug 以 Debug 级别记录日志，可选结构化属性。
+	Debug(msg string, args ...any)
+
+	// Info 以 Info 级别记录日志，可选结构化属性。
+	Info(msg string, args ...any)
+
+	// Warn 以 Warn 级别记录日志，可选结构化属性。
+	Warn(msg string, args ...any)
+
+	// Error 以 Error 级别记录日志，可选结构化属性。
+	Error(msg string, args ...any)
+
+	// DebugContext 以 Debug 级别记录带 context 的日志，可选结构化属性。
+	DebugContext(ctx context.Context, msg string, args ...any)
+
+	// InfoContext 以 Info 级别记录带 context 的日志，可选结构化属性。
+	InfoContext(ctx context.Context, msg string, args ...any)
+
+	// WarnContext 以 Warn 级别记录带 context 的日志，可选结构化属性。
+	WarnContext(ctx context.Context, msg string, args ...any)
+
+	// ErrorContext 以 Error 级别记录带 context 的日志，可选结构化属性。
+	ErrorContext(ctx context.Context, msg string, args ...any)
+
+	// With 返回一个带有指定属性的新 Logger，这些属性会添加到所有日志记录中。
+	With(args ...any) Logger
+
+	// WithGroup 返回一个带有指定分组名的新 Logger。
+	// 新 Logger 添加的所有属性都会嵌套在该分组下。
+	WithGroup(name string) Logger
+
+	// SetLevel 动态修改最小日志级别。
+	// 支持："debug"、"info"、"warn"、"error"。
+	SetLevel(level string) error
+}
+
+// NewLogger 根据提供的配置创建一个新的 Logger 实例。
+// 这是核心工厂函数，按配置组装所有组件。
+func NewLogger(cfg Config) (Logger, error) {
+	// 1. 创建 LevelManager
+	levelManager, err := slogx.NewLevelManager(cfg.Level)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create level manager: %w", err)
+	}
+
+	// 2. 为每个输出创建 handler
+	var handlers []slog.Handler
+	for i, outCfg := range cfg.Outputs {
+		handler, err := createOutputHandler(outCfg, cfg.AddSource, levelManager)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create handler for output %d: %w", i, err)
+		}
+		handlers = append(handlers, handler)
+	}
+
+	// 处理没有有效输出的情况
+	if len(handlers) == 0 {
+		return nil, fmt.Errorf("no valid outputs configured")
+	}
+
+	// 如果只有一个 handler，直接使用它，否则使用 TeeHandler
+	var coreHandler slog.Handler
+	if len(handlers) == 1 {
+		coreHandler = handlers[0]
+	} else {
+		coreHandler = slogx.NewTeeHandler(handlers...)
+	}
+
+	// 4. 如需 TraceID 中间件则包装
+	if cfg.EnableTraceID {
+		coreHandler = slogx.NewContextHandler(coreHandler, cfg.TraceIDKey)
+	}
+
+	// 5. 创建 slog.Logger 并包装
+	sl := slog.New(coreHandler)
+	return newLogger(sl, levelManager), nil
+}
+
+// createOutputHandler 根据输出配置创建单个输出 handler。
+func createOutputHandler(outCfg OutputConfig, addSource bool, levelManager *slogx.LevelManager) (slog.Handler, error) {
+	// 将 FileRotationConfig 转换为 slogx.FileRotationConfig
+	var slogxFileRotation *slogx.FileRotationConfig
+	if outCfg.FileRotation != nil {
+		slogxFileRotation = &slogx.FileRotationConfig{
+			Filename:   outCfg.FileRotation.Filename,
+			MaxSize:    outCfg.FileRotation.MaxSize,
+			MaxAge:     outCfg.FileRotation.MaxAge,
+			MaxBackups: outCfg.FileRotation.MaxBackups,
+			LocalTime:  outCfg.FileRotation.LocalTime,
+			Compress:   outCfg.FileRotation.Compress,
+		}
+	}
+
+	// 创建 writer
+	writer, err := slogx.NewWriter(outCfg.Writer, slogxFileRotation)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create writer: %w", err)
+	}
+
+	// 根据格式创建 handler
+	handler, err := createBaseHandler(writer, outCfg.Format, addSource, levelManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create base handler: %w", err)
+	}
+
+	return handler, nil
+}
+
+// createBaseHandler 根据指定配置创建基础 slog.Handler。
+func createBaseHandler(writer io.Writer, format string, addSource bool, levelManager *slogx.LevelManager) (slog.Handler, error) {
+	// 创建 handler 选项
+	opts := &slog.HandlerOptions{
+		Level:     levelManager.Leveler(),
+		AddSource: addSource,
+	}
+
+	// 根据格式创建 handler
+	switch format {
+	case "json":
+		return slog.NewJSONHandler(writer, opts), nil
+	case "text":
+		return slog.NewTextHandler(writer, opts), nil
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// NewDefaultLogger 创建一个默认配置的日志器。
+// 用于公共 API 的 Default() 方法。
+func NewDefaultLogger() Logger {
+	cfg := DefaultConfig()
+	logger, err := NewLogger(cfg)
+	if err != nil {
+		// 这不应该发生，但如果发生了，我们将创建一个基本的 slog 日志器作为备用
+		sl := slog.Default()
+		levelManager, _ := slogx.NewLevelManager("info")
+		return newLogger(sl, levelManager)
+	}
+	return logger
+}
