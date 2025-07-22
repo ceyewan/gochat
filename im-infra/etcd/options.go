@@ -119,7 +119,7 @@ func (l *DefaultLogger) Errorf(format string, args ...interface{}) {
 // DefaultManagerOptions 返回默认的管理器选项
 func DefaultManagerOptions() *ManagerOptions {
 	// 创建 etcd 模块的 clog 日志器
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().WithGroup("etcd")
 
 	return &ManagerOptions{
 		Endpoints:   []string{"localhost:23791", "localhost:23792", "localhost:23793"},
@@ -336,24 +336,4 @@ func (c *ClogAdapter) Warn(args ...interface{}) {
 // Error 实现 Logger 接口
 func (c *ClogAdapter) Error(args ...interface{}) {
 	c.logger.Error("etcd error", clog.Any("args", args))
-}
-
-// Debugf 实现 Logger 接口
-func (c *ClogAdapter) Debugf(format string, args ...interface{}) {
-	c.logger.Debugf("etcd debug: "+format, args...)
-}
-
-// Infof 实现 Logger 接口
-func (c *ClogAdapter) Infof(format string, args ...interface{}) {
-	c.logger.Infof("etcd info: "+format, args...)
-}
-
-// Warnf 实现 Logger 接口
-func (c *ClogAdapter) Warnf(format string, args ...interface{}) {
-	c.logger.Warnf("etcd warn: "+format, args...)
-}
-
-// Errorf 实现 Logger 接口
-func (c *ClogAdapter) Errorf(format string, args ...interface{}) {
-	c.logger.Errorf("etcd error: "+format, args...)
 }

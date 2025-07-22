@@ -23,7 +23,7 @@ var (
 // NewClient 创建一个新的etcd客户端
 func NewClient(config *Config) (*Client, error) {
 	// 创建 etcd 客户端专用的日志器
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd")
 
 	if config == nil {
 		etcdLogger.Info("使用默认配置创建 etcd 客户端")
@@ -58,7 +58,7 @@ func NewClient(config *Config) (*Client, error) {
 
 // InitDefaultClient 初始化默认客户端
 func InitDefaultClient(config *Config) error {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd")
 	etcdLogger.Info("开始初始化默认 etcd 客户端")
 
 	var err error
@@ -75,7 +75,7 @@ func InitDefaultClient(config *Config) error {
 
 // GetDefaultClient 获取默认客户端
 func GetDefaultClient() (*Client, error) {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd")
 
 	if defaultClient == nil {
 		etcdLogger.Error("默认 etcd 客户端未初始化")
@@ -106,7 +106,7 @@ func (c *Client) Close() error {
 
 // CloseDefaultClient 关闭默认客户端
 func CloseDefaultClient() error {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd")
 	etcdLogger.Info("开始关闭默认 etcd 客户端")
 
 	if defaultClient == nil {

@@ -36,8 +36,8 @@ type lockEntry struct {
 
 // NewDistributedLock 创建新的分布式锁管理器
 func NewDistributedLock(connMgr ConnectionManager, leaseMgr LeaseManager, logger Logger, lockPrefix string) DistributedLock {
-	etcdLogger := clog.Module("etcd")
-	etcdLogger.Info("创建分布式锁管理器", clog.String("lock_prefix", lockPrefix))
+	etcdLogger := clog.Default().WithGroup("etcd")
+	etcdLogger.Info("创建分布式锁管理器", "lock_prefix", lockPrefix)
 
 	if logger == nil {
 		logger = NewClogAdapter(etcdLogger)

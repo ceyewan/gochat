@@ -33,7 +33,7 @@ type etcdManager struct {
 
 // NewEtcdManager 创建新的 etcd 管理器
 func NewEtcdManager(options *ManagerOptions) (EtcdManager, error) {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().WithGroup("etcd")
 	etcdLogger.Info("开始创建 etcd 管理器")
 
 	if options == nil {
@@ -42,10 +42,10 @@ func NewEtcdManager(options *ManagerOptions) (EtcdManager, error) {
 	}
 
 	etcdLogger.Info("etcd 管理器配置",
-		clog.Any("endpoints", options.Endpoints),
-		clog.Duration("dial_timeout", options.DialTimeout),
-		clog.String("service_prefix", options.ServicePrefix),
-		clog.Int64("default_ttl", options.DefaultTTL))
+		"endpoints", options.Endpoints,
+		"dial_timeout", options.DialTimeout,
+		"service_prefix", options.ServicePrefix,
+		"default_ttl", options.DefaultTTL)
 
 	manager := &etcdManager{
 		options:    options,
@@ -56,7 +56,7 @@ func NewEtcdManager(options *ManagerOptions) (EtcdManager, error) {
 	// 初始化组件
 	etcdLogger.Info("开始初始化组件")
 	if err := manager.initializeComponents(); err != nil {
-		etcdLogger.Error("初始化组件失败", clog.Err(err))
+		etcdLogger.Error("初始化组件失败", "error", err)
 		return nil, WrapConfigurationError(err, "failed to initialize manager components")
 	}
 	etcdLogger.Info("组件初始化成功")
@@ -81,12 +81,12 @@ func (m *etcdManager) initializeComponents() error {
 	m.connMgr = NewConnectionManager(m.options)
 
 	// 建立连接
-	m.logger.Info("建立 etcd 连接", clog.Any("endpoints", m.options.Endpoints))
+	m.logger.Info("建立 etcd 连接", "endpoints", m.options.Endpoints)
 	ctx, cancel := context.WithTimeout(context.Background(), m.options.DialTimeout)
 	defer cancel()
 
 	if err := m.connMgr.Connect(ctx); err != nil {
-		m.logger.Error("连接 etcd 失败", clog.Err(err))
+		m.logger.Error("连接 etcd 失败", "error", err)
 		return WrapConnectionError(err, "failed to connect to etcd")
 	}
 	m.logger.Info("etcd 连接建立成功")
@@ -99,7 +99,7 @@ func (m *etcdManager) initializeComponents() error {
 	m.logger.Debug("创建服务注册组件")
 	registry, err := NewServiceRegistryWithManager(m.connMgr, m.leaseMgr, m.logger, m.options)
 	if err != nil {
-		m.logger.Error("创建服务注册组件失败", clog.Err(err))
+		m.logger.Error("创建服务注册组件失败", "error", err)
 		return WrapRegistryError(err, "failed to create service registry")
 	}
 	m.registry = registry
@@ -109,7 +109,7 @@ func (m *etcdManager) initializeComponents() error {
 	m.logger.Debug("创建服务发现组件")
 	discovery, err := NewServiceDiscoveryWithManager(m.connMgr, m.logger, m.options)
 	if err != nil {
-		m.logger.Error("创建服务发现组件失败", clog.Err(err))
+		m.logger.Error("创建服务发现组件失败", "error", err)
 		return WrapDiscoveryError(err, "failed to create service discovery")
 	}
 	m.discovery = discovery
@@ -157,7 +157,7 @@ func (m *etcdManager) HealthCheck(ctx context.Context) error {
 
 	// 检查连接状态
 	if err := m.connMgr.HealthCheck(ctx); err != nil {
-		m.logger.Errorf("Connection health check failed: %v", err)
+		m.logger.Error("连接健康检查失败", "error", err)
 		return err
 	}
 
@@ -192,7 +192,7 @@ func (m *etcdManager) Close() error {
 		m.logger.Debug("关闭分布式锁组件")
 		if lockCloser, ok := m.lock.(*etcdDistributedLock); ok {
 			if err := lockCloser.Close(); err != nil {
-				m.logger.Errorf("关闭分布式锁失败: %v", err)
+				m.logger.Error("关闭分布式锁失败", "error", err)
 				lastErr = err
 			} else {
 				m.logger.Debug("分布式锁组件关闭成功")
@@ -205,7 +205,7 @@ func (m *etcdManager) Close() error {
 		m.logger.Debug("关闭租约管理器")
 		if leaseCloser, ok := m.leaseMgr.(*etcdLeaseManager); ok {
 			if err := leaseCloser.Close(); err != nil {
-				m.logger.Errorf("关闭租约管理器失败: %v", err)
+				m.logger.Error("关闭租约管理器失败", "error", err)
 				lastErr = err
 			} else {
 				m.logger.Debug("租约管理器关闭成功")
@@ -217,7 +217,7 @@ func (m *etcdManager) Close() error {
 	if m.connMgr != nil {
 		m.logger.Debug("关闭连接管理器")
 		if err := m.connMgr.Close(); err != nil {
-			m.logger.Errorf("关闭连接管理器失败: %v", err)
+			m.logger.Error("关闭连接管理器失败", "error", err)
 			lastErr = err
 		} else {
 			m.logger.Debug("连接管理器关闭成功")
@@ -226,7 +226,7 @@ func (m *etcdManager) Close() error {
 
 	atomic.StoreInt32(&m.ready, 0)
 	if lastErr != nil {
-		m.logger.Warnf("etcd 管理器关闭完成，但有错误: %v", lastErr)
+		m.logger.Warn("etcd 管理器关闭完成，但有错误", "error", lastErr)
 	} else {
 		m.logger.Info("etcd 管理器关闭成功")
 	}
@@ -270,15 +270,15 @@ func (m *etcdManager) performHealthCheck() {
 	defer cancel()
 
 	if err := m.HealthCheck(ctx); err != nil {
-		m.logger.Warnf("Health check failed: %v", err)
+		m.logger.Warn("健康检查失败", "error", err)
 
 		// 尝试重连
 		if IsConnectionError(err) {
-			m.logger.Info("Attempting to reconnect...")
+			m.logger.Info("尝试重连...")
 			if reconnectErr := m.connMgr.Reconnect(ctx); reconnectErr != nil {
-				m.logger.Errorf("Reconnection failed: %v", reconnectErr)
+				m.logger.Error("重连失败", "error", reconnectErr)
 			} else {
-				m.logger.Info("Reconnection successful")
+				m.logger.Info("重连成功")
 			}
 		}
 	}
@@ -312,7 +312,7 @@ type ManagerStatus struct {
 
 // Restart 重启管理器
 func (m *etcdManager) Restart(ctx context.Context) error {
-	m.logger.Info("Restarting EtcdManager...")
+	m.logger.Info("重启 EtcdManager...")
 
 	// 重新连接
 	if err := m.connMgr.Reconnect(ctx); err != nil {
@@ -324,7 +324,7 @@ func (m *etcdManager) Restart(ctx context.Context) error {
 		return WrapConfigurationError(err, "failed to reinitialize components during restart")
 	}
 
-	m.logger.Info("EtcdManager restarted successfully")
+	m.logger.Info("EtcdManager 重启成功")
 	return nil
 }
 
@@ -360,7 +360,7 @@ func (m *etcdManager) UpdateConfiguration(newOptions *ManagerOptions) error {
 		}
 	}
 
-	m.logger.Info("Configuration updated successfully")
+	m.logger.Info("配置更新成功")
 	return nil
 }
 

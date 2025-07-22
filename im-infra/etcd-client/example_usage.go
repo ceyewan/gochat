@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
@@ -10,21 +9,9 @@ import (
 )
 
 func main() {
-	// 初始化 clog 日志系统
-	err := clog.Init(
-		clog.WithLevel("debug"),
-		clog.WithConsoleOutput(true),
-		clog.WithFilename("logs/etcd-example.log"),
-		clog.WithFormat(clog.FormatJSON),
-	)
-	if err != nil {
-		panic(fmt.Sprintf("初始化日志失败: %v", err))
-	}
-	defer clog.Sync()
-
-	// 获取 etcd 模块的日志器
-	etcdLogger := clog.Module("etcd")
-	etcdLogger.Info("开始 etcd 示例程序")
+	// 创建日志器
+	logger := clog.Default().With("module", "etcd-example")
+	logger.Info("开始 etcd 示例程序")
 
 	// 示例1: 使用基本客户端
 	basicClientExample()
@@ -35,12 +22,12 @@ func main() {
 	// 示例3: 服务注册和发现
 	serviceRegistryExample()
 
-	etcdLogger.Info("etcd 示例程序结束")
+	logger.Info("etcd 示例程序结束")
 }
 
 // basicClientExample 基本客户端示例
 func basicClientExample() {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd", "example", "basic-client")
 	etcdLogger.Info("=== 基本客户端示例 ===")
 
 	// 创建配置
@@ -52,7 +39,7 @@ func basicClientExample() {
 	// 创建客户端
 	client, err := etcd.NewClient(config)
 	if err != nil {
-		etcdLogger.Error("创建客户端失败", clog.Err(err))
+		etcdLogger.Error("创建客户端失败", "error", err)
 		return
 	}
 	defer client.Close()
@@ -62,7 +49,7 @@ func basicClientExample() {
 
 // managerExample 管理器示例
 func managerExample() {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd", "example", "manager")
 	etcdLogger.Info("=== 管理器示例 ===")
 
 	// 创建管理器选项
@@ -80,7 +67,7 @@ func managerExample() {
 	// 创建管理器
 	manager, err := etcd.NewEtcdManager(options)
 	if err != nil {
-		etcdLogger.Error("创建管理器失败", clog.Err(err))
+		etcdLogger.Error("创建管理器失败", "error", err)
 		return
 	}
 	defer manager.Close()
@@ -92,7 +79,7 @@ func managerExample() {
 	defer cancel()
 
 	if err := manager.HealthCheck(ctx); err != nil {
-		etcdLogger.Error("健康检查失败", clog.Err(err))
+		etcdLogger.Error("健康检查失败", "error", err)
 	} else {
 		etcdLogger.Info("健康检查通过")
 	}
@@ -100,7 +87,7 @@ func managerExample() {
 
 // serviceRegistryExample 服务注册和发现示例
 func serviceRegistryExample() {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd", "example", "service-registry")
 	etcdLogger.Info("=== 服务注册和发现示例 ===")
 
 	// 创建管理器
@@ -109,7 +96,7 @@ func serviceRegistryExample() {
 
 	manager, err := etcd.NewEtcdManager(options)
 	if err != nil {
-		etcdLogger.Error("创建管理器失败", clog.Err(err))
+		etcdLogger.Error("创建管理器失败", "error", err)
 		return
 	}
 	defer manager.Close()
@@ -127,9 +114,9 @@ func serviceRegistryExample() {
 	address := "localhost:8080"
 
 	etcdLogger.Info("注册服务",
-		clog.String("service", serviceName),
-		clog.String("instance", instanceID),
-		clog.String("address", address))
+		"service", serviceName,
+		"instance", instanceID,
+		"address", address)
 
 	err = registry.Register(ctx, serviceName, instanceID, address,
 		etcd.WithTTL(60),
@@ -138,44 +125,44 @@ func serviceRegistryExample() {
 			"region":  "us-west-1",
 		}))
 	if err != nil {
-		etcdLogger.Error("注册服务失败", clog.Err(err))
+		etcdLogger.Error("注册服务失败", "error", err)
 		return
 	}
 
 	etcdLogger.Info("服务注册成功")
 
 	// 发现服务
-	etcdLogger.Info("发现服务", clog.String("service", serviceName))
+	etcdLogger.Info("发现服务", "service", serviceName)
 	endpoints, err := discovery.GetServiceEndpoints(ctx, serviceName)
 	if err != nil {
-		etcdLogger.Error("发现服务失败", clog.Err(err))
+		etcdLogger.Error("发现服务失败", "error", err)
 		return
 	}
 
 	etcdLogger.Info("服务发现成功",
-		clog.String("service", serviceName),
-		clog.Any("endpoints", endpoints))
+		"service", serviceName,
+		"endpoints", endpoints)
 
 	// 获取服务实例详情
 	instances, err := discovery.ResolveService(ctx, serviceName)
 	if err != nil {
-		etcdLogger.Error("解析服务失败", clog.Err(err))
+		etcdLogger.Error("解析服务失败", "error", err)
 		return
 	}
 
 	for i, instance := range instances {
 		etcdLogger.Info("服务实例",
-			clog.Int("index", i),
-			clog.String("id", instance.ID),
-			clog.String("address", instance.Address),
-			clog.Any("metadata", instance.Metadata))
+			"index", i,
+			"id", instance.ID,
+			"address", instance.Address,
+			"metadata", instance.Metadata)
 	}
 
 	// 监听服务变化
 	etcdLogger.Info("开始监听服务变化")
 	eventCh, err := discovery.WatchService(ctx, serviceName)
 	if err != nil {
-		etcdLogger.Error("监听服务失败", clog.Err(err))
+		etcdLogger.Error("监听服务失败", "error", err)
 		return
 	}
 
@@ -183,10 +170,10 @@ func serviceRegistryExample() {
 	go func() {
 		for event := range eventCh {
 			etcdLogger.Info("收到服务事件",
-				clog.Int("type", int(event.Type)),
-				clog.String("service", event.Service),
-				clog.String("instance_id", event.Instance.ID),
-				clog.String("address", event.Instance.Address))
+				"type", int(event.Type),
+				"service", event.Service,
+				"instance_id", event.Instance.ID,
+				"address", event.Instance.Address)
 		}
 	}()
 
@@ -194,10 +181,10 @@ func serviceRegistryExample() {
 	time.Sleep(2 * time.Second)
 
 	// 注销服务
-	etcdLogger.Info("注销服务", clog.String("service", serviceName), clog.String("instance", instanceID))
+	etcdLogger.Info("注销服务", "service", serviceName, "instance", instanceID)
 	err = registry.Deregister(ctx, serviceName, instanceID)
 	if err != nil {
-		etcdLogger.Error("注销服务失败", clog.Err(err))
+		etcdLogger.Error("注销服务失败", "error", err)
 		return
 	}
 

@@ -22,7 +22,7 @@ type EtcdRegistry struct {
 
 // NewServiceRegistry 创建服务注册实例（向后兼容）
 func NewServiceRegistry(client *Client) (*EtcdRegistry, error) {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd")
 	etcdLogger.Info("创建服务注册实例")
 
 	if client == nil {
@@ -45,7 +45,7 @@ func NewServiceRegistry(client *Client) (*EtcdRegistry, error) {
 
 // NewServiceRegistryWithManager 使用管理器创建服务注册实例
 func NewServiceRegistryWithManager(connMgr ConnectionManager, leaseMgr LeaseManager, logger Logger, options *ManagerOptions) (ServiceRegistry, error) {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().With("module", "etcd")
 	etcdLogger.Info("使用管理器创建服务注册实例")
 
 	if connMgr == nil {

@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== clog Advanced Example ===\n")
+	fmt.Println("=== clog Advanced Example ===")
 
 	// Create logs directory
 	logsDir := "logs"

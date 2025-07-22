@@ -24,7 +24,7 @@ type etcdServiceDiscovery struct {
 
 // NewServiceDiscoveryWithManager 使用连接管理器创建服务发现组件
 func NewServiceDiscoveryWithManager(connMgr ConnectionManager, logger Logger, options *ManagerOptions) (ServiceDiscovery, error) {
-	etcdLogger := clog.Module("etcd")
+	etcdLogger := clog.Default().WithGroup("etcd")
 	etcdLogger.Info("创建服务发现组件")
 
 	if connMgr == nil {
