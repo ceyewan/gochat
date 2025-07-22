@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -20,8 +21,8 @@ func main() {
 		return
 	}
 
-	fmt.Println("1. Multi-Output Logger (Console + File):")
-	// 1. Multi-output configuration
+	// 1. 多输出配置（控制台 + 文件）
+	fmt.Println("1. 多输出配置:")
 	cfg := clog.Config{
 		Level: "debug",
 		Outputs: []clog.OutputConfig{
@@ -49,36 +50,28 @@ func main() {
 		AddSource:     true,
 	}
 
-	logger, err := clog.New(cfg)
+	customLogger, err := clog.New(cfg)
 	if err != nil {
 		fmt.Printf("Failed to create logger: %v\n", err)
 		return
 	}
 
-	// 2. Application startup logging
-	fmt.Println("\n2. Application Startup:")
-	appLogger := logger.WithGroup("app")
-	appLogger.Info("Application starting", "version", "1.0.0", "env", "production")
+	customLogger.Info("Custom logger created with multi-output configuration")
 
-	// 3. Service initialization
-	fmt.Println("\n3. Service Initialization:")
-	services := []string{"database", "redis", "message-queue", "http-server"}
-	for i, service := range services {
-		serviceLogger := logger.WithGroup("init").With("service", service)
+	// 2. 模块日志器演示
+	fmt.Println("\n2. 模块日志器演示:")
+	appLogger := clog.Module("app")
+	dbLogger := clog.Module("database")
+	apiLogger := clog.Module("api")
+	cacheLogger := clog.Module("cache")
 
-		// Simulate initialization time
-		start := time.Now()
-		time.Sleep(time.Duration(10+i*5) * time.Millisecond)
-		duration := time.Since(start)
+	appLogger.Info("Application initialized", "pid", os.Getpid())
+	dbLogger.Info("Database connection pool created", "max_connections", 100)
+	apiLogger.Info("HTTP server starting", "port", 8080)
+	cacheLogger.Info("Redis connection established", "host", "localhost:6379")
 
-		serviceLogger.Info("Service initialized",
-			"duration_ms", duration.Milliseconds(),
-			"status", "success",
-		)
-	}
-
-	// 4. Request processing simulation
-	fmt.Println("\n4. Request Processing:")
+	// 3. 请求处理演示
+	fmt.Println("\n3. 请求处理演示:")
 	requests := []struct {
 		id       string
 		endpoint string
@@ -90,130 +83,91 @@ func main() {
 		{"req-003", "/api/products", "GET", 12345},
 	}
 
+	requestLogger := clog.Module("request")
+
 	for _, req := range requests {
-		// Create context with trace ID
 		ctx := context.WithValue(context.Background(), "trace_id", req.id)
 
-		// Request logger with common attributes
-		reqLogger := logger.With(
+		requestLogger.InfoContext(ctx, "Request started",
 			"endpoint", req.endpoint,
 			"method", req.method,
 			"user_id", req.userID,
 		)
 
-		reqLogger.InfoContext(ctx, "Request started")
-
-		// Simulate request processing
+		// Simulate processing
 		start := time.Now()
-
-		// Database operation
-		dbLogger := reqLogger.WithGroup("database")
-		dbLogger.DebugContext(ctx, "Executing query", "table", "users", "operation", "SELECT")
-		time.Sleep(20 * time.Millisecond)
-
-		// Business logic
-		bizLogger := reqLogger.WithGroup("business")
-		bizLogger.DebugContext(ctx, "Processing business logic", "step", "validation")
-		time.Sleep(15 * time.Millisecond)
-
-		// Response
+		time.Sleep(time.Duration(rand.Intn(50)+10) * time.Millisecond)
 		duration := time.Since(start)
-		reqLogger.InfoContext(ctx, "Request completed",
+
+		requestLogger.InfoContext(ctx, "Request completed",
 			"status_code", 200,
 			"duration_ms", duration.Milliseconds(),
-			"response_size", 1024,
 		)
 	}
 
-	// 5. Error handling example
-	fmt.Println("\n5. Error Handling:")
-	errorLogger := logger.WithGroup("error")
+	// 4. 错误处理演示
+	fmt.Println("\n4. 错误处理演示:")
+	errorLogger := clog.Module("error")
 
-	// Simulate different types of errors
 	errors := []struct {
-		level   string
-		message string
-		details map[string]interface{}
+		errorType string
+		message   string
+		code      int
+		severity  string
 	}{
-		{
-			"warn",
-			"Rate limit approaching",
-			map[string]interface{}{
-				"current_rate": 850,
-				"limit":        1000,
-				"window":       "1m",
-			},
-		},
-		{
-			"error",
-			"Database connection failed",
-			map[string]interface{}{
-				"host":        "db.example.com",
-				"port":        5432,
-				"error":       "connection timeout",
-				"retry_count": 3,
-			},
-		},
+		{"validation", "Invalid user input", 400, "warn"},
+		{"database", "Connection timeout", 500, "error"},
+		{"external", "Third-party API failure", 502, "error"},
 	}
 
-	for _, errInfo := range errors {
-		ctx := context.WithValue(context.Background(), "trace_id", fmt.Sprintf("err-%d", time.Now().UnixNano()))
-
-		var args []interface{}
-		for k, v := range errInfo.details {
-			args = append(args, k, v)
-		}
-
-		switch errInfo.level {
+	for _, err := range errors {
+		switch err.severity {
 		case "warn":
-			errorLogger.WarnContext(ctx, errInfo.message, args...)
+			errorLogger.Warn(err.message,
+				"error_type", err.errorType,
+				"error_code", err.code,
+			)
 		case "error":
-			errorLogger.ErrorContext(ctx, errInfo.message, args...)
+			errorLogger.Error(err.message,
+				"error_type", err.errorType,
+				"error_code", err.code,
+				"requires_attention", true,
+			)
 		}
 	}
 
-	// 6. Performance monitoring
-	fmt.Println("\n6. Performance Monitoring:")
-	perfLogger := logger.WithGroup("performance")
+	// 5. 性能监控
+	fmt.Println("\n5. 性能监控:")
+	perfLogger := clog.Module("performance")
 
-	operations := []string{"cache_lookup", "db_query", "api_call", "file_processing"}
+	operations := []string{"cache_lookup", "db_query", "api_call"}
 	for _, op := range operations {
 		start := time.Now()
-
-		// Simulate operation
-		time.Sleep(time.Duration(20+len(op)*2) * time.Millisecond)
-
+		time.Sleep(time.Duration(rand.Intn(100)+10) * time.Millisecond)
 		duration := time.Since(start)
-		perfLogger.Info("Operation metrics",
+
+		perfLogger.Info("Operation completed",
 			"operation", op,
 			"duration_ms", duration.Milliseconds(),
 			"success", true,
-			"timestamp", start.Unix(),
 		)
 	}
 
-	// 7. Dynamic level change demonstration
-	fmt.Println("\n7. Dynamic Level Changes:")
-	logger.Info("Current level: debug - all messages show")
-	logger.Debug("Debug message")
-	logger.Info("Info message")
-	logger.Warn("Warn message")
+	// 6. 动态级别变更
+	fmt.Println("\n6. 动态级别变更:")
+	customLogger.Info("Current level: debug")
+	customLogger.Debug("Debug message (visible)")
 
-	logger.SetLevel("warn")
+	customLogger.SetLevel("warn")
 	fmt.Println("Changed level to warn:")
-	logger.Debug("Debug message (won't show)")
-	logger.Info("Info message (won't show)")
-	logger.Warn("Warn message (will show)")
-	logger.Error("Error message (will show)")
+	customLogger.Debug("Debug message (hidden)")
+	customLogger.Info("Info message (hidden)")
+	customLogger.Warn("Warn message (visible)")
 
-	// 8. Application shutdown
-	fmt.Println("\n8. Application Shutdown:")
-	appLogger.Info("Application shutting down gracefully",
-		"uptime_seconds", 5,
-		"requests_processed", len(requests),
-		"errors_encountered", len(errors),
-	)
+	// 7. 清理
+	fmt.Println("\n7. 应用关闭:")
+	clog.Info("Application shutting down gracefully")
 
-	fmt.Printf("\n=== Logs written to: %s ===\n", filepath.Join(logsDir, "app.log"))
-	fmt.Println("=== Advanced Example Complete ===")
+	fmt.Println("\n=== Advanced Example Complete ===")
+	fmt.Printf("Check the logs directory (%s) for the generated log files.\n", logsDir)
 }

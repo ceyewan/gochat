@@ -65,8 +65,8 @@ func Duration(key string, value time.Duration) Field {
 	return Field{Key: key, Value: value}
 }
 
-// Error 创建一个 error 类型的日志字段
-func Error(err error) Field {
+// ErrorValue 创建一个 error 类型的日志字段
+func ErrorValue(err error) Field {
 	if err == nil {
 		return Field{Key: "error", Value: nil}
 	}

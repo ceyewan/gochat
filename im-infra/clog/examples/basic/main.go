@@ -3,27 +3,51 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
 )
 
-type requestIDKeyType struct{}
-
-var requestIDKey = requestIDKeyType{}
-
 func main() {
 	fmt.Println("=== clog Basic Example ===")
 
-	// 1. Using Default Logger
-	fmt.Println("1. Default Logger:")
-	logger := clog.Default()
-	logger.Info("Hello from default logger!")
-	logger.Warn("This is a warning message", "component", "example")
-	logger.Error("This is an error message", "error_code", 500)
+	// 1. 全局日志方法（推荐方式）
+	fmt.Println("1. 全局日志方法:")
+	clog.Info("Hello from global logger!")
+	clog.Warn("This is a warning message", "component", "example")
+	clog.Error("This is an error message", "error_code", 500)
 
-	fmt.Println("\n2. Custom Logger with JSON Output:")
-	// 2. Custom Logger Configuration
+	// 2. 带 Context 的全局日志方法
+	fmt.Println("\n2. 带 Context 的全局日志:")
+	ctx := context.Background()
+	clog.InfoContext(ctx, "Processing request", "request_id", "req-123")
+	clog.WarnContext(ctx, "Request timeout warning", "timeout", "30s")
+
+	// 3. 模块日志器（推荐用于不同组件）
+	fmt.Println("\n3. 模块日志器:")
+	dbLogger := clog.Module("database")
+	apiLogger := clog.Module("api")
+	authLogger := clog.Module("auth")
+
+	dbLogger.Info("Database connection established", "host", "localhost", "port", 5432)
+	apiLogger.Info("API server started", "port", 8080, "version", "v1.0")
+	authLogger.Info("User authenticated", "user_id", 12345, "username", "alice")
+
+	// 4. 模块日志器的性能优势（缓存使用）
+	fmt.Println("\n4. 模块日志器缓存演示:")
+	// 相同模块名返回相同实例，无额外开销
+	db1 := clog.Module("database")
+	db2 := clog.Module("database")
+	db1.Info("First database logger")
+	db2.Info("Second database logger (same instance)")
+
+	// 5. 传统方式（兼容性）
+	fmt.Println("\n5. 传统方式（兼容性）:")
+	logger := clog.Default()
+	logger.Info("Using traditional Default() method")
+	logger.Warn("This still works for backward compatibility")
+
+	// 6. 自定义配置示例
+	fmt.Println("\n6. 自定义配置:")
 	cfg := clog.Config{
 		Level: "debug",
 		Outputs: []clog.OutputConfig{
@@ -33,8 +57,8 @@ func main() {
 			},
 		},
 		EnableTraceID: true,
-		TraceIDKey:    requestIDKey,
-		AddSource:     true,
+		TraceIDKey:    "trace_id",
+		AddSource:     false,
 	}
 
 	customLogger, err := clog.New(cfg)
@@ -46,52 +70,10 @@ func main() {
 	customLogger.Debug("Debug message with custom config")
 	customLogger.Info("Info message", "user_id", 12345, "action", "login")
 
-	fmt.Println("\n3. Context-aware Logging with TraceID:")
-	// 3. Context-aware logging
-	ctx := context.WithValue(context.Background(), requestIDKey, "req-abc-123")
-	customLogger.InfoContext(ctx, "Processing user request", "endpoint", "/api/users", "method", "GET")
-
-	fmt.Println("\n4. Structured Logging with Attributes:")
-	// 4. Structured logging with child loggers
+	// 7. 结构化日志
+	fmt.Println("\n7. 结构化日志:")
 	serviceLogger := customLogger.With("service", "user-service", "version", "1.2.3")
 	serviceLogger.Info("Service started successfully", "port", 8080)
-
-	userLogger := serviceLogger.With("user_id", 67890)
-	userLogger.Info("User authenticated", "username", "alice", "role", "admin")
-
-	fmt.Println("\n5. Grouped Logging:")
-	// 5. Grouped logging
-	dbLogger := customLogger.WithGroup("database")
-	dbLogger.Info("Connection established", "host", "localhost", "port", 5432, "database", "users")
-	dbLogger.Warn("Slow query detected", "duration_ms", 1500, "query", "SELECT * FROM users")
-
-	fmt.Println("\n6. Dynamic Level Changes:")
-	// 6. Dynamic level changes
-	logger.Info("Current level allows info messages")
-	logger.Debug("This debug message won't show (level is info)")
-
-	logger.SetLevel("debug")
-	logger.Debug("Now debug messages will show!")
-
-	logger.SetLevel("error")
-	logger.Info("This info message won't show (level is error)")
-	logger.Error("But error messages still show")
-
-	fmt.Println("\n7. Performance Logging Example:")
-	// 7. Performance logging example
-	performanceLogger := customLogger.WithGroup("performance")
-	start := time.Now()
-
-	// Simulate some work
-	time.Sleep(50 * time.Millisecond)
-
-	duration := time.Since(start)
-	performanceLogger.Info("Operation completed",
-		"operation", "data_processing",
-		"duration_ms", duration.Milliseconds(),
-		"records_processed", 1000,
-		"success", true,
-	)
 
 	fmt.Println("\n=== Example Complete ===")
 }

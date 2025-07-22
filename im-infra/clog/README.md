@@ -6,6 +6,8 @@
 
 - 🚀 **基于 slog**：充分利用 Go 标准库 `log/slog`，性能与兼容性俱佳
 - 🎯 **接口驱动**：抽象清晰，封装合理
+- 🌟 **全局日志方法**：支持 `clog.Info()` 等全局日志方法，无需显式创建日志器
+- 📦 **模块日志器**：`clog.Module("name")` 创建模块特定日志器，单例模式，配置继承
 - 📝 **双格式支持**：支持 JSON 和文本格式输出
 - 🔄 **多目标输出**：可同时输出到多个目标（stdout、stderr、文件等）
 - 📁 **文件滚动**：内置日志文件滚动与压缩（依赖 lumberjack）
@@ -24,6 +26,30 @@ go get github.com/ceyewan/gochat/im-infra/clog
 
 ### 基本用法
 
+#### 全局日志方法（推荐）
+
+```go
+package main
+
+import (
+    "context"
+    "github.com/ceyewan/gochat/im-infra/clog"
+)
+
+func main() {
+    // 直接使用全局日志方法，无需创建日志器实例
+    clog.Info("你好，世界！")
+    clog.Warn("这是一个警告", "component", "example")
+    clog.Error("这是一个错误", "error_code", 500)
+
+    // 带 context 的全局日志方法
+    ctx := context.Background()
+    clog.InfoContext(ctx, "带上下文的日志", "user_id", 12345)
+}
+```
+
+#### 传统方式（兼容）
+
 ```go
 package main
 
@@ -34,7 +60,7 @@ import (
 func main() {
     // 使用默认日志器
     logger := clog.Default()
-    
+
     logger.Info("你好，世界！")
     logger.Warn("这是一个警告", "component", "example")
     logger.Error("这是一个错误", "error_code", 500)
@@ -168,18 +194,25 @@ userLogger := serviceLogger.With("user_id", 12345)
 userLogger.Info("用户认证成功", "username", "alice")
 ```
 
-### 分组日志
+### 模块日志
 
 ```go
-// 创建分组日志器
-dbLogger := logger.WithGroup("database")
+// 创建模块日志器（推荐方式，替代 WithGroup）
+dbLogger := clog.Module("database")
 dbLogger.Info("连接已建立", "host", "localhost", "port", 5432)
-// 输出: {"database": {"host": "localhost", "port": 5432}, "msg": "连接已建立"}
+// 输出: time=2025-07-22T13:17:31.471+08:00 level=INFO msg="连接已建立" module=database host=localhost port=5432
 
-// 分组与属性链式组合
-apiLogger := logger.WithGroup("api").With("version", "v1")
-apiLogger.Info("请求已处理", "endpoint", "/users")
-// 输出: {"api": {"version": "v1", "endpoint": "/users"}, "msg": "请求已处理"}
+apiLogger := clog.Module("api")
+apiLogger.Info("请求已处理", "endpoint", "/users", "method", "GET")
+// 输出: time=2025-07-22T13:17:31.471+08:00 level=INFO msg="请求已处理" module=api endpoint=/users method=GET
+
+// 模块日志器支持所有标准日志方法
+dbLogger.Error("数据库连接失败", "error", "connection timeout")
+apiLogger.Warn("API 请求频率过高", "client_ip", "192.168.1.100")
+
+// 模块日志器也支持 context
+ctx := context.Background()
+dbLogger.InfoContext(ctx, "执行查询", "query", "SELECT * FROM users")
 ```
 
 ### 动态日志级别控制
@@ -261,6 +294,25 @@ func Default() Logger
 
 // 获取默认配置
 func DefaultConfig() Config
+
+// 创建模块日志器（单例模式）
+func Module(name string) Logger
+```
+
+### 全局日志方法
+
+```go
+// 基础全局日志方法
+func Debug(msg string, args ...any)
+func Info(msg string, args ...any)
+func Warn(msg string, args ...any)
+func Error(msg string, args ...any)
+
+// 带 context 的全局日志方法
+func DebugContext(ctx context.Context, msg string, args ...any)
+func InfoContext(ctx context.Context, msg string, args ...any)
+func WarnContext(ctx context.Context, msg string, args ...any)
+func ErrorContext(ctx context.Context, msg string, args ...any)
 ```
 
 ## 示例
