@@ -39,12 +39,12 @@ import (
 func main() {
     // 直接使用全局日志方法，无需创建日志器实例
     clog.Info("你好，世界！")
-    clog.Warn("这是一个警告", "component", "example")
-    clog.Error("这是一个错误", "error_code", 500)
+    clog.Warn("这是一个警告", clog.String("component", "example"))
+    clog.Error("这是一个错误", clog.Int("error_code", 500))
 
     // 带 context 的全局日志方法
     ctx := context.Background()
-    clog.InfoContext(ctx, "带上下文的日志", "user_id", 12345)
+    clog.InfoContext(ctx, "带上下文的日志", clog.Int("user_id", 12345))
 }
 ```
 
@@ -62,8 +62,8 @@ func main() {
     logger := clog.Default()
 
     logger.Info("你好，世界！")
-    logger.Warn("这是一个警告", "component", "example")
-    logger.Error("这是一个错误", "error_code", 500)
+    logger.Warn("这是一个警告", clog.String("component", "example"))
+    logger.Error("这是一个错误", clog.Int("error_code", 500))
 }
 ```
 
@@ -98,7 +98,7 @@ func main() {
 
     // 带 TraceID 的上下文日志
     ctx := context.WithValue(context.Background(), "request_id", "req-123")
-    logger.InfoContext(ctx, "处理请求", "endpoint", "/api/users")
+    logger.InfoContext(ctx, "处理请求", clog.String("endpoint", "/api/users"))
 }
 ```
 
@@ -186,12 +186,14 @@ logger.Info("这条消息会同时输出到控制台和文件")
 
 ```go
 // 创建带持久属性的子日志器
-serviceLogger := logger.With("service", "user-service", "version", "1.2.3")
-serviceLogger.Info("服务启动", "port", 8080)
+serviceLogger := logger.With(
+    clog.String("service", "user-service"),
+    clog.String("version", "1.2.3"))
+serviceLogger.Info("服务启动", clog.Int("port", 8080))
 
 // 链式添加属性
-userLogger := serviceLogger.With("user_id", 12345)
-userLogger.Info("用户认证成功", "username", "alice")
+userLogger := serviceLogger.With(clog.Int("user_id", 12345))
+userLogger.Info("用户认证成功", clog.String("username", "alice"))
 ```
 
 ### 模块日志
@@ -199,20 +201,20 @@ userLogger.Info("用户认证成功", "username", "alice")
 ```go
 // 创建模块日志器（推荐方式，替代 WithGroup）
 dbLogger := clog.Module("database")
-dbLogger.Info("连接已建立", "host", "localhost", "port", 5432)
+dbLogger.Info("连接已建立", clog.String("host", "localhost"), clog.Int("port", 5432))
 // 输出: time=2025-07-22T13:17:31.471+08:00 level=INFO msg="连接已建立" module=database host=localhost port=5432
 
 apiLogger := clog.Module("api")
-apiLogger.Info("请求已处理", "endpoint", "/users", "method", "GET")
+apiLogger.Info("请求已处理", clog.String("endpoint", "/users"), clog.String("method", "GET"))
 // 输出: time=2025-07-22T13:17:31.471+08:00 level=INFO msg="请求已处理" module=api endpoint=/users method=GET
 
 // 模块日志器支持所有标准日志方法
-dbLogger.Error("数据库连接失败", "error", "connection timeout")
-apiLogger.Warn("API 请求频率过高", "client_ip", "192.168.1.100")
+dbLogger.Error("数据库连接失败", clog.String("error", "connection timeout"))
+apiLogger.Warn("API 请求频率过高", clog.String("client_ip", "192.168.1.100"))
 
 // 模块日志器也支持 context
 ctx := context.Background()
-dbLogger.InfoContext(ctx, "执行查询", "query", "SELECT * FROM users")
+dbLogger.InfoContext(ctx, "执行查询", clog.String("query", "SELECT * FROM users"))
 ```
 
 ### 动态日志级别控制
@@ -262,22 +264,22 @@ logger.InfoContext(ctx2, "另一个请求")
 
 ```go
 type Logger interface {
-    // 基础日志方法
-    Debug(msg string, args ...any)
-    Info(msg string, args ...any)
-    Warn(msg string, args ...any)
-    Error(msg string, args ...any)
-    
-    // 带 context 的日志方法
-    DebugContext(ctx context.Context, msg string, args ...any)
-    InfoContext(ctx context.Context, msg string, args ...any)
-    WarnContext(ctx context.Context, msg string, args ...any)
-    ErrorContext(ctx context.Context, msg string, args ...any)
-    
-    // 创建子日志器
-    With(args ...any) Logger
+    // 基础日志方法（使用类型安全的字段）
+    Debug(msg string, fields ...Field)
+    Info(msg string, fields ...Field)
+    Warn(msg string, fields ...Field)
+    Error(msg string, fields ...Field)
+        
+    // 带 context 的日志方法（使用类型安全的字段）
+    DebugContext(ctx context.Context, msg string, fields ...Field)
+    InfoContext(ctx context.Context, msg string, fields ...Field)
+    WarnContext(ctx context.Context, msg string, fields ...Field)
+    ErrorContext(ctx context.Context, msg string, fields ...Field)
+        
+    // 创建子日志器（使用类型安全的字段）
+    With(fields ...Field) Logger
     WithGroup(name string) Logger
-    
+        
     // 动态日志级别
     SetLevel(level string) error
 }
@@ -303,16 +305,66 @@ func Module(name string) Logger
 
 ```go
 // 基础全局日志方法
-func Debug(msg string, args ...any)
-func Info(msg string, args ...any)
-func Warn(msg string, args ...any)
-func Error(msg string, args ...any)
+func Debug(msg string, fields ...Field)
+func Info(msg string, fields ...Field)
+func Warn(msg string, fields ...Field)
+func Error(msg string, fields ...Field)
 
 // 带 context 的全局日志方法
-func DebugContext(ctx context.Context, msg string, args ...any)
-func InfoContext(ctx context.Context, msg string, args ...any)
-func WarnContext(ctx context.Context, msg string, args ...any)
-func ErrorContext(ctx context.Context, msg string, args ...any)
+func DebugContext(ctx context.Context, msg string, fields ...Field)
+func InfoContext(ctx context.Context, msg string, fields ...Field)
+func WarnContext(ctx context.Context, msg string, fields ...Field)
+func ErrorContext(ctx context.Context, msg string, fields ...Field)
+```
+
+### 字段辅助函数
+
+```go
+// 创建任意类型的字段
+func Any(key string, value any) Field
+
+// 创建字符串字段
+func String(key, value string) Field
+
+// 创建整数字段
+func Int(key string, value int) Field
+func Int64(key string, value int64) Field
+
+// 创建浮点数字段
+func Float64(key string, value float64) Field
+
+// 创建布尔字段
+func Bool(key string, value bool) Field
+
+// 创建时间字段
+func Time(key string, value time.Time) Field
+
+// 创建持续时间字段
+func Duration(key string, value time.Duration) Field
+
+// 创建错误字段
+func Err(err error) Field           // 使用 "error" 作为键名
+func ErrorValue(err error) Field    // 创建 error 类型字段（重命名后的函数）
+```
+
+**使用示例：**
+```go
+// 使用类型安全的字段辅助函数（推荐且唯一支持的方式）
+clog.Info("操作完成",
+    clog.String("operation", "user_create"),
+    clog.Int("user_id", 12345),
+    clog.Duration("elapsed", time.Since(start)),
+    clog.Bool("success", true),
+)
+
+// 错误处理示例
+if err != nil {
+    clog.Error("操作失败",
+        clog.Err(err),                    // 使用 "error" 作为键名
+        clog.String("operation", "user_create"),
+        clog.Int("user_id", 12345),
+    )
+}
 ```
 
 ## 示例

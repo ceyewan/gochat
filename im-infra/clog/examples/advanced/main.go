@@ -65,10 +65,10 @@ func main() {
 	apiLogger := clog.Module("api")
 	cacheLogger := clog.Module("cache")
 
-	appLogger.Info("Application initialized", "pid", os.Getpid())
-	dbLogger.Info("Database connection pool created", "max_connections", 100)
-	apiLogger.Info("HTTP server starting", "port", 8080)
-	cacheLogger.Info("Redis connection established", "host", "localhost:6379")
+	appLogger.Info("Application initialized", clog.Int("pid", os.Getpid()))
+	dbLogger.Info("Database connection pool created", clog.Int("max_connections", 100))
+	apiLogger.Info("HTTP server starting", clog.Int("port", 8080))
+	cacheLogger.Info("Redis connection established", clog.String("host", "localhost:6379"))
 
 	// 3. 请求处理演示
 	fmt.Println("\n3. 请求处理演示:")
@@ -89,9 +89,9 @@ func main() {
 		ctx := context.WithValue(context.Background(), "trace_id", req.id)
 
 		requestLogger.InfoContext(ctx, "Request started",
-			"endpoint", req.endpoint,
-			"method", req.method,
-			"user_id", req.userID,
+			clog.String("endpoint", req.endpoint),
+			clog.String("method", req.method),
+			clog.Int("user_id", req.userID),
 		)
 
 		// Simulate processing
@@ -100,8 +100,8 @@ func main() {
 		duration := time.Since(start)
 
 		requestLogger.InfoContext(ctx, "Request completed",
-			"status_code", 200,
-			"duration_ms", duration.Milliseconds(),
+			clog.Int("status_code", 200),
+			clog.Int64("duration_ms", duration.Milliseconds()),
 		)
 	}
 
@@ -124,14 +124,14 @@ func main() {
 		switch err.severity {
 		case "warn":
 			errorLogger.Warn(err.message,
-				"error_type", err.errorType,
-				"error_code", err.code,
+				clog.String("error_type", err.errorType),
+				clog.Int("error_code", err.code),
 			)
 		case "error":
 			errorLogger.Error(err.message,
-				"error_type", err.errorType,
-				"error_code", err.code,
-				"requires_attention", true,
+				clog.String("error_type", err.errorType),
+				clog.Int("error_code", err.code),
+				clog.Bool("requires_attention", true),
 			)
 		}
 	}
@@ -147,9 +147,9 @@ func main() {
 		duration := time.Since(start)
 
 		perfLogger.Info("Operation completed",
-			"operation", op,
-			"duration_ms", duration.Milliseconds(),
-			"success", true,
+			clog.String("operation", op),
+			clog.Int64("duration_ms", duration.Milliseconds()),
+			clog.Bool("success", true),
 		)
 	}
 

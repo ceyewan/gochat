@@ -13,14 +13,14 @@ func main() {
 	// 1. 全局日志方法（推荐方式）
 	fmt.Println("1. 全局日志方法:")
 	clog.Info("Hello from global logger!")
-	clog.Warn("This is a warning message", "component", "example")
-	clog.Error("This is an error message", "error_code", 500)
+	clog.Warn("This is a warning message", clog.String("component", "example"))
+	clog.Error("This is an error message", clog.Int("error_code", 500))
 
 	// 2. 带 Context 的全局日志方法
 	fmt.Println("\n2. 带 Context 的全局日志:")
 	ctx := context.Background()
-	clog.InfoContext(ctx, "Processing request", "request_id", "req-123")
-	clog.WarnContext(ctx, "Request timeout warning", "timeout", "30s")
+	clog.InfoContext(ctx, "Processing request", clog.String("request_id", "req-123"))
+	clog.WarnContext(ctx, "Request timeout warning", clog.String("timeout", "30s"))
 
 	// 3. 模块日志器（推荐用于不同组件）
 	fmt.Println("\n3. 模块日志器:")
@@ -28,9 +28,15 @@ func main() {
 	apiLogger := clog.Module("api")
 	authLogger := clog.Module("auth")
 
-	dbLogger.Info("Database connection established", "host", "localhost", "port", 5432)
-	apiLogger.Info("API server started", "port", 8080, "version", "v1.0")
-	authLogger.Info("User authenticated", "user_id", 12345, "username", "alice")
+	dbLogger.Info("Database connection established",
+		clog.String("host", "localhost"),
+		clog.Int("port", 5432))
+	apiLogger.Info("API server started",
+		clog.Int("port", 8080),
+		clog.String("version", "v1.0"))
+	authLogger.Info("User authenticated",
+		clog.Int("user_id", 12345),
+		clog.String("username", "alice"))
 
 	// 4. 模块日志器的性能优势（缓存使用）
 	fmt.Println("\n4. 模块日志器缓存演示:")
@@ -68,12 +74,16 @@ func main() {
 	}
 
 	customLogger.Debug("Debug message with custom config")
-	customLogger.Info("Info message", "user_id", 12345, "action", "login")
+	customLogger.Info("Info message",
+		clog.Int("user_id", 12345),
+		clog.String("action", "login"))
 
 	// 7. 结构化日志
 	fmt.Println("\n7. 结构化日志:")
-	serviceLogger := customLogger.With("service", "user-service", "version", "1.2.3")
-	serviceLogger.Info("Service started successfully", "port", 8080)
+	serviceLogger := customLogger.With(
+		clog.String("service", "user-service"),
+		clog.String("version", "1.2.3"))
+	serviceLogger.Info("Service started successfully", clog.Int("port", 8080))
 
 	fmt.Println("\n=== Example Complete ===")
 }

@@ -23,10 +23,7 @@ type OutputConfig = internal.OutputConfig
 type FileRotationConfig = internal.FileRotationConfig
 
 // Field 表示一个结构化日志字段
-type Field struct {
-	Key   string
-	Value any
-}
+type Field = internal.Field
 
 var (
 	// 全局默认日志器实例
@@ -99,49 +96,44 @@ func DefaultConfig() Config {
 	return internal.DefaultConfig()
 }
 
-// Err 创建一个 error 类型的日志字段，使用 "error" 作为键名
-func Err(err error) Field {
-	return Field{Key: "error", Value: err}
-}
-
 // Debug 使用全局默认日志器以 Debug 级别记录日志
-func Debug(msg string, args ...any) {
-	getDefaultLogger().Debug(msg, args...)
+func Debug(msg string, fields ...Field) {
+	getDefaultLogger().Debug(msg, fields...)
 }
 
 // Info 使用全局默认日志器以 Info 级别记录日志
-func Info(msg string, args ...any) {
-	getDefaultLogger().Info(msg, args...)
+func Info(msg string, fields ...Field) {
+	getDefaultLogger().Info(msg, fields...)
 }
 
 // Warn 使用全局默认日志器以 Warn 级别记录日志
-func Warn(msg string, args ...any) {
-	getDefaultLogger().Warn(msg, args...)
+func Warn(msg string, fields ...Field) {
+	getDefaultLogger().Warn(msg, fields...)
 }
 
 // Error 使用全局默认日志器以 Error 级别记录日志
-func Error(msg string, args ...any) {
-	getDefaultLogger().Error(msg, args...)
+func Error(msg string, fields ...Field) {
+	getDefaultLogger().Error(msg, fields...)
 }
 
 // DebugContext 使用全局默认日志器以 Debug 级别记录带 context 的日志
-func DebugContext(ctx context.Context, msg string, args ...any) {
-	getDefaultLogger().DebugContext(ctx, msg, args...)
+func DebugContext(ctx context.Context, msg string, fields ...Field) {
+	getDefaultLogger().DebugContext(ctx, msg, fields...)
 }
 
 // InfoContext 使用全局默认日志器以 Info 级别记录带 context 的日志
-func InfoContext(ctx context.Context, msg string, args ...any) {
-	getDefaultLogger().InfoContext(ctx, msg, args...)
+func InfoContext(ctx context.Context, msg string, fields ...Field) {
+	getDefaultLogger().InfoContext(ctx, msg, fields...)
 }
 
 // WarnContext 使用全局默认日志器以 Warn 级别记录带 context 的日志
-func WarnContext(ctx context.Context, msg string, args ...any) {
-	getDefaultLogger().WarnContext(ctx, msg, args...)
+func WarnContext(ctx context.Context, msg string, fields ...Field) {
+	getDefaultLogger().WarnContext(ctx, msg, fields...)
 }
 
 // ErrorContext 使用全局默认日志器以 Error 级别记录带 context 的日志
-func ErrorContext(ctx context.Context, msg string, args ...any) {
-	getDefaultLogger().ErrorContext(ctx, msg, args...)
+func ErrorContext(ctx context.Context, msg string, fields ...Field) {
+	getDefaultLogger().ErrorContext(ctx, msg, fields...)
 }
 
 // Module 返回一个带有指定模块名的日志器实例。
@@ -172,7 +164,7 @@ func Module(name string) Logger {
 	}
 
 	// 基于默认日志器创建模块日志器，添加 module 字段
-	moduleLogger := getDefaultLogger().With("module", name)
+	moduleLogger := getDefaultLogger().With(String("module", name))
 	moduleLoggers[name] = moduleLogger
 	return moduleLogger
 }

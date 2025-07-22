@@ -109,11 +109,16 @@ func Ints(key string, values []int) Field {
 	return Field{Key: key, Value: values}
 }
 
-// fieldsToArgs 将 Field 切片转换为 slog 兼容的参数列表
-func fieldsToArgs(fields []Field) []any {
-	args := make([]any, 0, len(fields)*2)
-	for _, field := range fields {
-		args = append(args, field.Key, field.Value)
-	}
-	return args
+// Err 创建一个 error 类型的日志字段，使用 "error" 作为键名
+func Err(err error) Field {
+	return Field{Key: "error", Value: err}
 }
+
+// // fieldsToArgs 将 Field 切片转换为 slog 兼容的参数列表
+// func fieldsToArgs(fields []Field) []any {
+// 	args := make([]any, 0, len(fields)*2)
+// 	for _, field := range fields {
+// 		args = append(args, field.Key, field.Value)
+// 	}
+// 	return args
+// }

@@ -6,38 +6,44 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/ceyewan/gochat/im-infra/clog/internal/slogx"
+	slogx "github.com/ceyewan/gochat/im-infra/clog/internal/clogx"
 )
 
+// Field 表示一个结构化日志字段
+type Field struct {
+	Key   string
+	Value any
+}
+
 // Logger 定义结构化日志操作的接口。
-// 提供不同级别的结构化日志方法。
+// 提供不同级别的结构化日志方法，使用类型安全的 Field 参数。
 type Logger interface {
-	// Debug 以 Debug 级别记录日志，可选结构化属性。
-	Debug(msg string, args ...any)
+	// Debug 以 Debug 级别记录日志，使用类型安全的字段。
+	Debug(msg string, fields ...Field)
 
-	// Info 以 Info 级别记录日志，可选结构化属性。
-	Info(msg string, args ...any)
+	// Info 以 Info 级别记录日志，使用类型安全的字段。
+	Info(msg string, fields ...Field)
 
-	// Warn 以 Warn 级别记录日志，可选结构化属性。
-	Warn(msg string, args ...any)
+	// Warn 以 Warn 级别记录日志，使用类型安全的字段。
+	Warn(msg string, fields ...Field)
 
-	// Error 以 Error 级别记录日志，可选结构化属性。
-	Error(msg string, args ...any)
+	// Error 以 Error 级别记录日志，使用类型安全的字段。
+	Error(msg string, fields ...Field)
 
-	// DebugContext 以 Debug 级别记录带 context 的日志，可选结构化属性。
-	DebugContext(ctx context.Context, msg string, args ...any)
+	// DebugContext 以 Debug 级别记录带 context 的日志，使用类型安全的字段。
+	DebugContext(ctx context.Context, msg string, fields ...Field)
 
-	// InfoContext 以 Info 级别记录带 context 的日志，可选结构化属性。
-	InfoContext(ctx context.Context, msg string, args ...any)
+	// InfoContext 以 Info 级别记录带 context 的日志，使用类型安全的字段。
+	InfoContext(ctx context.Context, msg string, fields ...Field)
 
-	// WarnContext 以 Warn 级别记录带 context 的日志，可选结构化属性。
-	WarnContext(ctx context.Context, msg string, args ...any)
+	// WarnContext 以 Warn 级别记录带 context 的日志，使用类型安全的字段。
+	WarnContext(ctx context.Context, msg string, fields ...Field)
 
-	// ErrorContext 以 Error 级别记录带 context 的日志，可选结构化属性。
-	ErrorContext(ctx context.Context, msg string, args ...any)
+	// ErrorContext 以 Error 级别记录带 context 的日志，使用类型安全的字段。
+	ErrorContext(ctx context.Context, msg string, fields ...Field)
 
-	// With 返回一个带有指定属性的新 Logger，这些属性会添加到所有日志记录中。
-	With(args ...any) Logger
+	// With 返回一个带有指定字段的新 Logger，这些字段会添加到所有日志记录中。
+	With(fields ...Field) Logger
 
 	// WithGroup 返回一个带有指定分组名的新 Logger。
 	// 新 Logger 添加的所有属性都会嵌套在该分组下。

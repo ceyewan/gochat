@@ -17,37 +17,42 @@
 
 ## 全局日志方法
 
-### 基础日志方法
-
 ```go
-func Debug(msg string, args ...any)
-func Info(msg string, args ...any)
-func Warn(msg string, args ...any)
-func Error(msg string, args ...any)
+// 基础全局日志方法
+func Debug(msg string, fields ...Field)
+func Info(msg string, fields ...Field)
+func Warn(msg string, fields ...Field)
+func Error(msg string, fields ...Field)
+
+// 带 context 的全局日志方法
+func DebugContext(ctx context.Context, msg string, fields ...Field)
+func InfoContext(ctx context.Context, msg string, fields ...Field)
+func WarnContext(ctx context.Context, msg string, fields ...Field)
+func ErrorContext(ctx context.Context, msg string, fields ...Field)
 ```
 
 **使用示例：**
 ```go
-clog.Debug("调试信息", "key", "value")
-clog.Info("用户登录", "user_id", 12345, "username", "alice")
-clog.Warn("警告信息", "component", "auth", "reason", "rate_limit")
-clog.Error("错误信息", "error", err, "operation", "database_query")
+clog.Debug("调试信息", clog.String("key", "value"))
+clog.Info("用户登录", clog.Int("user_id", 12345), clog.String("username", "alice"))
+clog.Warn("警告信息", clog.String("component", "auth"), clog.String("reason", "rate_limit"))
+clog.Error("错误信息", clog.Err(err), clog.String("operation", "database_query"))
 ```
 
 ### 带 Context 的日志方法
 
 ```go
-func DebugContext(ctx context.Context, msg string, args ...any)
-func InfoContext(ctx context.Context, msg string, args ...any)
-func WarnContext(ctx context.Context, msg string, args ...any)
-func ErrorContext(ctx context.Context, msg string, args ...any)
+func DebugContext(ctx context.Context, msg string, fields ...Field)
+func InfoContext(ctx context.Context, msg string, fields ...Field)
+func WarnContext(ctx context.Context, msg string, fields ...Field)
+func ErrorContext(ctx context.Context, msg string, fields ...Field)
 ```
 
 **使用示例：**
 ```go
 ctx := context.WithValue(context.Background(), "trace_id", "req-123")
-clog.InfoContext(ctx, "处理请求", "endpoint", "/api/users")
-clog.ErrorContext(ctx, "请求失败", "error", err, "status_code", 500)
+clog.InfoContext(ctx, "处理请求", clog.String("endpoint", "/api/users"))
+clog.ErrorContext(ctx, "请求失败", clog.Err(err), clog.Int("status_code", 500))
 ```
 
 ## 模块日志器
@@ -74,10 +79,10 @@ apiLogger := clog.Module("api")
 authLogger := clog.Module("auth")
 
 // 使用模块日志器
-dbLogger.Info("连接已建立", "host", "localhost", "port", 5432)
+dbLogger.Info("连接已建立", clog.String("host", "localhost"), clog.Int("port", 5432))
 // 输出: time=... level=INFO msg="连接已建立" module=database host=localhost port=5432
 
-apiLogger.Error("请求失败", "endpoint", "/users", "status", 500)
+apiLogger.Error("请求失败", clog.String("endpoint", "/users"), clog.Int("status", 500))
 // 输出: time=... level=ERROR msg="请求失败" module=api endpoint=/users status=500
 ```
 
@@ -144,27 +149,24 @@ logger.Info("Application started", "version", "1.0.0")
 
 ```go
 type Logger interface {
-    // 基础日志方法
-    Debug(msg string, args ...any)
-    Info(msg string, args ...any)
-    Warn(msg string, args ...any)
-    Error(msg string, args ...any)
-    
-    // 带 Context 的日志方法
-    DebugContext(ctx context.Context, msg string, args ...any)
-    InfoContext(ctx context.Context, msg string, args ...any)
-    WarnContext(ctx context.Context, msg string, args ...any)
-    ErrorContext(ctx context.Context, msg string, args ...any)
-    
-    // 结构化日志
-    With(args ...any) Logger
+    // 基础日志方法（使用类型安全的字段）
+    Debug(msg string, fields ...Field)
+    Info(msg string, fields ...Field)
+    Warn(msg string, fields ...Field)
+    Error(msg string, fields ...Field)
+
+    // 带 Context 的日志方法（使用类型安全的字段）
+    DebugContext(ctx context.Context, msg string, fields ...Field)
+    InfoContext(ctx context.Context, msg string, fields ...Field)
+    WarnContext(ctx context.Context, msg string, fields ...Field)
+    ErrorContext(ctx context.Context, msg string, fields ...Field)
+
+    // 结构化日志（使用类型安全的字段）
+    With(fields ...Field) Logger
     WithGroup(name string) Logger
-    
+
     // 动态配置
     SetLevel(level string) error
-    
-    // 启用/禁用功能
-    Enabled(ctx context.Context, level slog.Level) bool
 }
 ```
 
@@ -268,6 +270,7 @@ func ErrorValue(err error) Field    // 创建 error 类型字段（重命名后�
 
 **使用示例：**
 ```go
+// 使用类型安全的字段辅助函数（推荐且唯一支持的方式）
 clog.Info("操作完成",
     clog.String("operation", "user_create"),
     clog.Int("user_id", 12345),
@@ -275,12 +278,13 @@ clog.Info("操作完成",
     clog.Bool("success", true),
 )
 
-// 或者直接使用键值对
-clog.Info("操作完成",
-    "operation", "user_create",
-    "user_id", 12345,
-    "elapsed", time.Since(start),
-    "success", true,
+// 错误处理示例
+if err != nil {
+    clog.Error("操作失败",
+        clog.Err(err),                    // 使用 "error" 作为键名
+        clog.String("operation", "user_create"),
+        clog.Int("user_id", 12345),
+    )
 )
 ```
 
@@ -290,11 +294,11 @@ clog.Info("操作完成",
 
 ```go
 // ✅ 简单场景：使用全局方法
-clog.Info("应用启动", "version", "1.0.0")
+clog.Info("应用启动", clog.String("version", "1.0.0"))
 
 // ✅ 模块化场景：使用模块日志器
 var dbLogger = clog.Module("database")
-dbLogger.Info("连接建立", "host", "localhost")
+dbLogger.Info("连接建立", clog.String("host", "localhost"))
 
 // ✅ 复杂配置：使用自定义日志器
 logger, _ := clog.New(customConfig)
