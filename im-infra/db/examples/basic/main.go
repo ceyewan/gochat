@@ -47,17 +47,32 @@ func main() {
 	clog.Info("=== 演示完成 ===")
 }
 
-// demonstrateDatabaseCreation 演示数据库创建
+// demonstrateDatabaseCreation 演示数据库自动创建
 func demonstrateDatabaseCreation(ctx context.Context) {
-	clog.Info("--- 数据库创建演示 ---")
+	clog.Info("--- 数据库自动创建演示 ---")
 
-	// 创建数据库（如果不存在）
-	cfg := db.DefaultConfig()
-	err := db.CreateDatabaseIfNotExistsWithConfig(cfg, "gochat_example")
+	// 新的优雅方式：直接创建数据库实例，如果数据库不存在会自动创建
+	cfg := db.Config{
+		DSN:                "root:mysql@tcp(localhost:3306)/gochat_example?charset=utf8mb4&parseTime=True&loc=Local",
+		Driver:             "mysql",
+		AutoCreateDatabase: true, // 启用自动创建（默认就是true）
+	}
+
+	database, err := db.New(cfg)
 	if err != nil {
-		clog.Error("创建数据库失败", clog.ErrorValue(err))
+		clog.Error("创建数据库实例失败", clog.ErrorValue(err))
+		return
+	}
+	defer database.Close()
+
+	clog.Info("数据库实例创建成功（数据库已自动创建）")
+
+	// 测试连接
+	err = database.Ping(ctx)
+	if err != nil {
+		clog.Error("数据库连接测试失败", clog.ErrorValue(err))
 	} else {
-		clog.Info("数据库创建成功或已存在")
+		clog.Info("数据库连接测试成功")
 	}
 }
 
@@ -109,13 +124,14 @@ func demonstrateCustomInstances(ctx context.Context) {
 
 	// 创建自定义配置
 	cfg := db.Config{
-		DSN:             "root:mysql@tcp(localhost:3306)/gochat_example?charset=utf8mb4&parseTime=True&loc=Local",
-		Driver:          "mysql",
-		MaxOpenConns:    20,
-		MaxIdleConns:    10,
-		ConnMaxLifetime: time.Hour,
-		LogLevel:        "info",
-		TablePrefix:     "custom_",
+		DSN:                "root:mysql@tcp(localhost:3306)/gochat_custom_example?charset=utf8mb4&parseTime=True&loc=Local",
+		Driver:             "mysql",
+		MaxOpenConns:       20,
+		MaxIdleConns:       10,
+		ConnMaxLifetime:    time.Hour,
+		LogLevel:           "info",
+		TablePrefix:        "custom_",
+		AutoCreateDatabase: true, // 自动创建数据库
 	}
 
 	// 创建自定义数据库实例
@@ -172,15 +188,17 @@ func demonstrateMultipleInstances(ctx context.Context) {
 
 	// 创建不同配置的数据库实例
 	cfg1 := db.Config{
-		DSN:         "root:mysql@tcp(localhost:3306)/gochat_example?charset=utf8mb4&parseTime=True&loc=Local",
-		Driver:      "mysql",
-		TablePrefix: "product_",
+		DSN:                "root:mysql@tcp(localhost:3306)/gochat_product_db?charset=utf8mb4&parseTime=True&loc=Local",
+		Driver:             "mysql",
+		TablePrefix:        "product_",
+		AutoCreateDatabase: true, // 自动创建数据库
 	}
 
 	cfg2 := db.Config{
-		DSN:         "root:mysql@tcp(localhost:3306)/gochat_example?charset=utf8mb4&parseTime=True&loc=Local",
-		Driver:      "mysql",
-		TablePrefix: "user_",
+		DSN:                "root:mysql@tcp(localhost:3306)/gochat_user_db?charset=utf8mb4&parseTime=True&loc=Local",
+		Driver:             "mysql",
+		TablePrefix:        "user_",
+		AutoCreateDatabase: true, // 自动创建数据库
 	}
 
 	productDB, err := db.New(cfg1)
@@ -221,9 +239,10 @@ func demonstrateTransactions(ctx context.Context) {
 
 	// 创建数据库实例
 	cfg := db.Config{
-		DSN:      "root:mysql@tcp(localhost:3306)/gochat_example?charset=utf8mb4&parseTime=True&loc=Local",
-		Driver:   "mysql",
-		LogLevel: "info",
+		DSN:                "root:mysql@tcp(localhost:3306)/gochat_transaction_example?charset=utf8mb4&parseTime=True&loc=Local",
+		Driver:             "mysql",
+		LogLevel:           "info",
+		AutoCreateDatabase: true, // 自动创建数据库
 	}
 
 	database, err := db.New(cfg)
@@ -277,9 +296,10 @@ func demonstrateSharding(ctx context.Context) {
 	}
 
 	cfg := db.Config{
-		DSN:      "root:mysql@tcp(localhost:3306)/gochat_example?charset=utf8mb4&parseTime=True&loc=Local",
-		Driver:   "mysql",
-		Sharding: shardingConfig,
+		DSN:                "root:mysql@tcp(localhost:3306)/gochat_sharding_example?charset=utf8mb4&parseTime=True&loc=Local",
+		Driver:             "mysql",
+		Sharding:           shardingConfig,
+		AutoCreateDatabase: true, // 自动创建数据库
 	}
 
 	database, err := db.New(cfg)

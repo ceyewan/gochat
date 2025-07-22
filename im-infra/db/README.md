@@ -9,6 +9,7 @@
 - 🌟 **全局数据库方法**：支持 `db.GetDB()` 等全局数据库方法，无需显式创建数据库实例
 - 📦 **自定义数据库实例**：`db.New(config)` 创建自定义配置的数据库实例
 - 🔧 **数据库管理**：自动创建数据库、表结构迁移等便捷功能
+- 🚀 **自动创建数据库**：当DSN中指定的数据库不存在时，自动创建它
 - 🔄 **连接池管理**：内置连接池和错误恢复机制
 - 🏷️ **日志集成**：与 clog 日志库深度集成，提供详细的操作日志和慢查询监控
 - ⚡ **高性能**：优化的连接管理和查询性能
@@ -21,6 +22,46 @@
 ```bash
 go get github.com/ceyewan/gochat/im-infra/db
 ```
+
+## 🚀 新功能：自动创建数据库
+
+**现在支持自动创建数据库！** 当DSN中指定的数据库不存在时，系统会自动创建它，让您的开发体验更加优雅。
+
+### 优雅的使用方式
+
+```go
+// 新的优雅方式：无需关心数据库是否存在
+cfg := db.Config{
+    DSN:    "root:mysql@tcp(localhost:3306)/my_new_app?charset=utf8mb4&parseTime=True&loc=Local",
+    Driver: "mysql",
+    // AutoCreateDatabase: true, // 默认就是 true
+}
+
+// 直接创建实例，数据库会自动创建（如果不存在）
+database, err := db.New(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+defer database.Close()
+
+// 就这么简单！无需手动创建数据库
+```
+
+### 配置选项
+
+- `AutoCreateDatabase bool`: 是否启用自动创建数据库功能（默认：`true`）
+- 如果设置为 `false`，则保持原有行为（需要手动创建数据库）
+
+### 支持的数据库
+
+- ✅ **MySQL**: 自动解析DSN并创建数据库
+- ✅ **PostgreSQL**: 支持URL格式和键值对格式的DSN
+- ✅ **SQLite**: 文件会自动创建，无需额外处理
+
+### 向后兼容
+
+- 现有代码无需修改，完全向后兼容
+- 仍然支持手动创建数据库的方式：`db.CreateDatabaseIfNotExistsWithConfig()`
 
 ## 快速开始
 

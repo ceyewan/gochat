@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
@@ -256,6 +259,72 @@ func NewDB(cfg Config) (DB, error) {
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.Driver)
 	}
 
+	// 如果连接失败且启用了自动创建数据库，尝试创建数据库
+	if err != nil && cfg.AutoCreateDatabase && isDatabaseNotExistError(err, cfg.Driver) {
+		moduleLogger.Info("检测到数据库不存在，尝试自动创建",
+			clog.String("driver", cfg.Driver),
+			clog.ErrorValue(err),
+		)
+
+		// 解析数据库名称
+		dbName, parseErr := parseDatabaseName(cfg.DSN, cfg.Driver)
+		if parseErr != nil {
+			moduleLogger.Error("解析数据库名称失败", clog.ErrorValue(parseErr))
+			return nil, fmt.Errorf("failed to parse database name: %w", parseErr)
+		}
+
+		if dbName != "" { // SQLite 返回空字符串，不需要创建
+			// 创建系统数据库连接DSN
+			systemDSN, systemErr := createSystemDSN(cfg.DSN, cfg.Driver)
+			if systemErr != nil {
+				moduleLogger.Error("创建系统数据库DSN失败", clog.ErrorValue(systemErr))
+				return nil, fmt.Errorf("failed to create system DSN: %w", systemErr)
+			}
+
+			// 创建临时配置连接到系统数据库
+			tempCfg := cfg
+			tempCfg.DSN = systemDSN
+			tempCfg.AutoCreateDatabase = false // 避免递归
+
+			moduleLogger.Info("连接到系统数据库以创建目标数据库",
+				clog.String("systemDSN", maskDSN(systemDSN)),
+				clog.String("targetDatabase", dbName),
+			)
+
+			// 创建临时数据库连接
+			tempDB, tempErr := NewDB(tempCfg)
+			if tempErr != nil {
+				moduleLogger.Error("连接系统数据库失败", clog.ErrorValue(tempErr))
+				return nil, fmt.Errorf("failed to connect to system database: %w", tempErr)
+			}
+			defer tempDB.Close()
+
+			// 创建目标数据库
+			createErr := tempDB.CreateDatabaseIfNotExists(dbName)
+			if createErr != nil {
+				moduleLogger.Error("自动创建数据库失败",
+					clog.ErrorValue(createErr),
+					clog.String("database", dbName),
+				)
+				return nil, fmt.Errorf("failed to auto-create database '%s': %w", dbName, createErr)
+			}
+
+			moduleLogger.Info("数据库自动创建成功，重新尝试连接",
+				clog.String("database", dbName),
+			)
+
+			// 重新尝试连接到目标数据库
+			switch cfg.Driver {
+			case "mysql":
+				db, err = gorm.Open(mysql.Open(cfg.DSN), gormConfig)
+			case "postgres":
+				db, err = gorm.Open(postgres.Open(cfg.DSN), gormConfig)
+			case "sqlite":
+				db, err = gorm.Open(sqlite.Open(cfg.DSN), gormConfig)
+			}
+		}
+	}
+
 	if err != nil {
 		moduleLogger.Error("数据库连接失败",
 			clog.ErrorValue(err),
@@ -347,6 +416,135 @@ func maskDSN(dsn string) string {
 		return dsn[:10] + "***" + dsn[len(dsn)-7:]
 	}
 	return "***"
+}
+
+// parseDatabaseName 从DSN中解析数据库名称
+func parseDatabaseName(dsn, driver string) (string, error) {
+	switch driver {
+	case "mysql":
+		// MySQL DSN 格式: user:password@tcp(host:port)/dbname?params
+		// 或者: user:password@/dbname?params
+		parts := strings.Split(dsn, "/")
+		if len(parts) < 2 {
+			return "", fmt.Errorf("invalid MySQL DSN format: %s", dsn)
+		}
+
+		dbPart := parts[len(parts)-1]
+		// 移除查询参数
+		if idx := strings.Index(dbPart, "?"); idx != -1 {
+			dbPart = dbPart[:idx]
+		}
+
+		if dbPart == "" {
+			return "", fmt.Errorf("database name not found in MySQL DSN: %s", dsn)
+		}
+
+		return dbPart, nil
+
+	case "postgres":
+		// PostgreSQL DSN 格式: host=localhost user=user password=pass dbname=dbname sslmode=disable
+		// 或者: postgres://user:pass@host:port/dbname?sslmode=disable
+		if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+			// URL 格式
+			u, err := url.Parse(dsn)
+			if err != nil {
+				return "", fmt.Errorf("invalid PostgreSQL URL format: %w", err)
+			}
+			dbName := strings.TrimPrefix(u.Path, "/")
+			if dbName == "" {
+				return "", fmt.Errorf("database name not found in PostgreSQL URL: %s", dsn)
+			}
+			return dbName, nil
+		} else {
+			// 键值对格式
+			re := regexp.MustCompile(`dbname=([^\s]+)`)
+			matches := re.FindStringSubmatch(dsn)
+			if len(matches) < 2 {
+				return "", fmt.Errorf("database name not found in PostgreSQL DSN: %s", dsn)
+			}
+			return matches[1], nil
+		}
+
+	case "sqlite":
+		// SQLite DSN 就是文件路径，不需要创建数据库
+		return "", nil
+
+	default:
+		return "", fmt.Errorf("unsupported driver for database name parsing: %s", driver)
+	}
+}
+
+// isDatabaseNotExistError 检查错误是否是"数据库不存在"错误
+func isDatabaseNotExistError(err error, driver string) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+
+	switch driver {
+	case "mysql":
+		// MySQL 错误码 1049: Unknown database
+		return strings.Contains(errStr, "Unknown database") ||
+			strings.Contains(errStr, "Error 1049")
+
+	case "postgres":
+		// PostgreSQL 错误码 3D000: database does not exist
+		return strings.Contains(errStr, "database") &&
+			strings.Contains(errStr, "does not exist")
+
+	case "sqlite":
+		// SQLite 文件会自动创建，不会有数据库不存在的错误
+		return false
+
+	default:
+		return false
+	}
+}
+
+// createSystemDSN 创建连接到系统数据库的DSN
+func createSystemDSN(originalDSN, driver string) (string, error) {
+	switch driver {
+	case "mysql":
+		// 将数据库名替换为 mysql 系统数据库
+		parts := strings.Split(originalDSN, "/")
+		if len(parts) < 2 {
+			return "", fmt.Errorf("invalid MySQL DSN format: %s", originalDSN)
+		}
+
+		// 获取查询参数
+		dbPart := parts[len(parts)-1]
+		var params string
+		if idx := strings.Index(dbPart, "?"); idx != -1 {
+			params = dbPart[idx:]
+		}
+
+		// 重新构建DSN，使用mysql系统数据库
+		parts[len(parts)-1] = "mysql" + params
+		return strings.Join(parts, "/"), nil
+
+	case "postgres":
+		if strings.HasPrefix(originalDSN, "postgres://") || strings.HasPrefix(originalDSN, "postgresql://") {
+			// URL 格式
+			u, err := url.Parse(originalDSN)
+			if err != nil {
+				return "", fmt.Errorf("invalid PostgreSQL URL format: %w", err)
+			}
+			u.Path = "/postgres"
+			return u.String(), nil
+		} else {
+			// 键值对格式，替换dbname
+			re := regexp.MustCompile(`dbname=([^\s]+)`)
+			return re.ReplaceAllString(originalDSN, "dbname=postgres"), nil
+		}
+
+	case "sqlite":
+		// SQLite 不需要系统数据库
+		return originalDSN, nil
+
+	default:
+		return "", fmt.Errorf("unsupported driver for system DSN creation: %s", driver)
+	}
 }
 
 // newClient 创建一个新的数据库客户端实例

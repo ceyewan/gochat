@@ -199,10 +199,3 @@ func AutoMigrate(dst ...interface{}) error {
 func CreateDatabaseIfNotExists(dbName string) error {
 	return getDefaultDB().CreateDatabaseIfNotExists(dbName)
 }
-
-// CreateDatabaseIfNotExistsWithConfig 使用指定配置创建数据库（如果不存在）
-// 这个方法不依赖于全局数据库实例，专门用于创建数据库。
-// 它会先连接到系统数据库（如 MySQL 的 mysql 数据库），然后创建目标数据库。
-func CreateDatabaseIfNotExistsWithConfig(cfg Config, dbName string) error {
-	return internal.CreateDatabaseIfNotExistsWithConfig(cfg, dbName)
-}

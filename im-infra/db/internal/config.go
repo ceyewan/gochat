@@ -87,6 +87,11 @@ type Config struct {
 	// 默认: false
 	DisableForeignKeyConstraintWhenMigrating bool `json:"disableForeignKeyConstraintWhenMigrating" yaml:"disableForeignKeyConstraintWhenMigrating"`
 
+	// AutoCreateDatabase 是否自动创建数据库（如果不存在）
+	// 当连接数据库失败且错误是"数据库不存在"时，自动尝试创建数据库
+	// 默认: true
+	AutoCreateDatabase bool `json:"autoCreateDatabase" yaml:"autoCreateDatabase"`
+
 	// Sharding 分库分表配置（可选）
 	Sharding *ShardingConfig `json:"sharding,omitempty" yaml:"sharding,omitempty"`
 }
@@ -160,6 +165,7 @@ func DefaultConfig() Config {
 		EnableTracing:                            false,
 		TablePrefix:                              "",
 		DisableForeignKeyConstraintWhenMigrating: false,
+		AutoCreateDatabase:                       true,
 	}
 }
 
