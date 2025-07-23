@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	slogx "github.com/ceyewan/gochat/im-infra/clog/internal/clogx"
+	"github.com/ceyewan/gochat/im-infra/clog/internal/slogx"
 )
 
 // logger 是 Logger 接口的内部实现。

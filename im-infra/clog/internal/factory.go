@@ -6,7 +6,7 @@ import (
 	"io"
 	"log/slog"
 
-	slogx "github.com/ceyewan/gochat/im-infra/clog/internal/clogx"
+	"github.com/ceyewan/gochat/im-infra/clog/internal/slogx"
 )
 
 // Field 表示一个结构化日志字段
