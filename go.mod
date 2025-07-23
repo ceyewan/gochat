@@ -9,6 +9,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.22
 	github.com/redis/go-redis/v9 v9.11.0
 	github.com/twmb/franz-go v1.19.5
+	github.com/twmb/franz-go/pkg/kadm v1.16.0
 	github.com/twmb/franz-go/pkg/kmsg v1.11.2
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/mysql v1.6.0

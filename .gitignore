@@ -4,3 +4,4 @@ gochat.bin
 **/.DS_Store
 .env
 data/
+qdrant_storage/

@@ -99,47 +99,12 @@ func getDefaultMQ() MQ {
 
 // New 根据提供的配置创建一个新的 MQ 实例。
 // 这是核心工厂函数，按配置组装所有组件。
-//
-// 示例：
-//
-//	cfg := mq.Config{
-//		Brokers: []string{"localhost:9092"},
-//		ProducerConfig: mq.ProducerConfig{
-//			Compression: "lz4",
-//			BatchSize: 16384,
-//			LingerMs: 5,
-//		},
-//		ConsumerConfig: mq.ConsumerConfig{
-//			GroupID: "my-group",
-//			AutoOffsetReset: "earliest",
-//		},
-//	}
-//	mqInstance, err := mq.New(cfg)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	defer mqInstance.Close()
 func New(cfg Config) (MQ, error) {
 	return internal.NewMQ(cfg)
 }
 
 // Default 返回一个带有合理默认配置的 MQ 实例。
 // 默认MQ连接到 localhost:9092，使用合理的性能配置。
-//
-// 等价于：
-//
-//	cfg := mq.Config{
-//		Brokers: []string{"localhost:9092"},
-//		ProducerConfig: mq.DefaultProducerConfig(),
-//		ConsumerConfig: mq.DefaultConsumerConfig(),
-//	}
-//	mqInstance, _ := mq.New(cfg)
-//
-// 示例：
-//
-//	mqInstance := mq.Default()
-//	producer := mqInstance.Producer()
-//	err := producer.SendSync(ctx, "topic", []byte("message"))
 func Default() MQ {
 	return getDefaultMQ()
 }
@@ -162,22 +127,6 @@ func DefaultConsumerConfig() ConsumerConfig {
 
 // MergeWithDefaults 将用户配置与默认配置合并
 // 用户未设置的字段将使用默认值，这样用户只需要设置需要自定义的字段
-//
-// 示例：
-//
-//	cfg := mq.Config{
-//		Brokers:  []string{"localhost:19092"},
-//		ClientID: "my-app",
-//		ProducerConfig: mq.ProducerConfig{
-//			Compression: "lz4",
-//			BatchSize:   32768,
-//		},
-//		ConsumerConfig: mq.ConsumerConfig{
-//			GroupID: "my-group",
-//		},
-//	}
-//	mergedCfg := mq.MergeWithDefaults(cfg)
-//	// mergedCfg 现在包含所有默认值，用户设置的字段被保留
 func MergeWithDefaults(cfg Config) Config {
 	return internal.MergeWithDefaults(cfg)
 }
@@ -257,25 +206,6 @@ func NewConnectionPool(cfg Config) (ConnectionPool, error) {
 
 // NewAdminClient 创建管理客户端
 // 用于创建、删除、列出 topic 等管理操作
-//
-// 示例：
-//
-//	cfg := mq.Config{
-//		Brokers: []string{"localhost:19092"},
-//		ClientID: "admin-client",
-//	}
-//	admin, err := mq.NewAdminClient(cfg)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	defer admin.Close()
-//
-//	// 创建 topic
-//	err = admin.CreateTopic(ctx, mq.TopicConfig{
-//		Name:       "my-topic",
-//		Partitions: 3,
-//		ReplicationFactor: 1,
-//	})
 func NewAdminClient(cfg Config) (AdminClient, error) {
 	return internal.NewAdminClient(cfg)
 }
