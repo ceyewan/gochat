@@ -30,6 +30,12 @@ type ProducerConfig = internal.ProducerConfig
 // ConsumerConfig 消费者配置
 type ConsumerConfig = internal.ConsumerConfig
 
+// AdminClient 管理客户端接口
+type AdminClient = internal.AdminClient
+
+// TopicConfig topic 配置
+type TopicConfig = internal.TopicConfig
+
 // Message 消息结构体
 type Message = internal.Message
 
@@ -154,6 +160,28 @@ func DefaultConsumerConfig() ConsumerConfig {
 	return internal.DefaultConsumerConfig()
 }
 
+// MergeWithDefaults 将用户配置与默认配置合并
+// 用户未设置的字段将使用默认值，这样用户只需要设置需要自定义的字段
+//
+// 示例：
+//
+//	cfg := mq.Config{
+//		Brokers:  []string{"localhost:19092"},
+//		ClientID: "my-app",
+//		ProducerConfig: mq.ProducerConfig{
+//			Compression: "lz4",
+//			BatchSize:   32768,
+//		},
+//		ConsumerConfig: mq.ConsumerConfig{
+//			GroupID: "my-group",
+//		},
+//	}
+//	mergedCfg := mq.MergeWithDefaults(cfg)
+//	// mergedCfg 现在包含所有默认值，用户设置的字段被保留
+func MergeWithDefaults(cfg Config) Config {
+	return internal.MergeWithDefaults(cfg)
+}
+
 // ===== 全局生产者方法 =====
 
 // SendSync 使用全局默认MQ同步发送消息
@@ -225,6 +253,31 @@ func NewConsumer(cfg ConsumerConfig) (Consumer, error) {
 // NewConnectionPool 创建独立的连接池实例
 func NewConnectionPool(cfg Config) (ConnectionPool, error) {
 	return internal.NewConnectionPool(cfg)
+}
+
+// NewAdminClient 创建管理客户端
+// 用于创建、删除、列出 topic 等管理操作
+//
+// 示例：
+//
+//	cfg := mq.Config{
+//		Brokers: []string{"localhost:19092"},
+//		ClientID: "admin-client",
+//	}
+//	admin, err := mq.NewAdminClient(cfg)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer admin.Close()
+//
+//	// 创建 topic
+//	err = admin.CreateTopic(ctx, mq.TopicConfig{
+//		Name:       "my-topic",
+//		Partitions: 3,
+//		ReplicationFactor: 1,
+//	})
+func NewAdminClient(cfg Config) (AdminClient, error) {
+	return internal.NewAdminClient(cfg)
 }
 
 // ===== 错误处理工具函数 =====

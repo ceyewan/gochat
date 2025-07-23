@@ -407,3 +407,280 @@ func DefaultMonitoringConfig() MonitoringConfig {
 		LogLevel:        "info",
 	}
 }
+
+// MergeWithDefaults 将用户配置与默认配置合并
+// 用户未设置的字段将使用默认值
+func MergeWithDefaults(userCfg Config) Config {
+	// 获取默认配置
+	defaultCfg := DefaultConfig()
+
+	// 合并主配置字段
+	if len(userCfg.Brokers) > 0 {
+		defaultCfg.Brokers = userCfg.Brokers
+	}
+	if userCfg.ClientID != "" {
+		defaultCfg.ClientID = userCfg.ClientID
+	}
+	if userCfg.SecurityProtocol != "" {
+		defaultCfg.SecurityProtocol = userCfg.SecurityProtocol
+	}
+
+	// 合并SASL配置
+	defaultCfg.SASL = mergeSASLConfig(defaultCfg.SASL, userCfg.SASL)
+
+	// 合并SSL配置
+	defaultCfg.SSL = mergeSSLConfig(defaultCfg.SSL, userCfg.SSL)
+
+	// 合并连接配置
+	defaultCfg.Connection = mergeConnectionConfig(defaultCfg.Connection, userCfg.Connection)
+
+	// 合并生产者配置
+	defaultCfg.ProducerConfig = mergeProducerConfig(defaultCfg.ProducerConfig, userCfg.ProducerConfig, defaultCfg.Brokers, defaultCfg.ClientID)
+
+	// 合并消费者配置
+	defaultCfg.ConsumerConfig = mergeConsumerConfig(defaultCfg.ConsumerConfig, userCfg.ConsumerConfig, defaultCfg.Brokers, defaultCfg.ClientID)
+
+	// 合并连接池配置
+	defaultCfg.PoolConfig = mergePoolConfig(defaultCfg.PoolConfig, userCfg.PoolConfig)
+
+	// 合并性能配置
+	defaultCfg.Performance = mergePerformanceConfig(defaultCfg.Performance, userCfg.Performance)
+
+	// 合并监控配置
+	defaultCfg.Monitoring = mergeMonitoringConfig(defaultCfg.Monitoring, userCfg.Monitoring)
+
+	return defaultCfg
+}
+
+// mergeSASLConfig 合并SASL配置
+func mergeSASLConfig(defaultCfg, userCfg SASLConfig) SASLConfig {
+	result := defaultCfg
+	if userCfg.Mechanism != "" {
+		result.Mechanism = userCfg.Mechanism
+	}
+	if userCfg.Username != "" {
+		result.Username = userCfg.Username
+	}
+	if userCfg.Password != "" {
+		result.Password = userCfg.Password
+	}
+	return result
+}
+
+// mergeSSLConfig 合并SSL配置
+func mergeSSLConfig(defaultCfg, userCfg SSLConfig) SSLConfig {
+	result := defaultCfg
+	if userCfg.CertFile != "" {
+		result.CertFile = userCfg.CertFile
+	}
+	if userCfg.KeyFile != "" {
+		result.KeyFile = userCfg.KeyFile
+	}
+	if userCfg.CAFile != "" {
+		result.CAFile = userCfg.CAFile
+	}
+	if userCfg.InsecureSkipVerify != defaultCfg.InsecureSkipVerify {
+		result.InsecureSkipVerify = userCfg.InsecureSkipVerify
+	}
+	return result
+}
+
+// mergeConnectionConfig 合并连接配置
+func mergeConnectionConfig(defaultCfg, userCfg ConnectionConfig) ConnectionConfig {
+	result := defaultCfg
+	if userCfg.DialTimeout != 0 {
+		result.DialTimeout = userCfg.DialTimeout
+	}
+	if userCfg.ReadTimeout != 0 {
+		result.ReadTimeout = userCfg.ReadTimeout
+	}
+	if userCfg.WriteTimeout != 0 {
+		result.WriteTimeout = userCfg.WriteTimeout
+	}
+	if userCfg.KeepAlive != 0 {
+		result.KeepAlive = userCfg.KeepAlive
+	}
+	if userCfg.MaxRetries != 0 {
+		result.MaxRetries = userCfg.MaxRetries
+	}
+	if userCfg.RetryBackoff != 0 {
+		result.RetryBackoff = userCfg.RetryBackoff
+	}
+	return result
+}
+
+// mergeProducerConfig 合并生产者配置
+func mergeProducerConfig(defaultCfg, userCfg ProducerConfig, mainBrokers []string, mainClientID string) ProducerConfig {
+	result := defaultCfg
+
+	// 如果用户没有设置Brokers，使用主配置的Brokers
+	if len(userCfg.Brokers) == 0 && len(mainBrokers) > 0 {
+		result.Brokers = mainBrokers
+	} else if len(userCfg.Brokers) > 0 {
+		result.Brokers = userCfg.Brokers
+	}
+
+	// 如果用户没有设置ClientID，使用主配置的ClientID
+	if userCfg.ClientID == "" && mainClientID != "" {
+		result.ClientID = mainClientID
+	} else if userCfg.ClientID != "" {
+		result.ClientID = userCfg.ClientID
+	}
+
+	if userCfg.Compression != "" {
+		result.Compression = userCfg.Compression
+	}
+	if userCfg.BatchSize != 0 {
+		result.BatchSize = userCfg.BatchSize
+	}
+	if userCfg.LingerMs != 0 {
+		result.LingerMs = userCfg.LingerMs
+	}
+	if userCfg.MaxMessageBytes != 0 {
+		result.MaxMessageBytes = userCfg.MaxMessageBytes
+	}
+	if userCfg.RequiredAcks != 0 {
+		result.RequiredAcks = userCfg.RequiredAcks
+	}
+	if userCfg.RequestTimeout != 0 {
+		result.RequestTimeout = userCfg.RequestTimeout
+	}
+	// EnableIdempotence 保持默认值，除非用户明确设置了不同的值
+	// 由于Go的零值是false，我们假设如果用户设置了true，就使用用户的值
+	if userCfg.EnableIdempotence {
+		result.EnableIdempotence = userCfg.EnableIdempotence
+	}
+	if userCfg.MaxInFlightRequests != 0 {
+		result.MaxInFlightRequests = userCfg.MaxInFlightRequests
+	}
+	if userCfg.RetryBackoff != 0 {
+		result.RetryBackoff = userCfg.RetryBackoff
+	}
+	if userCfg.MaxRetries != 0 {
+		result.MaxRetries = userCfg.MaxRetries
+	}
+
+	return result
+}
+
+// mergeConsumerConfig 合并消费者配置
+func mergeConsumerConfig(defaultCfg, userCfg ConsumerConfig, mainBrokers []string, mainClientID string) ConsumerConfig {
+	result := defaultCfg
+
+	// 如果用户没有设置Brokers，使用主配置的Brokers
+	if len(userCfg.Brokers) == 0 && len(mainBrokers) > 0 {
+		result.Brokers = mainBrokers
+	} else if len(userCfg.Brokers) > 0 {
+		result.Brokers = userCfg.Brokers
+	}
+
+	// 如果用户没有设置ClientID，使用主配置的ClientID
+	if userCfg.ClientID == "" && mainClientID != "" {
+		result.ClientID = mainClientID
+	} else if userCfg.ClientID != "" {
+		result.ClientID = userCfg.ClientID
+	}
+
+	if userCfg.GroupID != "" {
+		result.GroupID = userCfg.GroupID
+	}
+	if userCfg.AutoOffsetReset != "" {
+		result.AutoOffsetReset = userCfg.AutoOffsetReset
+	}
+	// EnableAutoCommit 是bool类型，需要特殊处理
+	if userCfg.EnableAutoCommit != defaultCfg.EnableAutoCommit {
+		result.EnableAutoCommit = userCfg.EnableAutoCommit
+	}
+	if userCfg.AutoCommitInterval != 0 {
+		result.AutoCommitInterval = userCfg.AutoCommitInterval
+	}
+	if userCfg.SessionTimeout != 0 {
+		result.SessionTimeout = userCfg.SessionTimeout
+	}
+	if userCfg.HeartbeatInterval != 0 {
+		result.HeartbeatInterval = userCfg.HeartbeatInterval
+	}
+	if userCfg.MaxPollRecords != 0 {
+		result.MaxPollRecords = userCfg.MaxPollRecords
+	}
+	if userCfg.MaxPollInterval != 0 {
+		result.MaxPollInterval = userCfg.MaxPollInterval
+	}
+	if userCfg.FetchMinBytes != 0 {
+		result.FetchMinBytes = userCfg.FetchMinBytes
+	}
+	if userCfg.FetchMaxBytes != 0 {
+		result.FetchMaxBytes = userCfg.FetchMaxBytes
+	}
+	if userCfg.FetchMaxWait != 0 {
+		result.FetchMaxWait = userCfg.FetchMaxWait
+	}
+	if userCfg.IsolationLevel != "" {
+		result.IsolationLevel = userCfg.IsolationLevel
+	}
+
+	return result
+}
+
+// mergePoolConfig 合并连接池配置
+func mergePoolConfig(defaultCfg, userCfg PoolConfig) PoolConfig {
+	result := defaultCfg
+	if userCfg.MaxConnections != 0 {
+		result.MaxConnections = userCfg.MaxConnections
+	}
+	if userCfg.MinIdleConnections != 0 {
+		result.MinIdleConnections = userCfg.MinIdleConnections
+	}
+	if userCfg.MaxIdleConnections != 0 {
+		result.MaxIdleConnections = userCfg.MaxIdleConnections
+	}
+	if userCfg.ConnectionMaxLifetime != 0 {
+		result.ConnectionMaxLifetime = userCfg.ConnectionMaxLifetime
+	}
+	if userCfg.ConnectionMaxIdleTime != 0 {
+		result.ConnectionMaxIdleTime = userCfg.ConnectionMaxIdleTime
+	}
+	if userCfg.HealthCheckInterval != 0 {
+		result.HealthCheckInterval = userCfg.HealthCheckInterval
+	}
+	return result
+}
+
+// mergePerformanceConfig 合并性能配置
+func mergePerformanceConfig(defaultCfg, userCfg PerformanceConfig) PerformanceConfig {
+	result := defaultCfg
+	if userCfg.TargetLatencyMicros != 0 {
+		result.TargetLatencyMicros = userCfg.TargetLatencyMicros
+	}
+	if userCfg.TargetThroughputPerSec != 0 {
+		result.TargetThroughputPerSec = userCfg.TargetThroughputPerSec
+	}
+	// OptimizeForSmallMessages 是bool类型，需要特殊处理
+	if userCfg.OptimizeForSmallMessages != defaultCfg.OptimizeForSmallMessages {
+		result.OptimizeForSmallMessages = userCfg.OptimizeForSmallMessages
+	}
+	if userCfg.SmallMessageThresholdBytes != 0 {
+		result.SmallMessageThresholdBytes = userCfg.SmallMessageThresholdBytes
+	}
+	return result
+}
+
+// mergeMonitoringConfig 合并监控配置
+func mergeMonitoringConfig(defaultCfg, userCfg MonitoringConfig) MonitoringConfig {
+	result := defaultCfg
+	// EnableMetrics 是bool类型，需要特殊处理
+	if userCfg.EnableMetrics != defaultCfg.EnableMetrics {
+		result.EnableMetrics = userCfg.EnableMetrics
+	}
+	if userCfg.MetricsInterval != 0 {
+		result.MetricsInterval = userCfg.MetricsInterval
+	}
+	// EnableTracing 是bool类型，需要特殊处理
+	if userCfg.EnableTracing != defaultCfg.EnableTracing {
+		result.EnableTracing = userCfg.EnableTracing
+	}
+	if userCfg.LogLevel != "" {
+		result.LogLevel = userCfg.LogLevel
+	}
+	return result
+}

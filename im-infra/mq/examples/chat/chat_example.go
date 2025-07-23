@@ -48,26 +48,30 @@ func main() {
 	}
 	defer mqInstance.Close()
 
+	// 创建用于优雅关闭的 context
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// 启动消费者
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		startConsumer(mqInstance)
+		startConsumer(ctx, mqInstance)
 	}()
 
 	// 启动生产者
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		startProducer(mqInstance)
+		startProducer(ctx, mqInstance)
 	}()
 
 	// 启动监控
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		startMonitoring(mqInstance)
+		startMonitoring(ctx, mqInstance)
 	}()
 
 	// 等待中断信号
@@ -77,7 +81,9 @@ func main() {
 
 	log.Println("收到关闭信号，开始优雅关闭...")
 
-	// 这里可以添加优雅关闭逻辑
+	// 取消 context，通知所有协程退出
+	cancel()
+
 	// 等待所有协程完成
 	wg.Wait()
 
@@ -85,7 +91,7 @@ func main() {
 }
 
 // startConsumer 启动消费者
-func startConsumer(mqInstance mq.MQ) {
+func startConsumer(ctx context.Context, mqInstance mq.MQ) {
 	consumer := mqInstance.Consumer()
 
 	callback := func(message *mq.Message, partition mq.TopicPartition, err error) bool {
@@ -111,7 +117,6 @@ func startConsumer(mqInstance mq.MQ) {
 		return true // 继续消费
 	}
 
-	ctx := context.Background()
 	err := consumer.Subscribe(ctx, []string{"chat-messages"}, callback)
 	if err != nil {
 		log.Fatalf("订阅主题失败: %v", err)
@@ -119,12 +124,13 @@ func startConsumer(mqInstance mq.MQ) {
 
 	log.Println("消费者已启动，等待消息...")
 
-	// 保持消费者运行
-	select {}
+	// 等待 context 取消信号
+	<-ctx.Done()
+	log.Println("消费者收到退出信号，正在关闭...")
 }
 
 // startProducer 启动生产者
-func startProducer(mqInstance mq.MQ) {
+func startProducer(ctx context.Context, mqInstance mq.MQ) {
 	producer := mqInstance.Producer()
 
 	// 模拟发送聊天消息
@@ -134,86 +140,98 @@ func startProducer(mqInstance mq.MQ) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		// 随机选择发送者和接收者
-		fromUser := users[messageCount%len(users)]
-		toUser := users[(messageCount+1)%len(users)]
-
-		// 创建聊天消息
-		msg := ChatMessage{
-			MessageID:   fmt.Sprintf("msg_%d", messageCount),
-			FromUser:    fromUser,
-			ToUser:      toUser,
-			Content:     fmt.Sprintf("这是第 %d 条消息", messageCount),
-			Timestamp:   time.Now(),
-			MessageType: "text",
-		}
-
-		// 序列化消息
-		data, err := json.Marshal(msg)
-		if err != nil {
-			log.Printf("序列化消息失败: %v", err)
-			continue
-		}
-
-		// 发送消息
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		err = producer.SendSyncWithKey(ctx, "chat-messages", []byte(msg.ToUser), data)
-		cancel()
-
-		if err != nil {
-			log.Printf("发送消息失败: %v", err)
-		} else {
-			log.Printf("发送消息成功: %s -> %s", msg.FromUser, msg.ToUser)
-		}
-
-		messageCount++
-
-		// 发送100条消息后停止
-		if messageCount >= 100 {
-			log.Println("已发送100条消息，生产者停止")
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("生产者收到退出信号，正在关闭...")
 			return
+		case <-ticker.C:
+			// 随机选择发送者和接收者
+			fromUser := users[messageCount%len(users)]
+			toUser := users[(messageCount+1)%len(users)]
+
+			// 创建聊天消息
+			msg := ChatMessage{
+				MessageID:   fmt.Sprintf("msg_%d", messageCount),
+				FromUser:    fromUser,
+				ToUser:      toUser,
+				Content:     fmt.Sprintf("这是第 %d 条消息", messageCount),
+				Timestamp:   time.Now(),
+				MessageType: "text",
+			}
+
+			// 序列化消息
+			data, err := json.Marshal(msg)
+			if err != nil {
+				log.Printf("序列化消息失败: %v", err)
+				continue
+			}
+
+			// 发送消息
+			sendCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err = producer.SendSyncWithKey(sendCtx, "chat-messages", []byte(msg.ToUser), data)
+			cancel()
+
+			if err != nil {
+				log.Printf("发送消息失败: %v", err)
+			} else {
+				log.Printf("发送消息成功: %s -> %s", msg.FromUser, msg.ToUser)
+			}
+
+			messageCount++
+
+			// 发送100条消息后停止
+			if messageCount >= 100 {
+				log.Println("已发送100条消息，生产者停止")
+				return
+			}
 		}
 	}
 }
 
 // startMonitoring 启动监控
-func startMonitoring(mqInstance mq.MQ) {
+func startMonitoring(ctx context.Context, mqInstance mq.MQ) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		// 获取生产者指标
-		producerMetrics := mqInstance.Producer().GetMetrics()
-		log.Printf("生产者指标 - 总消息: %d, 成功: %d, 失败: %d, 平均延迟: %v",
-			producerMetrics.TotalMessages,
-			producerMetrics.SuccessMessages,
-			producerMetrics.FailedMessages,
-			producerMetrics.AverageLatency)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("监控服务收到退出信号，正在关闭...")
+			return
+		case <-ticker.C:
+			// 获取生产者指标
+			producerMetrics := mqInstance.Producer().GetMetrics()
+			log.Printf("生产者指标 - 总消息: %d, 成功: %d, 失败: %d, 平均延迟: %v",
+				producerMetrics.TotalMessages,
+				producerMetrics.SuccessMessages,
+				producerMetrics.FailedMessages,
+				producerMetrics.AverageLatency)
 
-		// 获取消费者指标
-		consumerMetrics := mqInstance.Consumer().GetMetrics()
-		log.Printf("消费者指标 - 总消息: %d, 延迟: %d, 吞吐量: %.2f 消息/秒",
-			consumerMetrics.TotalMessages,
-			consumerMetrics.Lag,
-			consumerMetrics.MessagesPerSecond)
+			// 获取消费者指标
+			consumerMetrics := mqInstance.Consumer().GetMetrics()
+			log.Printf("消费者指标 - 总消息: %d, 延迟: %d, 吞吐量: %.2f 消息/秒",
+				consumerMetrics.TotalMessages,
+				consumerMetrics.Lag,
+				consumerMetrics.MessagesPerSecond)
 
-		// 获取连接池统计
-		poolStats := mqInstance.ConnectionPool().GetStats()
-		log.Printf("连接池统计 - 总连接: %d, 活跃: %d, 空闲: %d",
-			poolStats.TotalConnections,
-			poolStats.ActiveConnections,
-			poolStats.IdleConnections)
+			// 获取连接池统计
+			poolStats := mqInstance.ConnectionPool().GetStats()
+			log.Printf("连接池统计 - 总连接: %d, 活跃: %d, 空闲: %d",
+				poolStats.TotalConnections,
+				poolStats.ActiveConnections,
+				poolStats.IdleConnections)
 
-		// 健康检查
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		err := mqInstance.Ping(ctx)
-		cancel()
+			// 健康检查
+			pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			err := mqInstance.Ping(pingCtx)
+			cancel()
 
-		if err != nil {
-			log.Printf("健康检查失败: %v", err)
-		} else {
-			log.Println("健康检查通过")
+			if err != nil {
+				log.Printf("健康检查失败: %v", err)
+			} else {
+				log.Println("健康检查通过")
+			}
 		}
 	}
 }
