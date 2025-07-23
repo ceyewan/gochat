@@ -52,6 +52,10 @@ type Logger interface {
 	// SetLevel 动态修改最小日志级别。
 	// 支持："debug"、"info"、"warn"、"error"。
 	SetLevel(level string) error
+
+	// Module 返回一个带有指定模块名的日志器实例。
+	// 对于相同的模块名，应返回相同的日志器实例（如果底层实现支持）。
+	Module(name string) Logger
 }
 
 // NewLogger 根据提供的配置创建一个新的 Logger 实例。

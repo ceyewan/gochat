@@ -94,3 +94,8 @@ func (l *logger) WithGroup(name string) Logger {
 func (l *logger) SetLevel(level string) error {
 	return l.levelManager.SetLevel(level)
 }
+
+// Module 返回一个带有指定模块名的日志器实例。
+func (l *logger) Module(name string) Logger {
+	return l.With(Field{Key: "module", Value: name})
+}

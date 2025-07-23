@@ -1,127 +1,89 @@
-# clog API 文档
+# `im-infra/clog` - API 参考文档
 
-## 概述
+本库为 GoChat 微服务生态提供统一的结构化日志能力。本文档详细描述了如何使用本库的公共 API。
 
-`clog` 是一个基于 Go 标准库 `log/slog` 的高性能结构化日志库，提供了简洁易用的 API 和丰富的功能。
+## 1. 核心 API 概览
 
-## 核心特性
+`clog` 提供了两种主要的交互方式：**全局日志方法**和**日志器实例**。
 
-- 🌟 **全局日志方法**：支持 `clog.Info()` 等全局方法，无需显式创建日志器
-- 📦 **模块日志器**：`clog.Module("name")` 创建模块特定日志器，单例模式，配置继承
-- 🚀 **基于 slog**：充分利用 Go 标准库 `log/slog`，性能与兼容性俱佳
-- 📝 **双格式支持**：支持 JSON 和文本格式输出
-- 🔄 **多目标输出**：可同时输出到多个目标（stdout、stderr、文件等）
-- 📁 **文件滚动**：内置日志文件滚动与压缩
-- 🏷️ **TraceID 集成**：自动从 context 注入 TraceID
-- ⚡ **动态日志级别**：运行时可调整日志级别
+### 全局日志方法
 
-## 全局日志方法
+为了方便快速开发，可以直接使用包级别的全局函数。
 
 ```go
-// 基础全局日志方法
-func Debug(msg string, fields ...Field)
-func Info(msg string, fields ...Field)
-func Warn(msg string, fields ...Field)
-func Error(msg string, fields ...Field)
+// 直接记录不同级别的日志
+clog.Info(msg string, fields ...clog.Field)
+clog.Warn(msg string, fields ...clog.Field)
+clog.Error(msg string, fields ...clog.Field)
 
-// 带 context 的全局日志方法
-func DebugContext(ctx context.Context, msg string, fields ...Field)
-func InfoContext(ctx context.Context, msg string, fields ...Field)
-func WarnContext(ctx context.Context, msg string, fields ...Field)
-func ErrorContext(ctx context.Context, msg string, fields ...Field)
+// 记录带 context 的日志，用于自动注入 TraceID
+clog.InfoContext(ctx context.Context, msg string, fields ...clog.Field)
 ```
 
-**使用示例：**
-```go
-clog.Debug("调试信息", clog.String("key", "value"))
-clog.Info("用户登录", clog.Int("user_id", 12345), clog.String("username", "alice"))
-clog.Warn("警告信息", clog.String("component", "auth"), clog.String("reason", "rate_limit"))
-clog.Error("错误信息", clog.Err(err), clog.String("operation", "database_query"))
-```
+### Logger 接口
 
-### 带 Context 的日志方法
+所有日志器实例都实现了 `Logger` 接口，这是与日志器交互的核心。
 
 ```go
-func DebugContext(ctx context.Context, msg string, fields ...Field)
-func InfoContext(ctx context.Context, msg string, fields ...Field)
-func WarnContext(ctx context.Context, msg string, fields ...Field)
-func ErrorContext(ctx context.Context, msg string, fields ...Field)
+type Logger interface {
+    // 基础日志方法
+	Debug(msg string, fields ...Field)
+	Info(msg string, fields ...Field)
+	Warn(msg string, fields ...Field)
+	Error(msg string, fields ...Field)
+
+    // 带 Context 的日志方法
+	DebugContext(ctx context.Context, msg string, fields ...Field)
+	InfoContext(ctx context.Context, msg string, fields ...Field)
+    // ...
+
+    // 创建子日志器
+	With(fields ...Field) Logger
+	Module(name string) Logger
+
+    // 动态配置
+	SetLevel(level string) error
+}
 ```
 
-**使用示例：**
-```go
-ctx := context.WithValue(context.Background(), "trace_id", "req-123")
-clog.InfoContext(ctx, "处理请求", clog.String("endpoint", "/api/users"))
-clog.ErrorContext(ctx, "请求失败", clog.Err(err), clog.Int("status_code", 500))
-```
+## 2. 快速上手
 
-## 模块日志器
-
-### Module 函数
-
-```go
-func Module(name string) Logger
-```
-
-创建或获取指定名称的模块日志器。对于相同的模块名，返回相同的日志器实例（单例模式）。
-
-**特性：**
-- 单例缓存：相同模块名返回相同实例
-- 配置继承：继承默认日志器的所有配置
-- 线程安全：支持并发访问
-- 自动标识：自动添加 `module` 字段
-
-**使用示例：**
-```go
-// 创建模块日志器
-dbLogger := clog.Module("database")
-apiLogger := clog.Module("api")
-authLogger := clog.Module("auth")
-
-// 使用模块日志器
-dbLogger.Info("连接已建立", clog.String("host", "localhost"), clog.Int("port", 5432))
-// 输出: time=... level=INFO msg="连接已建立" module=database host=localhost port=5432
-
-apiLogger.Error("请求失败", clog.String("endpoint", "/users"), clog.Int("status", 500))
-// 输出: time=... level=ERROR msg="请求失败" module=api endpoint=/users status=500
-```
-
-**性能建议：**
-```go
-// ✅ 推荐：缓存模块日志器
-var logger = clog.Module("service")
-logger.Info("message")
-
-// ❌ 避免：重复调用 Module()
-clog.Module("service").Info("message") // 有额外开销
-```
-
-## 传统 API（向后兼容）
-
-### Default 函数
+在你的服务中集成 `clog` 非常简单。
 
 ```go
-func Default() Logger
+package main
+
+import (
+	"errors"
+	"github.com/ceyewan/gochat/im-infra/clog"
+)
+
+// 推荐：在包级别获取模块日志器
+var (
+	dbLogger  = clog.Module("database")
+	apiLogger = clog.Module("api")
+)
+
+func main() {
+	// 使用全局方法记录一般信息
+	clog.Info("服务启动", clog.String("version", "1.0.0"))
+
+	// 使用模块日志器记录特定领域的日志
+	dbLogger.Info("连接数据库成功", clog.String("host", "localhost"))
+	apiLogger.Debug("收到一个外部请求", clog.String("path", "/v1/users"))
+
+	// 记录一个错误
+	err := errors.New("something went wrong")
+	apiLogger.Error("请求处理失败", clog.Err(err), clog.Int("status_code", 500))
+}
 ```
 
-返回默认日志器实例，与全局日志方法使用相同的日志器。
+## 3. 核心功能详解
 
-**使用示例：**
-```go
-logger := clog.Default()
-logger.Info("Hello, World!")
-logger.Warn("This is a warning", "component", "example")
-```
+### 自定义日志器
 
-### New 函数
+通过 `clog.New()` 和 `clog.Config`，你可以创建一个完全独立的日志器实例。
 
-```go
-func New(cfg Config) (Logger, error)
-```
-
-使用自定义配置创建新的日志器实例。
-
-**使用示例：**
 ```go
 cfg := clog.Config{
     Level: "debug",
@@ -135,277 +97,101 @@ cfg := clog.Config{
     TraceIDKey:    "trace_id",
     AddSource:     true,
 }
-
 logger, err := clog.New(cfg)
 if err != nil {
-    return err
+    // handle error
 }
 
-logger.Debug("Debug message")
-logger.Info("Application started", "version", "1.0.0")
+logger.Info("这是一条来自自定义日志器的消息")
 ```
 
-## Logger 接口
+### 模块化日志 (`Module`)
+
+`Module(name)` 是 `With(clog.String("module", name))` 的一层封装，是组织大型项目日志的最佳实践。它可以从任何 `Logger` 实例调用。
 
 ```go
-type Logger interface {
-    // 基础日志方法（使用类型安全的字段）
-    Debug(msg string, fields ...Field)
-    Info(msg string, fields ...Field)
-    Warn(msg string, fields ...Field)
-    Error(msg string, fields ...Field)
+// 1. 基于全局日志器创建模块
+var serviceALogger = clog.Module("service-a")
 
-    // 带 Context 的日志方法（使用类型安全的字段）
-    DebugContext(ctx context.Context, msg string, fields ...Field)
-    InfoContext(ctx context.Context, msg string, fields ...Field)
-    WarnContext(ctx context.Context, msg string, fields ...Field)
-    ErrorContext(ctx context.Context, msg string, fields ...Field)
+// 2. 基于自定义日志器创建模块
+customLogger, _ := clog.New(cfg)
+var serviceBLogger = customLogger.Module("service-b")
 
-    // 结构化日志（使用类型安全的字段）
-    With(fields ...Field) Logger
-    WithGroup(name string) Logger
+serviceALogger.Info("来自服务A的日志")
+serviceBLogger.Info("来自服务B的日志，它将遵循 customLogger 的配置")
+```
 
-    // 动态配置
-    SetLevel(level string) error
+### 多目标输出
+
+在 `Config.Outputs` 数组中定义多个输出目标。
+
+```go
+cfg.Outputs = []clog.OutputConfig{
+    // 目标1: 向控制台输出 Text 格式
+    {Format: "text", Writer: "stdout"},
+    // 目标2: 向文件输出 JSON 格式
+    {Format: "json", Writer: "file", FileRotation: &clog.FileRotationConfig{...}},
 }
-```
-
-### 结构化日志
-
-```go
-// 添加固定属性
-userLogger := logger.With("user_id", 12345, "session", "abc123")
-userLogger.Info("用户操作", "action", "login")
-// 输出: ... user_id=12345 session=abc123 action=login
-
-// 创建分组（已弃用，推荐使用 Module）
-dbLogger := logger.WithGroup("database")
-dbLogger.Info("查询执行", "table", "users", "duration", "150ms")
-// 输出: ... database.table=users database.duration=150ms
 ```
 
 ### 动态级别调整
 
+在服务运行时，可以随时更改日志级别。
+
 ```go
 logger := clog.Default()
+logger.Debug("这条不会显示") // 默认是 Info 级别
 
-// 检查当前级别
-if logger.Enabled(ctx, slog.LevelDebug) {
-    logger.Debug("Debug message")
-}
-
-// 动态调整级别
 err := logger.SetLevel("debug")
 if err != nil {
-    clog.Error("Failed to set level", "error", err)
-}
-```
-
-## 配置
-
-### Config 结构
-
-```go
-type Config struct {
-    Level         string         `json:"level"`          // 日志级别: debug, info, warn, error
-    Outputs       []OutputConfig `json:"outputs"`        // 输出配置列表
-    EnableTraceID bool           `json:"enable_trace_id"` // 是否启用 TraceID
-    TraceIDKey    any            `json:"trace_id_key"`   // TraceID 在 context 中的键
-    AddSource     bool           `json:"add_source"`     // 是否添加源码位置信息
-}
-```
-
-### OutputConfig 结构
-
-```go
-type OutputConfig struct {
-    Format       string               `json:"format"`        // 输出格式: text, json
-    Writer       string               `json:"writer"`        // 输出目标: stdout, stderr, file
-    FileRotation *FileRotationConfig  `json:"file_rotation"` // 文件滚动配置（仅当 writer=file 时）
-}
-```
-
-### FileRotationConfig 结构
-
-```go
-type FileRotationConfig struct {
-    Filename   string `json:"filename"`    // 日志文件路径
-    MaxSize    int    `json:"max_size"`    // 最大文件大小（MB）
-    MaxAge     int    `json:"max_age"`     // 最大保留天数
-    MaxBackups int    `json:"max_backups"` // 最大备份文件数
-    LocalTime  bool   `json:"local_time"`  // 是否使用本地时间
-    Compress   bool   `json:"compress"`    // 是否压缩备份文件
-}
-```
-
-## 字段辅助函数
-
-```go
-// 创建任意类型的字段
-func Any(key string, value any) Field
-
-// 创建字符串字段
-func String(key, value string) Field
-
-// 创建整数字段
-func Int(key string, value int) Field
-func Int64(key string, value int64) Field
-
-// 创建浮点数字段
-func Float64(key string, value float64) Field
-
-// 创建布尔字段
-func Bool(key string, value bool) Field
-
-// 创建时间字段
-func Time(key string, value time.Time) Field
-
-// 创建持续时间字段
-func Duration(key string, value time.Duration) Field
-
-// 创建错误字段
-func Err(err error) Field           // 使用 "error" 作为键名
-func ErrorValue(err error) Field    // 创建 error 类型字段（重命名后的函数）
-```
-
-**使用示例：**
-```go
-// 使用类型安全的字段辅助函数（推荐且唯一支持的方式）
-clog.Info("操作完成",
-    clog.String("operation", "user_create"),
-    clog.Int("user_id", 12345),
-    clog.Duration("elapsed", time.Since(start)),
-    clog.Bool("success", true),
-)
-
-// 错误处理示例
-if err != nil {
-    clog.Error("操作失败",
-        clog.Err(err),                    // 使用 "error" 作为键名
-        clog.String("operation", "user_create"),
-        clog.Int("user_id", 12345),
-    )
-)
-```
-
-## 最佳实践
-
-### 1. 选择合适的日志方法
-
-```go
-// ✅ 简单场景：使用全局方法
-clog.Info("应用启动", clog.String("version", "1.0.0"))
-
-// ✅ 模块化场景：使用模块日志器
-var dbLogger = clog.Module("database")
-dbLogger.Info("连接建立", clog.String("host", "localhost"))
-
-// ✅ 复杂配置：使用自定义日志器
-logger, _ := clog.New(customConfig)
-logger.Info("自定义日志器")
-```
-
-### 2. 性能优化
-
-```go
-// ✅ 缓存模块日志器
-var (
-    dbLogger  = clog.Module("database")
-    apiLogger = clog.Module("api")
-)
-
-func handleRequest() {
-    dbLogger.Info("查询数据")  // 无额外开销
-    apiLogger.Info("处理请求") // 无额外开销
+    // handle error
 }
 
-// ❌ 避免重复调用
-func handleRequest() {
-    clog.Module("database").Info("查询数据")  // 有额外开销
-    clog.Module("api").Info("处理请求")       // 有额外开销
-}
+logger.Debug("这条现在会显示了！")
 ```
 
-### 3. 结构化日志
+## 4. 配置项说明 (`Config`)
 
-```go
-// ✅ 使用结构化字段
-clog.Info("用户登录",
-    "user_id", 12345,
-    "username", "alice",
-    "ip", "192.168.1.100",
-    "user_agent", "Mozilla/5.0...",
-)
+| 字段 | 类型 | 描述 | 默认值 |
+| :--- | :--- | :--- | :--- |
+| `Level` | `string` | **(必需)** 日志级别，支持: `debug`, `info`, `warn`, `error`。 | `info` |
+| `Outputs` | `[]OutputConfig` | **(必需)** 定义一个或多个输出目标。 | `stdout` + `text` |
+| `EnableTraceID` | `bool` | 是否从 `context.Context` 自动注入 TraceID。 | `false` |
+| `TraceIDKey` | `any` | 从 context 中提取 TraceID 的键。 | `traceID` |
+| `AddSource`| `bool` | 是否在日志中包含源码文件和行号信息。 | `false` |
 
-// ❌ 避免在消息中嵌入变量
-clog.Info(fmt.Sprintf("用户 %s (ID: %d) 登录", username, userID))
-```
+### `OutputConfig`
 
-### 4. 错误处理
+| 字段 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `Format` | `string` | **(必需)** 输出格式，支持: `json`, `text`。 |
+| `Writer` | `string` | **(必需)** 输出目标，支持: `stdout`, `stderr`, `file`。 |
+| `FileRotation` | `*FileRotationConfig`| 当 `Writer` 为 `file` 时的滚动配置。 |
 
-```go
-// ✅ 使用 Err 辅助函数
-if err != nil {
-    clog.Error("操作失败", clog.Err(err), "operation", "user_create")
-}
+### `FileRotationConfig`
 
-// ✅ 或者直接使用键值对
-if err != nil {
-    clog.Error("操作失败", "error", err, "operation", "user_create")
-}
-```
+| 字段 | 类型 | 描述 | 默认值 |
+| :--- | :--- | :--- | :--- |
+| `Filename`| `string` | **(必需)** 日志文件路径。 | - |
+| `MaxSize` | `int` | 单个文件最大大小 (MB)。 | `100` |
+| `MaxAge` | `int` | 日志文件最大保留天数。 | `30` |
+| `MaxBackups`| `int` | 最大保留的旧日志文件数。| `10` |
+| `LocalTime`| `bool` | 备份文件时间戳是否用本地时间。| `false` (UTC) |
+| `Compress`| `bool` | 是否对滚动的日志文件进行 gzip 压缩。| `false` |
 
-### 5. Context 使用
 
-```go
-// ✅ 传递 context 以支持 TraceID
-func handleRequest(ctx context.Context) {
-    clog.InfoContext(ctx, "开始处理请求")
-    
-    // 业务逻辑...
-    
-    clog.InfoContext(ctx, "请求处理完成", "duration", time.Since(start))
-}
-```
+## 5. 最佳实践
 
-## 迁移指南
+1.  **优先使用模块日志器**：对于任何有明确归属的业务逻辑，都应使用 `clog.Module()` 创建独立的日志器进行记录，而不是直接使用全局方法。
 
-### 从 WithGroup 迁移到 Module
+2.  **缓存日志器实例**：无论是通过 `clog.New()` 还是 `clog.Module()` 获取的日志器，都应在包级别变量中缓存起来，避免在函数调用或循环中重复创建。
 
-```go
-// 旧方式（已弃用）
-dbLogger := logger.WithGroup("database")
-dbLogger.Info("连接建立")
+3.  **使用 `clog.Err()` 处理错误**：统一使用 `clog.Err(err)` 来记录错误信息，而不是 `clog.String("error", err.Error())`，前者能保留更完整的错误信息。
 
-// 新方式（推荐）
-dbLogger := clog.Module("database")
-dbLogger.Info("连接建立")
-```
+4.  **利用结构化优势**：始终使用 `clog.String()`, `clog.Int()` 等类型化辅助函数，避免使用 `fmt.Sprintf` 将变量拼接到消息字符串中。
+    ```go
+    // ✅ 推荐
+    clog.Info("用户登录成功", clog.Int("user_id", 123), clog.String("ip", "1.2.3.4"))
 
-### 从传统方式迁移到全局方法
-
-```go
-// 旧方式
-logger := clog.Default()
-logger.Info("消息")
-
-// 新方式（推荐）
-clog.Info("消息")
-```
-
-## 常见问题
-
-### Q: 全局方法和模块日志器的区别？
-A: 全局方法适用于简单场景，模块日志器适用于需要区分不同组件的场景。模块日志器会自动添加 `module` 字段。
-
-### Q: 模块日志器是否线程安全？
-A: 是的，模块日志器使用读写锁保护，完全线程安全。
-
-### Q: 如何选择输出格式？
-A: 开发环境推荐使用 `text` 格式（易读），生产环境推荐使用 `json` 格式（易于解析和分析）。
-
-### Q: 如何处理敏感信息？
-A: 避免在日志中记录密码、令牌等敏感信息。如需记录，请先进行脱敏处理。
-
-### Q: 性能如何？
-A: 基于 `log/slog`，性能优异。模块日志器查找开销约 6ns，建议缓存使用以获得最佳性能。
+    // ❌ 不推荐
+    clog.Info(fmt.Sprintf("用户 %d 从 IP %s 登录成功", 123, "1.2.3.4"))
