@@ -2,74 +2,96 @@ package main
 
 import (
 	"context"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-infra/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
+var (
+	// 模块化日志器
+	mainLogger = clog.Module("basic.main")
+	grpcLogger = clog.Module("basic.grpc")
+)
+
 func main() {
-	// 1. Configure and initialize the metrics provider.
+	mainLogger.Info("启动基础 metrics 示例应用")
+
+	// 1. 配置并初始化 metrics provider
 	cfg := metrics.DefaultConfig()
 	cfg.ServiceName = "my-awesome-service"
-	cfg.PrometheusListenAddr = ":9091" // Expose metrics on this port
-	cfg.ExporterType = "stdout"        // For demo, print traces to console
+	cfg.PrometheusListenAddr = ":9091" // 在此端口暴露指标
+	cfg.ExporterType = "stdout"        // 演示用，将 traces 打印到控制台
+
+	mainLogger.Info("创建 metrics provider",
+		clog.String("service_name", cfg.ServiceName),
+		clog.String("prometheus_addr", cfg.PrometheusListenAddr),
+		clog.String("exporter_type", cfg.ExporterType))
 
 	provider, err := metrics.New(cfg)
 	if err != nil {
-		log.Fatalf("failed to create metrics provider: %v", err)
+		mainLogger.Error("failed to create metrics provider", clog.Err(err))
+		panic(err)
 	}
 
-	// 2. Defer the shutdown of the provider.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// 2. 延迟关闭 provider
 	defer func() {
-		// Give a bit of time for metrics to be exported
+		mainLogger.Info("关闭 metrics provider")
+		// 给指标导出一点时间
 		time.Sleep(5 * time.Second)
-		if err := provider.Shutdown(ctx); err != nil {
-			log.Printf("failed to shutdown metrics provider: %v", err)
+
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+
+		if err := provider.Shutdown(shutdownCtx); err != nil {
+			mainLogger.Error("failed to shutdown metrics provider", clog.Err(err))
+		} else {
+			mainLogger.Info("metrics provider 关闭完成")
 		}
 	}()
 
-	// 3. Create a gRPC server with the interceptor.
+	// 3. 创建带有拦截器的 gRPC 服务器
+	grpcLogger.Info("创建 gRPC 服务器，集成 metrics 拦截器")
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			provider.GRPCServerInterceptor(),
 		),
 	)
 
-	// In a real app, you would register your gRPC services here.
-	// For this example, we'll just enable reflection so tools can see the server.
+	// 在真实应用中，你会在这里注册你的 gRPC 服务。
+	// 对于这个示例，我们只启用反射，这样工具就能看到服务器。
 	reflection.Register(server)
 
-	// 4. Start the gRPC server.
+	// 4. 启动 gRPC 服务器
 	lis, err := net.Listen("tcp", ":8081")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		mainLogger.Error("failed to listen on :8081", clog.Err(err))
+		panic(err)
 	}
+
 	go func() {
-		log.Println("gRPC server listening on :8081")
+		grpcLogger.Info("gRPC 服务器开始监听", clog.String("address", ":8081"))
 		if err := server.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+			grpcLogger.Error("failed to serve gRPC", clog.Err(err))
 		}
 	}()
 
-	log.Println("Service is running. Press Ctrl+C to exit.")
-	log.Println("Metrics available at http://localhost:9091/metrics")
-	log.Println("Any gRPC call to localhost:8081 will be traced and measured (e.g., using grpcurl).")
+	mainLogger.Info("服务正在运行，按 Ctrl+C 退出")
+	mainLogger.Info("指标可在以下地址访问: http://localhost:9091/metrics")
+	mainLogger.Info("可以使用 grpcurl 向 localhost:8081 发送任何 gRPC 调用进行追踪和测量")
 
-	// Wait for termination signal
+	// 等待终止信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	mainLogger.Info("收到退出信号，正在关闭服务器...")
 	server.GracefulStop()
-	log.Println("Server stopped.")
+	mainLogger.Info("服务器已停止")
 }
