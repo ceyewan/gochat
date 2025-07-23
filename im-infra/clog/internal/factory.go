@@ -15,8 +15,8 @@ type Field struct {
 	Value any
 }
 
-// Logger 定义结构化日志操作的接口。
-// 提供不同级别的结构化日志方法，使用类型安全的 Field 参数。
+// Logger 定义简化的结构化日志操作接口。
+// 专注于生产环境常用的日志级别，提供类型安全的 Field 参数。
 type Logger interface {
 	// Debug 以 Debug 级别记录日志，使用类型安全的字段。
 	Debug(msg string, fields ...Field)
@@ -30,31 +30,22 @@ type Logger interface {
 	// Error 以 Error 级别记录日志，使用类型安全的字段。
 	Error(msg string, fields ...Field)
 
-	// DebugContext 以 Debug 级别记录带 context 的日志，使用类型安全的字段。
+	// DebugContext 以 Debug 级别记录带 context 的日志，自动注入 TraceID。
 	DebugContext(ctx context.Context, msg string, fields ...Field)
 
-	// InfoContext 以 Info 级别记录带 context 的日志，使用类型安全的字段。
+	// InfoContext 以 Info 级别记录带 context 的日志，自动注入 TraceID。
 	InfoContext(ctx context.Context, msg string, fields ...Field)
 
-	// WarnContext 以 Warn 级别记录带 context 的日志，使用类型安全的字段。
+	// WarnContext 以 Warn 级别记录带 context 的日志，自动注入 TraceID。
 	WarnContext(ctx context.Context, msg string, fields ...Field)
 
-	// ErrorContext 以 Error 级别记录带 context 的日志，使用类型安全的字段。
+	// ErrorContext 以 Error 级别记录带 context 的日志，自动注入 TraceID。
 	ErrorContext(ctx context.Context, msg string, fields ...Field)
 
 	// With 返回一个带有指定字段的新 Logger，这些字段会添加到所有日志记录中。
 	With(fields ...Field) Logger
 
-	// WithGroup 返回一个带有指定分组名的新 Logger。
-	// 新 Logger 添加的所有属性都会嵌套在该分组下。
-	WithGroup(name string) Logger
-
-	// SetLevel 动态修改最小日志级别。
-	// 支持："debug"、"info"、"warn"、"error"。
-	SetLevel(level string) error
-
 	// Module 返回一个带有指定模块名的日志器实例。
-	// 对于相同的模块名，应返回相同的日志器实例（如果底层实现支持）。
 	Module(name string) Logger
 }
 
@@ -102,21 +93,8 @@ func NewLogger(cfg Config) (Logger, error) {
 
 // createOutputHandler 根据输出配置创建单个输出 handler。
 func createOutputHandler(outCfg OutputConfig, addSource bool, levelManager *slogx.LevelManager) (slog.Handler, error) {
-	// 将 FileRotationConfig 转换为 slogx.FileRotationConfig
-	var slogxFileRotation *slogx.FileRotationConfig
-	if outCfg.FileRotation != nil {
-		slogxFileRotation = &slogx.FileRotationConfig{
-			Filename:   outCfg.FileRotation.Filename,
-			MaxSize:    outCfg.FileRotation.MaxSize,
-			MaxAge:     outCfg.FileRotation.MaxAge,
-			MaxBackups: outCfg.FileRotation.MaxBackups,
-			LocalTime:  outCfg.FileRotation.LocalTime,
-			Compress:   outCfg.FileRotation.Compress,
-		}
-	}
-
-	// 创建 writer
-	writer, err := slogx.NewWriter(outCfg.Writer, slogxFileRotation)
+	// 创建 writer（只支持 stdout 和 stderr，保持零依赖）
+	writer, err := slogx.NewWriter(outCfg.Writer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create writer: %w", err)
 	}
@@ -149,16 +127,10 @@ func createBaseHandler(writer io.Writer, format string, addSource bool, levelMan
 	}
 }
 
-// NewDefaultLogger 创建一个默认配置的日志器。
-// 用于公共 API 的 Default() 方法。
-func NewDefaultLogger() Logger {
-	cfg := DefaultConfig()
-	logger, err := NewLogger(cfg)
-	if err != nil {
-		// 这不应该发生，但如果发生了，我们将创建一个基本的 slog 日志器作为备用
-		sl := slog.Default()
-		levelManager, _ := slogx.NewLevelManager("info")
-		return newLogger(sl, levelManager)
-	}
-	return logger
+// NewFallbackLogger 创建一个基本的备用日志器。
+// 当优化配置创建失败时使用。
+func NewFallbackLogger() Logger {
+	sl := slog.Default()
+	levelManager, _ := slogx.NewLevelManager("info")
+	return newLogger(sl, levelManager)
 }

@@ -8,7 +8,7 @@ import (
 )
 
 // logger 是 Logger 接口的内部实现。
-// 它包装了一个 *slog.Logger，并提供接口方法。
+// 它包装了一个 *slog.Logger，提供简化的日志方法。
 type logger struct {
 	sl           *slog.Logger
 	levelManager *slogx.LevelManager
@@ -78,21 +78,6 @@ func (l *logger) With(fields ...Field) Logger {
 		sl:           l.sl.With(convertFieldsToArgs(fields...)...),
 		levelManager: l.levelManager,
 	}
-}
-
-// WithGroup 返回一个带有指定分组名的新 Logger。
-// 新 Logger 添加的所有属性都会嵌套在该分组下。
-func (l *logger) WithGroup(name string) Logger {
-	return &logger{
-		sl:           l.sl.WithGroup(name),
-		levelManager: l.levelManager,
-	}
-}
-
-// SetLevel 动态修改最小日志级别。
-// 支持："debug"、"info"、"warn"、"error"。
-func (l *logger) SetLevel(level string) error {
-	return l.levelManager.SetLevel(level)
 }
 
 // Module 返回一个带有指定模块名的日志器实例。

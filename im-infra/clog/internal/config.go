@@ -31,59 +31,23 @@ type OutputConfig struct {
 	Format string `json:"format" yaml:"format"`
 
 	// Writer 日志写入位置。
-	// 支持："stdout"、"stderr"、"file"。
+	// 支持："stdout"、"stderr"。
 	Writer string `json:"writer" yaml:"writer"`
-
-	// FileRotation 配置 "file" 写入方式的日志滚动。
-	// Writer 非 "file" 时此配置无效。
-	FileRotation *FileRotationConfig `json:"fileRotation,omitempty" yaml:"fileRotation,omitempty"`
 }
 
-// FileRotationConfig 配置日志文件滚动。
-// 基于 lumberjack.v2，可靠的文件滚动方案。
-type FileRotationConfig struct {
-	// Filename 日志写入的文件路径。
-	Filename string `json:"filename" yaml:"filename"`
-
-	// MaxSize 单个日志文件最大 MB，超过则滚动。
-	// 默认：100 MB。
-	MaxSize int `json:"maxSize" yaml:"maxSize"`
-
-	// MaxAge 日志文件最大保存天数。
-	// 默认：30 天。
-	MaxAge int `json:"maxAge" yaml:"maxAge"`
-
-	// MaxBackups 最大保留的旧日志文件数。
-	// 默认：10 个文件。
-	MaxBackups int `json:"maxBackups" yaml:"maxBackups"`
-
-	// LocalTime 备份文件时间戳是否使用本地时间。
-	// 默认：false（UTC）。
-	LocalTime bool `json:"localTime" yaml:"localTime"`
-
-	// Compress 滚动后的日志文件是否使用 gzip 压缩。
-	// 默认：false。
-	Compress bool `json:"compress" yaml:"compress"`
-}
-
-// DefaultConfig 返回一个带有合理默认值的 Config。
-// 默认配置：
-//   - Level: "info"
-//   - Format: "text"
-//   - Writer: "stdout"
-//   - TraceID: 关闭
-//   - AddSource: false
+// DefaultConfig 返回生产环境优化的配置。
+// 专为内部使用设计，确保日志包含完整信息且保持零依赖。
 func DefaultConfig() Config {
 	return Config{
 		Level: "info",
 		Outputs: []OutputConfig{
 			{
-				Format: "text",
+				Format: "json",
 				Writer: "stdout",
 			},
 		},
-		EnableTraceID: false,
-		TraceIDKey:    "traceID",
-		AddSource:     false,
+		EnableTraceID: true,
+		TraceIDKey:    "trace_id",
+		AddSource:     true,
 	}
 }
