@@ -52,7 +52,7 @@ func (c *cache) HSet(ctx context.Context, key, field string, value interface{}) 
 		c.logger.Error("序列化值失败",
 			clog.String("key", key),
 			clog.String("field", field),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return fmt.Errorf("failed to serialize value for key %s field %s: %w", key, field, err)
 	}
@@ -281,7 +281,7 @@ func (c *cache) HMSet(ctx context.Context, key string, values map[string]interfa
 			c.logger.Error("序列化值失败",
 				clog.String("key", key),
 				clog.String("field", field),
-				clog.ErrorValue(err),
+				clog.Err(err),
 			)
 			return fmt.Errorf("failed to serialize value for key %s field %s: %w", key, field, err)
 		}

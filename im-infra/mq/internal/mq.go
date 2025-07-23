@@ -118,7 +118,7 @@ func (m *mq) Close() error {
 	if m.consumer != nil {
 		if err := m.consumer.Close(); err != nil {
 			errors = append(errors, err)
-			m.logger.Error("关闭消费者失败", clog.ErrorValue(err))
+			m.logger.Error("关闭消费者失败", clog.Err(err))
 		}
 	}
 
@@ -126,7 +126,7 @@ func (m *mq) Close() error {
 	if m.producer != nil {
 		if err := m.producer.Close(); err != nil {
 			errors = append(errors, err)
-			m.logger.Error("关闭生产者失败", clog.ErrorValue(err))
+			m.logger.Error("关闭生产者失败", clog.Err(err))
 		}
 	}
 
@@ -134,7 +134,7 @@ func (m *mq) Close() error {
 	if m.connectionPool != nil {
 		if err := m.connectionPool.Close(); err != nil {
 			errors = append(errors, err)
-			m.logger.Error("关闭连接池失败", clog.ErrorValue(err))
+			m.logger.Error("关闭连接池失败", clog.Err(err))
 		}
 	}
 
@@ -267,7 +267,7 @@ func (mm *MQManager) RemoveInstance(name string) error {
 	}
 
 	if err := instance.Close(); err != nil {
-		mm.logger.Error("关闭MQ实例失败", clog.String("name", name), clog.ErrorValue(err))
+		mm.logger.Error("关闭MQ实例失败", clog.String("name", name), clog.Err(err))
 		return err
 	}
 
@@ -300,7 +300,7 @@ func (mm *MQManager) CloseAll() error {
 	for name, instance := range mm.instances {
 		if err := instance.Close(); err != nil {
 			errors = append(errors, err)
-			mm.logger.Error("关闭MQ实例失败", clog.String("name", name), clog.ErrorValue(err))
+			mm.logger.Error("关闭MQ实例失败", clog.String("name", name), clog.Err(err))
 		}
 	}
 

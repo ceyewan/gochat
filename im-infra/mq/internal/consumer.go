@@ -498,7 +498,7 @@ func (c *consumer) consumeLoop() {
 		fetches := c.client.PollFetches(c.consumeCtx)
 		if errs := fetches.Errors(); len(errs) > 0 {
 			for _, err := range errs {
-				c.logger.Error("拉取消息错误", clog.ErrorValue(err.Err))
+				c.logger.Error("拉取消息错误", clog.Err(err.Err))
 			}
 			continue
 		}
@@ -658,7 +658,7 @@ func (om *offsetManager) commitOffsets(ctx context.Context, offsets map[TopicPar
 	wg.Wait()
 
 	if commitErr != nil {
-		om.logger.Error("提交偏移量失败", clog.ErrorValue(commitErr))
+		om.logger.Error("提交偏移量失败", clog.Err(commitErr))
 		return NewConsumerError("偏移量提交失败", commitErr)
 	}
 
@@ -719,7 +719,7 @@ func (om *offsetManager) autoCommit() {
 		defer cancel()
 
 		if err := om.commitOffsets(ctx, toCommit); err != nil {
-			om.logger.Warn("自动提交偏移量失败", clog.ErrorValue(err))
+			om.logger.Warn("自动提交偏移量失败", clog.Err(err))
 		}
 	}()
 }

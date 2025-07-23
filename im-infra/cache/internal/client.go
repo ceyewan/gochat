@@ -25,14 +25,14 @@ func (c *cache) Ping(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start)
-		c.logger.Debug("Ping 操作完成", 
+		c.logger.Debug("Ping 操作完成",
 			clog.Duration("duration", duration),
 		)
 	}()
 
 	err := c.client.Ping(ctx).Err()
 	if err != nil {
-		c.logger.Error("Redis Ping 失败", clog.ErrorValue(err))
+		c.logger.Error("Redis Ping 失败", clog.Err(err))
 		return fmt.Errorf("redis ping failed: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func (c *cache) Close() error {
 	c.logger.Info("关闭 Redis 连接")
 	err := c.client.Close()
 	if err != nil {
-		c.logger.Error("关闭 Redis 连接失败", clog.ErrorValue(err))
+		c.logger.Error("关闭 Redis 连接失败", clog.Err(err))
 		return fmt.Errorf("failed to close redis client: %w", err)
 	}
 	c.logger.Info("Redis 连接已关闭")
@@ -112,7 +112,7 @@ func (c *cache) logOperation(operation string, key string, duration time.Duratio
 	}
 
 	if err != nil {
-		fields = append(fields, clog.ErrorValue(err))
+		fields = append(fields, clog.Err(err))
 		c.logger.Error("缓存操作失败", fields...)
 	} else {
 		c.logger.Debug("缓存操作成功", fields...)
@@ -158,7 +158,7 @@ func (c *cache) handleRedisError(operation string, key string, err error) error 
 		c.logger.Error("Redis 操作错误",
 			clog.String("operation", operation),
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return fmt.Errorf("redis %s operation failed for key %s: %w", operation, key, err)
 	}
@@ -172,7 +172,7 @@ func (c *cache) isKeyNotFoundError(err error) bool {
 // retryOperation 重试操作
 func (c *cache) retryOperation(ctx context.Context, operation string, maxRetries int, fn func() error) error {
 	var lastErr error
-	
+
 	for i := 0; i <= maxRetries; i++ {
 		if i > 0 {
 			// 等待一段时间再重试
@@ -181,14 +181,14 @@ func (c *cache) retryOperation(ctx context.Context, operation string, maxRetries
 				return ctx.Err()
 			case <-time.After(time.Duration(i) * 100 * time.Millisecond):
 			}
-			
+
 			c.logger.Debug("重试操作",
 				clog.String("operation", operation),
 				clog.Int("attempt", i+1),
 				clog.Int("maxRetries", maxRetries),
 			)
 		}
-		
+
 		lastErr = fn()
 		if lastErr == nil {
 			if i > 0 {
@@ -199,19 +199,19 @@ func (c *cache) retryOperation(ctx context.Context, operation string, maxRetries
 			}
 			return nil
 		}
-		
+
 		// 如果是上下文取消或超时，不再重试
 		if lastErr == context.Canceled || lastErr == context.DeadlineExceeded {
 			break
 		}
 	}
-	
+
 	c.logger.Error("操作重试失败",
 		clog.String("operation", operation),
 		clog.Int("maxRetries", maxRetries),
-		clog.ErrorValue(lastErr),
+		clog.Err(lastErr),
 	)
-	
+
 	return lastErr
 }
 
@@ -220,7 +220,7 @@ func (c *cache) validateContext(ctx context.Context) error {
 	if ctx == nil {
 		return fmt.Errorf("context cannot be nil")
 	}
-	
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -242,12 +242,12 @@ func (c *cache) validateKeys(keys []string) error {
 	if len(keys) == 0 {
 		return fmt.Errorf("keys cannot be empty")
 	}
-	
+
 	for i, key := range keys {
 		if key == "" {
 			return fmt.Errorf("key at index %d cannot be empty", i)
 		}
 	}
-	
+
 	return nil
 }

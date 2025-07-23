@@ -58,7 +58,7 @@ func (dl *distributedLock) Acquire(ctx context.Context, key string, ttl time.Dur
 	err = mutex.Lock(ctx)
 	if err != nil {
 		dl.logger.Error("获取分布式锁失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 			clog.Duration("ttl", ttl),
 		)
@@ -116,7 +116,7 @@ func (dl *distributedLock) AcquireReentrant(ctx context.Context, key string, ttl
 	err = mutex.Lock(ctx)
 	if err != nil {
 		dl.logger.Error("获取可重入锁失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 			clog.Duration("ttl", ttl),
 		)
@@ -275,7 +275,7 @@ func (bl *basicLock) Release(ctx context.Context) error {
 	err := bl.mutex.Unlock(ctx)
 	if err != nil {
 		bl.logger.Error("释放锁失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", bl.key),
 		)
 		return fmt.Errorf("failed to release lock: %w", err)

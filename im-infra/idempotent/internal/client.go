@@ -60,7 +60,7 @@ func (c *client) Check(ctx context.Context, key string) (bool, error) {
 	if err != nil {
 		c.logger.Error("检查键存在性失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return false, fmt.Errorf("failed to check key existence: %w", err)
 	}
@@ -99,7 +99,7 @@ func (c *client) Set(ctx context.Context, key string, ttl time.Duration) (bool, 
 	if err != nil {
 		c.logger.Error("设置幂等标记失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return false, fmt.Errorf("failed to set idempotent key: %w", err)
 	}
@@ -144,7 +144,7 @@ func (c *client) SetWithResult(ctx context.Context, key string, result interface
 	if err != nil {
 		c.logger.Error("序列化结果失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return false, fmt.Errorf("failed to serialize result: %w", err)
 	}
@@ -154,7 +154,7 @@ func (c *client) SetWithResult(ctx context.Context, key string, result interface
 	if err != nil {
 		c.logger.Error("设置幂等标记和结果失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return false, fmt.Errorf("failed to set idempotent key with result: %w", err)
 	}
@@ -189,7 +189,7 @@ func (c *client) GetResult(ctx context.Context, key string) (interface{}, error)
 	if err != nil {
 		c.logger.Error("获取结果失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return nil, fmt.Errorf("failed to get result: %w", err)
 	}
@@ -204,7 +204,7 @@ func (c *client) GetResult(ctx context.Context, key string) (interface{}, error)
 	if err := c.deserialize([]byte(value), &result); err != nil {
 		c.logger.Error("反序列化结果失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return nil, fmt.Errorf("failed to deserialize result: %w", err)
 	}
@@ -237,7 +237,7 @@ func (c *client) Delete(ctx context.Context, key string) error {
 	if err != nil {
 		c.logger.Error("删除幂等标记失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return fmt.Errorf("failed to delete idempotent key: %w", err)
 	}
@@ -275,7 +275,7 @@ func (c *client) TTL(ctx context.Context, key string) (time.Duration, error) {
 	if err != nil {
 		c.logger.Error("获取 TTL 失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return 0, fmt.Errorf("failed to get TTL: %w", err)
 	}
@@ -312,7 +312,7 @@ func (c *client) Refresh(ctx context.Context, key string, ttl time.Duration) err
 	if err != nil {
 		c.logger.Error("刷新过期时间失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return fmt.Errorf("failed to refresh TTL: %w", err)
 	}

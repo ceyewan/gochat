@@ -60,7 +60,7 @@ func demonstrateDatabaseCreation(ctx context.Context) {
 
 	database, err := db.New(cfg)
 	if err != nil {
-		clog.Error("创建数据库实例失败", clog.ErrorValue(err))
+		clog.Error("创建数据库实例失败", clog.Err(err))
 		return
 	}
 	defer database.Close()
@@ -70,7 +70,7 @@ func demonstrateDatabaseCreation(ctx context.Context) {
 	// 测试连接
 	err = database.Ping(ctx)
 	if err != nil {
-		clog.Error("数据库连接测试失败", clog.ErrorValue(err))
+		clog.Error("数据库连接测试失败", clog.Err(err))
 	} else {
 		clog.Info("数据库连接测试成功")
 	}
@@ -89,7 +89,7 @@ func demonstrateGlobalMethods(ctx context.Context) {
 	// 自动迁移
 	err := db.AutoMigrate(&Product{})
 	if err != nil {
-		clog.Error("自动迁移失败", clog.ErrorValue(err))
+		clog.Error("自动迁移失败", clog.Err(err))
 		return
 	}
 	clog.Info("自动迁移成功")
@@ -97,7 +97,7 @@ func demonstrateGlobalMethods(ctx context.Context) {
 	// 检查连接
 	err = db.Ping(ctx)
 	if err != nil {
-		clog.Warn("全局数据库连接检查失败", clog.ErrorValue(err))
+		clog.Warn("全局数据库连接检查失败", clog.Err(err))
 	} else {
 		clog.Info("全局数据库连接正常")
 	}
@@ -112,7 +112,7 @@ func demonstrateGlobalMethods(ctx context.Context) {
 
 	err = gormDB.WithContext(ctx).Create(product).Error
 	if err != nil {
-		clog.Error("创建产品失败", clog.ErrorValue(err))
+		clog.Error("创建产品失败", clog.Err(err))
 	} else {
 		clog.Info("创建产品成功", clog.String("name", product.Name), clog.Uint("id", product.ID))
 	}
@@ -137,7 +137,7 @@ func demonstrateCustomInstances(ctx context.Context) {
 	// 创建自定义数据库实例
 	database, err := db.New(cfg)
 	if err != nil {
-		clog.Error("创建数据库实例失败", clog.ErrorValue(err))
+		clog.Error("创建数据库实例失败", clog.Err(err))
 		return
 	}
 	defer database.Close()
@@ -145,7 +145,7 @@ func demonstrateCustomInstances(ctx context.Context) {
 	// 自动迁移
 	err = database.AutoMigrate(&Product{})
 	if err != nil {
-		clog.Error("数据库迁移失败", clog.ErrorValue(err))
+		clog.Error("数据库迁移失败", clog.Err(err))
 		return
 	}
 
@@ -159,7 +159,7 @@ func demonstrateCustomInstances(ctx context.Context) {
 
 	err = database.GetDB().WithContext(ctx).Create(product).Error
 	if err != nil {
-		clog.Error("创建产品失败", clog.ErrorValue(err))
+		clog.Error("创建产品失败", clog.Err(err))
 	} else {
 		clog.Info("创建产品成功", clog.String("name", product.Name), clog.Uint("id", product.ID))
 	}
@@ -168,7 +168,7 @@ func demonstrateCustomInstances(ctx context.Context) {
 	var products []Product
 	err = database.GetDB().WithContext(ctx).Find(&products).Error
 	if err != nil {
-		clog.Error("查询产品失败", clog.ErrorValue(err))
+		clog.Error("查询产品失败", clog.Err(err))
 	} else {
 		clog.Info("查询产品成功", clog.Int("count", len(products)))
 	}
@@ -203,14 +203,14 @@ func demonstrateMultipleInstances(ctx context.Context) {
 
 	productDB, err := db.New(cfg1)
 	if err != nil {
-		clog.Error("创建产品数据库实例失败", clog.ErrorValue(err))
+		clog.Error("创建产品数据库实例失败", clog.Err(err))
 		return
 	}
 	defer productDB.Close()
 
 	userDB, err := db.New(cfg2)
 	if err != nil {
-		clog.Error("创建用户数据库实例失败", clog.ErrorValue(err))
+		clog.Error("创建用户数据库实例失败", clog.Err(err))
 		return
 	}
 	defer userDB.Close()
@@ -220,14 +220,14 @@ func demonstrateMultipleInstances(ctx context.Context) {
 	// 测试连接
 	err = productDB.Ping(ctx)
 	if err != nil {
-		clog.Warn("产品数据库连接检查失败", clog.ErrorValue(err))
+		clog.Warn("产品数据库连接检查失败", clog.Err(err))
 	} else {
 		clog.Info("产品数据库连接正常")
 	}
 
 	err = userDB.Ping(ctx)
 	if err != nil {
-		clog.Warn("用户数据库连接检查失败", clog.ErrorValue(err))
+		clog.Warn("用户数据库连接检查失败", clog.Err(err))
 	} else {
 		clog.Info("用户数据库连接正常")
 	}
@@ -247,7 +247,7 @@ func demonstrateTransactions(ctx context.Context) {
 
 	database, err := db.New(cfg)
 	if err != nil {
-		clog.Error("创建数据库实例失败", clog.ErrorValue(err))
+		clog.Error("创建数据库实例失败", clog.Err(err))
 		return
 	}
 	defer database.Close()
@@ -275,7 +275,7 @@ func demonstrateTransactions(ctx context.Context) {
 	})
 
 	if err != nil {
-		clog.Error("事务执行失败", clog.ErrorValue(err))
+		clog.Error("事务执行失败", clog.Err(err))
 	} else {
 		clog.Info("事务执行成功")
 	}
@@ -304,7 +304,7 @@ func demonstrateSharding(ctx context.Context) {
 
 	database, err := db.New(cfg)
 	if err != nil {
-		clog.Error("创建分片数据库实例失败", clog.ErrorValue(err))
+		clog.Error("创建分片数据库实例失败", clog.Err(err))
 		return
 	}
 	defer database.Close()

@@ -43,7 +43,7 @@ func configureSharding(db *gorm.DB, cfg *ShardingConfig) error {
 	}
 
 	if err != nil {
-		logger.Error("注册分片插件失败", clog.ErrorValue(err))
+		logger.Error("注册分片插件失败", clog.Err(err))
 		return fmt.Errorf("failed to register sharding plugin: %w", err)
 	}
 

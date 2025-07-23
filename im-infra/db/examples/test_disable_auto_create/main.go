@@ -24,7 +24,7 @@ func main() {
 	// 创建数据库实例，应该失败
 	database, err := db.New(cfg)
 	if err != nil {
-		clog.Info("预期的失败：数据库不存在且未启用自动创建", clog.ErrorValue(err))
+		clog.Info("预期的失败：数据库不存在且未启用自动创建", clog.Err(err))
 		clog.Info("=== 测试成功：禁用自动创建功能正常工作 ===")
 		return
 	}

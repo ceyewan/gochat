@@ -34,9 +34,9 @@ func (c *cache) Lock(ctx context.Context, key string, expiration time.Duration) 
 
 	formattedKey := c.formatKey("lock:" + key)
 	lockValue := generateLockValue()
-	
+
 	lockLogger := clog.Module("cache.lock")
-	
+
 	// 尝试获取锁，使用 SET NX EX 命令
 	var acquired bool
 	err := c.executeWithLogging(ctx, "LOCK", key, func() error {
@@ -99,7 +99,7 @@ func (l *lock) Unlock(ctx context.Context) error {
 			clog.String("key", l.key),
 			clog.String("value", l.value),
 			clog.Duration("duration", duration),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return fmt.Errorf("failed to unlock key %s: %w", l.key, err)
 	}
@@ -151,7 +151,7 @@ func (l *lock) Refresh(ctx context.Context, expiration time.Duration) error {
 			clog.String("value", l.value),
 			clog.Duration("newExpiration", expiration),
 			clog.Duration("duration", duration),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return fmt.Errorf("failed to refresh lock for key %s: %w", l.key, err)
 	}
@@ -201,11 +201,11 @@ func (l *lock) IsLocked(ctx context.Context) (bool, error) {
 			)
 			return false, nil
 		}
-		
+
 		l.logger.Error("检查锁状态失败",
 			clog.String("key", l.key),
 			clog.Duration("duration", duration),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return false, fmt.Errorf("failed to check lock status for key %s: %w", l.key, err)
 	}
@@ -240,7 +240,7 @@ func validateContext(ctx context.Context) error {
 	if ctx == nil {
 		return fmt.Errorf("context cannot be nil")
 	}
-	
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -296,7 +296,7 @@ func (c *cache) TryLock(ctx context.Context, key string, expiration time.Duratio
 	lockLogger.Error("获取锁重试失败",
 		clog.String("key", key),
 		clog.Int("maxRetries", maxRetries),
-		clog.ErrorValue(lastErr),
+		clog.Err(lastErr),
 	)
 
 	return nil, lastErr

@@ -63,7 +63,7 @@ func (sr *serviceRegistry) Register(ctx context.Context, service ServiceInfo) er
 	lease, err := sr.client.Grant(ctx, int64(sr.config.TTL.Seconds()))
 	if err != nil {
 		sr.logger.Error("创建租约失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", service.Name),
 			clog.String("instance", service.InstanceID),
 		)
@@ -83,7 +83,7 @@ func (sr *serviceRegistry) Register(ctx context.Context, service ServiceInfo) er
 	_, err = sr.client.Put(ctx, key, string(serviceData), clientv3.WithLease(lease.ID))
 	if err != nil {
 		sr.logger.Error("注册服务失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", service.Name),
 			clog.String("instance", service.InstanceID),
 			clog.String("key", key),
@@ -129,7 +129,7 @@ func (sr *serviceRegistry) Deregister(ctx context.Context, serviceName, instance
 	_, err := sr.client.Delete(ctx, key)
 	if err != nil {
 		sr.logger.Error("注销服务失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", serviceName),
 			clog.String("instance", instanceID),
 		)
@@ -166,7 +166,7 @@ func (sr *serviceRegistry) Discover(ctx context.Context, serviceName string) ([]
 	resp, err := sr.client.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		sr.logger.Error("发现服务失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", serviceName),
 		)
 		return nil, fmt.Errorf("failed to discover service: %w", err)
@@ -177,7 +177,7 @@ func (sr *serviceRegistry) Discover(ctx context.Context, serviceName string) ([]
 		var service ServiceInfo
 		if err := json.Unmarshal(kv.Value, &service); err != nil {
 			sr.logger.Warn("解析服务信息失败",
-				clog.ErrorValue(err),
+				clog.Err(err),
 				clog.String("key", string(kv.Key)),
 			)
 			continue
@@ -247,7 +247,7 @@ func (sr *serviceRegistry) Watch(ctx context.Context, serviceName string) (<-cha
 
 				if watchResp.Err() != nil {
 					sr.logger.Error("监听服务变化失败",
-						clog.ErrorValue(watchResp.Err()),
+						clog.Err(watchResp.Err()),
 						clog.String("service", serviceName),
 					)
 					continue
@@ -344,7 +344,7 @@ func (sr *serviceRegistry) GetConnection(ctx context.Context, serviceName string
 	)
 	if err != nil {
 		sr.logger.Error("创建 gRPC 连接失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", serviceName),
 			clog.String("strategy", strategy.String()),
 		)
@@ -390,7 +390,7 @@ func (sr *serviceRegistry) keepAlive(ctx context.Context, leaseID clientv3.Lease
 	keepAliveCh, err := sr.client.KeepAlive(ctx, leaseID)
 	if err != nil {
 		sr.logger.Error("启动租约续期失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", serviceName),
 			clog.String("instance", instanceID),
 		)
@@ -438,7 +438,7 @@ func (sr *serviceRegistry) healthCheck(ctx context.Context, service ServiceInfo)
 			// 目前只是更新心跳时间
 			if err := sr.UpdateHealth(ctx, service.Name, service.InstanceID, HealthHealthy); err != nil {
 				sr.logger.Warn("健康检查更新失败",
-					clog.ErrorValue(err),
+					clog.Err(err),
 					clog.String("service", service.Name),
 					clog.String("instance", service.InstanceID),
 				)
@@ -527,7 +527,7 @@ func (er *etcdResolver) watch() {
 	ch, err := er.registry.Watch(er.ctx, er.serviceName)
 	if err != nil {
 		er.registry.logger.Error("监听服务变化失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", er.serviceName),
 		)
 		return
@@ -551,7 +551,7 @@ func (er *etcdResolver) updateAddresses() {
 	services, err := er.registry.Discover(er.ctx, er.serviceName)
 	if err != nil {
 		er.registry.logger.Error("获取服务列表失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", er.serviceName),
 		)
 		return
@@ -572,7 +572,7 @@ func (er *etcdResolver) updateAddressesFromServices(services []ServiceInfo) {
 	err := er.cc.UpdateState(resolver.State{Addresses: addresses})
 	if err != nil {
 		er.registry.logger.Error("更新解析器状态失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("service", er.serviceName),
 		)
 	} else {

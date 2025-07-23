@@ -40,7 +40,7 @@ func demonstrateDistributedLock(ctx context.Context) {
 	// 基本锁操作
 	lock, err := cache.AcquireLock(ctx, "resource:critical", time.Minute*5)
 	if err != nil {
-		clog.Error("获取锁失败", clog.ErrorValue(err))
+		clog.Error("获取锁失败", clog.Err(err))
 		return
 	}
 
@@ -53,7 +53,7 @@ func demonstrateDistributedLock(ctx context.Context) {
 	// 检查锁状态
 	isLocked, err := lock.IsLocked(ctx)
 	if err != nil {
-		clog.Error("检查锁状态失败", clog.ErrorValue(err))
+		clog.Error("检查锁状态失败", clog.Err(err))
 	} else {
 		clog.Info("锁状态检查", clog.Bool("isLocked", isLocked))
 	}
@@ -61,7 +61,7 @@ func demonstrateDistributedLock(ctx context.Context) {
 	// 续期锁
 	err = lock.Refresh(ctx, time.Minute*10)
 	if err != nil {
-		clog.Error("续期锁失败", clog.ErrorValue(err))
+		clog.Error("续期锁失败", clog.Err(err))
 	} else {
 		clog.Info("锁续期成功")
 	}
@@ -69,7 +69,7 @@ func demonstrateDistributedLock(ctx context.Context) {
 	// 释放锁
 	err = lock.Unlock(ctx)
 	if err != nil {
-		clog.Error("释放锁失败", clog.ErrorValue(err))
+		clog.Error("释放锁失败", clog.Err(err))
 	} else {
 		clog.Info("锁释放成功")
 	}
@@ -96,7 +96,7 @@ func demonstrateLockContention(ctx context.Context) {
 
 			lock, err := cache.AcquireLock(ctx, lockKey, time.Second*10)
 			if err != nil {
-				clog.Error("获取锁失败", clog.Int("goroutine", id), clog.ErrorValue(err))
+				clog.Error("获取锁失败", clog.Int("goroutine", id), clog.Err(err))
 				return
 			}
 
@@ -107,7 +107,7 @@ func demonstrateLockContention(ctx context.Context) {
 
 			err = lock.Unlock(ctx)
 			if err != nil {
-				clog.Error("释放锁失败", clog.Int("goroutine", id), clog.ErrorValue(err))
+				clog.Error("释放锁失败", clog.Int("goroutine", id), clog.Err(err))
 			} else {
 				clog.Info("释放锁成功", clog.Int("goroutine", id))
 			}
@@ -126,7 +126,7 @@ func demonstrateBloomFilter(ctx context.Context) {
 	// 初始化布隆过滤器
 	err := cache.BloomInit(ctx, bloomKey, 100000, 0.01)
 	if err != nil {
-		clog.Error("初始化布隆过滤器失败", clog.ErrorValue(err))
+		clog.Error("初始化布隆过滤器失败", clog.Err(err))
 		return
 	}
 	clog.Info("布隆过滤器初始化成功")
@@ -136,7 +136,7 @@ func demonstrateBloomFilter(ctx context.Context) {
 	for _, user := range users {
 		err := cache.BloomAdd(ctx, bloomKey, user)
 		if err != nil {
-			clog.Error("添加用户到布隆过滤器失败", clog.String("user", user), clog.ErrorValue(err))
+			clog.Error("添加用户到布隆过滤器失败", clog.String("user", user), clog.Err(err))
 			continue
 		}
 		clog.Info("添加用户到布隆过滤器", clog.String("user", user))
@@ -147,7 +147,7 @@ func demonstrateBloomFilter(ctx context.Context) {
 	for _, user := range testUsers {
 		exists, err := cache.BloomExists(ctx, bloomKey, user)
 		if err != nil {
-			clog.Error("检查布隆过滤器失败", clog.String("user", user), clog.ErrorValue(err))
+			clog.Error("检查布隆过滤器失败", clog.String("user", user), clog.Err(err))
 			continue
 		}
 
@@ -178,7 +178,7 @@ func demonstrateConcurrency(ctx context.Context) {
 
 			err := cache.Set(ctx, key, value, time.Hour)
 			if err != nil {
-				clog.Error("并发写入失败", clog.Int("id", id), clog.ErrorValue(err))
+				clog.Error("并发写入失败", clog.Int("id", id), clog.Err(err))
 			} else {
 				clog.Debug("并发写入成功", clog.Int("id", id))
 			}
@@ -195,7 +195,7 @@ func demonstrateConcurrency(ctx context.Context) {
 
 			value, err := cache.Get(ctx, key)
 			if err != nil {
-				clog.Error("并发读取失败", clog.Int("id", id), clog.ErrorValue(err))
+				clog.Error("并发读取失败", clog.Int("id", id), clog.Err(err))
 			} else {
 				clog.Debug("并发读取成功", clog.Int("id", id), clog.String("value", value))
 			}
@@ -212,13 +212,13 @@ func demonstrateErrorHandling(ctx context.Context) {
 	// 1. 键不存在错误
 	_, err := cache.Get(ctx, "nonexistent:key")
 	if err != nil {
-		clog.Info("处理键不存在错误", clog.ErrorValue(err))
+		clog.Info("处理键不存在错误", clog.Err(err))
 	}
 
 	// 2. 无效参数错误
 	err = cache.Set(ctx, "", "value", time.Hour)
 	if err != nil {
-		clog.Info("处理无效参数错误", clog.ErrorValue(err))
+		clog.Info("处理无效参数错误", clog.Err(err))
 	}
 
 	// 3. 超时上下文
@@ -229,13 +229,13 @@ func demonstrateErrorHandling(ctx context.Context) {
 
 	_, err = cache.Get(timeoutCtx, "some:key")
 	if err != nil {
-		clog.Info("处理上下文超时错误", clog.ErrorValue(err))
+		clog.Info("处理上下文超时错误", clog.Err(err))
 	}
 
 	// 4. 锁获取失败
 	lock1, err := cache.AcquireLock(ctx, "error:demo:lock", time.Minute)
 	if err != nil {
-		clog.Error("获取第一个锁失败", clog.ErrorValue(err))
+		clog.Error("获取第一个锁失败", clog.Err(err))
 		return
 	}
 	defer lock1.Unlock(ctx)
@@ -243,7 +243,7 @@ func demonstrateErrorHandling(ctx context.Context) {
 	// 尝试获取同一个锁（应该失败）
 	_, err = cache.AcquireLock(ctx, "error:demo:lock", time.Minute)
 	if err != nil {
-		clog.Info("处理锁竞争错误", clog.ErrorValue(err))
+		clog.Info("处理锁竞争错误", clog.Err(err))
 	}
 
 	clog.Info("错误处理演示完成")
@@ -306,7 +306,7 @@ func demonstratePerformanceOptimization(ctx context.Context) {
 	err := cache.Ping(ctx)
 	duration := time.Since(start)
 	if err != nil {
-		clog.Error("连接测试失败", clog.ErrorValue(err))
+		clog.Error("连接测试失败", clog.Err(err))
 	} else {
 		clog.Info("连接测试成功", clog.Duration("ping_time", duration))
 	}

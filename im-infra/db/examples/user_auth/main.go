@@ -51,7 +51,7 @@ func (s *UserService) Register(ctx context.Context, username, email, password st
 		return nil, fmt.Errorf("username already exists")
 	}
 	if err != gorm.ErrRecordNotFound {
-		s.logger.Error("检查用户名失败", clog.ErrorValue(err))
+		s.logger.Error("检查用户名失败", clog.Err(err))
 		return nil, fmt.Errorf("failed to check username: %w", err)
 	}
 
@@ -62,7 +62,7 @@ func (s *UserService) Register(ctx context.Context, username, email, password st
 		return nil, fmt.Errorf("email already exists")
 	}
 	if err != gorm.ErrRecordNotFound {
-		s.logger.Error("检查邮箱失败", clog.ErrorValue(err))
+		s.logger.Error("检查邮箱失败", clog.Err(err))
 		return nil, fmt.Errorf("failed to check email: %w", err)
 	}
 
@@ -76,7 +76,7 @@ func (s *UserService) Register(ctx context.Context, username, email, password st
 	err = s.db.GetDB().WithContext(ctx).Create(user).Error
 	if err != nil {
 		s.logger.Error("创建用户失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("username", username),
 		)
 		return nil, fmt.Errorf("failed to create user: %w", err)
@@ -101,7 +101,7 @@ func (s *UserService) Login(ctx context.Context, username, password string) (*Us
 			s.logger.Warn("用户不存在", clog.String("username", username))
 			return nil, fmt.Errorf("user not found")
 		}
-		s.logger.Error("查询用户失败", clog.ErrorValue(err))
+		s.logger.Error("查询用户失败", clog.Err(err))
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
 
@@ -127,7 +127,7 @@ func (s *UserService) GetUserByID(ctx context.Context, id uint) (*User, error) {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("user not found")
 		}
-		s.logger.Error("查询用户失败", clog.ErrorValue(err), clog.Uint("userID", id))
+		s.logger.Error("查询用户失败", clog.Err(err), clog.Uint("userID", id))
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
 
@@ -138,7 +138,7 @@ func (s *UserService) GetUserByID(ctx context.Context, id uint) (*User, error) {
 func (s *UserService) UpdateUser(ctx context.Context, id uint, updates map[string]interface{}) error {
 	err := s.db.GetDB().WithContext(ctx).Model(&User{}).Where("id = ?", id).Updates(updates).Error
 	if err != nil {
-		s.logger.Error("更新用户失败", clog.ErrorValue(err), clog.Uint("userID", id))
+		s.logger.Error("更新用户失败", clog.Err(err), clog.Uint("userID", id))
 		return fmt.Errorf("failed to update user: %w", err)
 	}
 
@@ -150,7 +150,7 @@ func (s *UserService) UpdateUser(ctx context.Context, id uint, updates map[strin
 func (s *UserService) DeleteUser(ctx context.Context, id uint) error {
 	err := s.db.GetDB().WithContext(ctx).Delete(&User{}, id).Error
 	if err != nil {
-		s.logger.Error("删除用户失败", clog.ErrorValue(err), clog.Uint("userID", id))
+		s.logger.Error("删除用户失败", clog.Err(err), clog.Uint("userID", id))
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
@@ -163,7 +163,7 @@ func (s *UserService) ListUsers(ctx context.Context, offset, limit int) ([]User,
 	var users []User
 	err := s.db.GetDB().WithContext(ctx).Offset(offset).Limit(limit).Find(&users).Error
 	if err != nil {
-		s.logger.Error("查询用户列表失败", clog.ErrorValue(err))
+		s.logger.Error("查询用户列表失败", clog.Err(err))
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
 
@@ -215,14 +215,14 @@ func main() {
 	clog.Info("--- 演示用户注册 ---")
 	user1, err := userService.Register(ctx, "alice", "alice@example.com", "password123")
 	if err != nil {
-		clog.Error("用户注册失败", clog.ErrorValue(err))
+		clog.Error("用户注册失败", clog.Err(err))
 	} else {
 		clog.Info("用户注册成功", clog.String("username", user1.Username))
 	}
 
 	user2, err := userService.Register(ctx, "bob", "bob@example.com", "password456")
 	if err != nil {
-		clog.Error("用户注册失败", clog.ErrorValue(err))
+		clog.Error("用户注册失败", clog.Err(err))
 	} else {
 		clog.Info("用户注册成功", clog.String("username", user2.Username))
 	}
@@ -231,7 +231,7 @@ func main() {
 	clog.Info("--- 演示用户登录 ---")
 	loginUser, err := userService.Login(ctx, "alice", "password123")
 	if err != nil {
-		clog.Error("用户登录失败", clog.ErrorValue(err))
+		clog.Error("用户登录失败", clog.Err(err))
 	} else {
 		clog.Info("用户登录成功", clog.String("username", loginUser.Username))
 	}
@@ -239,7 +239,7 @@ func main() {
 	// 演示错误密码登录
 	_, err = userService.Login(ctx, "alice", "wrongpassword")
 	if err != nil {
-		clog.Info("预期的登录失败", clog.ErrorValue(err))
+		clog.Info("预期的登录失败", clog.Err(err))
 	}
 
 	// 演示获取用户信息
@@ -247,7 +247,7 @@ func main() {
 	if user1 != nil {
 		foundUser, err := userService.GetUserByID(ctx, user1.ID)
 		if err != nil {
-			clog.Error("获取用户失败", clog.ErrorValue(err))
+			clog.Error("获取用户失败", clog.Err(err))
 		} else {
 			clog.Info("获取用户成功", clog.String("username", foundUser.Username))
 		}
@@ -257,7 +257,7 @@ func main() {
 	clog.Info("--- 演示用户列表 ---")
 	users, err := userService.ListUsers(ctx, 0, 10)
 	if err != nil {
-		clog.Error("获取用户列表失败", clog.ErrorValue(err))
+		clog.Error("获取用户列表失败", clog.Err(err))
 	} else {
 		clog.Info("获取用户列表成功", clog.Int("count", len(users)))
 		for _, u := range users {

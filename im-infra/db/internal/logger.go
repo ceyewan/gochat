@@ -94,12 +94,12 @@ func (l *clogLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 	case err != nil && l.logLevel >= logger.Error && (!errors.Is(err, gorm.ErrRecordNotFound) || !l.isIgnoreRecordNotFoundError()):
 		// 记录错误
 		l.logger.ErrorContext(ctx, "SQL 执行错误",
-			append(fields, clog.ErrorValue(err))...,
+			append(fields, clog.Err(err))...,
 		)
 	case elapsed > l.slowThreshold && l.slowThreshold != 0 && l.logLevel >= logger.Warn:
 		// 记录慢查询
 		l.logger.WarnContext(ctx, "检测到慢查询",
-			append(fields, 
+			append(fields,
 				clog.Duration("threshold", l.slowThreshold),
 				clog.String("level", "slow"),
 			)...,
@@ -140,7 +140,7 @@ func (q *QueryLogger) LogQuery(ctx context.Context, operation string, table stri
 
 	if err != nil {
 		q.logger.ErrorContext(ctx, "数据库操作失败",
-			append(fields, clog.ErrorValue(err))...,
+			append(fields, clog.Err(err))...,
 		)
 	} else {
 		q.logger.DebugContext(ctx, "数据库操作成功",
@@ -158,7 +158,7 @@ func (q *QueryLogger) LogTransaction(ctx context.Context, operation string, dura
 
 	if err != nil {
 		q.logger.ErrorContext(ctx, "事务操作失败",
-			append(fields, clog.ErrorValue(err))...,
+			append(fields, clog.Err(err))...,
 		)
 	} else {
 		q.logger.InfoContext(ctx, "事务操作成功",

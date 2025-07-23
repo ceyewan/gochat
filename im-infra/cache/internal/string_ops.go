@@ -19,7 +19,7 @@ func (c *cache) Get(ctx context.Context, key string) (string, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result string
 	err := c.executeWithLogging(ctx, "GET", key, func() error {
 		val, err := c.client.Get(ctx, formattedKey).Result()
@@ -45,9 +45,9 @@ func (c *cache) Set(ctx context.Context, key string, value interface{}, expirati
 	formattedKey := c.formatKey(key)
 	serializedValue, err := c.serialize(value)
 	if err != nil {
-		c.logger.Error("序列化值失败", 
+		c.logger.Error("序列化值失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return fmt.Errorf("failed to serialize value for key %s: %w", key, err)
 	}
@@ -68,7 +68,7 @@ func (c *cache) Incr(ctx context.Context, key string) (int64, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result int64
 	err := c.executeWithLogging(ctx, "INCR", key, func() error {
 		val, err := c.client.Incr(ctx, formattedKey).Result()
@@ -92,7 +92,7 @@ func (c *cache) Decr(ctx context.Context, key string) (int64, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result int64
 	err := c.executeWithLogging(ctx, "DECR", key, func() error {
 		val, err := c.client.Decr(ctx, formattedKey).Result()
@@ -142,7 +142,7 @@ func (c *cache) TTL(ctx context.Context, key string) (time.Duration, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result time.Duration
 	err := c.executeWithLogging(ctx, "TTL", key, func() error {
 		ttl, err := c.client.TTL(ctx, formattedKey).Result()
@@ -176,12 +176,12 @@ func (c *cache) Del(ctx context.Context, keys ...string) error {
 		if err != nil {
 			return c.handleRedisError("DEL", fmt.Sprintf("%v", keys), err)
 		}
-		
+
 		c.logger.Debug("删除键完成",
 			clog.Strings("keys", keys),
 			clog.Int64("deletedCount", deletedCount),
 		)
-		
+
 		return nil
 	})
 }
@@ -226,9 +226,9 @@ func (c *cache) SetNX(ctx context.Context, key string, value interface{}, expira
 	formattedKey := c.formatKey(key)
 	serializedValue, err := c.serialize(value)
 	if err != nil {
-		c.logger.Error("序列化值失败", 
+		c.logger.Error("序列化值失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return false, fmt.Errorf("failed to serialize value for key %s: %w", key, err)
 	}
@@ -258,9 +258,9 @@ func (c *cache) GetSet(ctx context.Context, key string, value interface{}) (stri
 	formattedKey := c.formatKey(key)
 	serializedValue, err := c.serialize(value)
 	if err != nil {
-		c.logger.Error("序列化值失败", 
+		c.logger.Error("序列化值失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return "", fmt.Errorf("failed to serialize value for key %s: %w", key, err)
 	}

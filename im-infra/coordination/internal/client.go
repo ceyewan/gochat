@@ -158,7 +158,7 @@ func (c *coordinator) Ping(ctx context.Context) error {
 	// 使用 etcd 的状态检查
 	_, err := c.client.Status(ctx, c.config.Endpoints[0])
 	if err != nil {
-		c.logger.Error("etcd Ping 失败", clog.ErrorValue(err))
+		c.logger.Error("etcd Ping 失败", clog.Err(err))
 		return fmt.Errorf("etcd ping failed: %w", err)
 	}
 
@@ -305,7 +305,7 @@ func withRetry(ctx context.Context, retryConfig *RetryConfig, operation func() e
 
 		if attempt < retryConfig.MaxRetries {
 			logger.Warn("操作失败，准备重试",
-				clog.ErrorValue(lastErr),
+				clog.Err(lastErr),
 				clog.Int("attempt", attempt+1),
 				clog.Int("max_retries", retryConfig.MaxRetries),
 				clog.Duration("next_interval", interval),
@@ -314,7 +314,7 @@ func withRetry(ctx context.Context, retryConfig *RetryConfig, operation func() e
 	}
 
 	logger.Error("重试操作最终失败",
-		clog.ErrorValue(lastErr),
+		clog.Err(lastErr),
 		clog.Int("max_retries", retryConfig.MaxRetries),
 	)
 	return fmt.Errorf("operation failed after %d retries: %w", retryConfig.MaxRetries, lastErr)

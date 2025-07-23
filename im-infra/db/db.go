@@ -40,7 +40,7 @@ func getDefaultDB() DB {
 		var err error
 		defaultDB, err = internal.NewDB(cfg)
 		if err != nil {
-			logger.Error("创建默认数据库实例失败", clog.ErrorValue(err))
+			logger.Error("创建默认数据库实例失败", clog.Err(err))
 			panic(err)
 		}
 	})

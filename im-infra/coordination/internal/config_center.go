@@ -47,7 +47,7 @@ func (cc *configCenter) Get(ctx context.Context, key string) (*ConfigValue, erro
 	resp, err := cc.client.Get(ctx, configKey)
 	if err != nil {
 		cc.logger.Error("获取配置失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 		)
 		return nil, fmt.Errorf("failed to get config: %w", err)
@@ -60,7 +60,7 @@ func (cc *configCenter) Get(ctx context.Context, key string) (*ConfigValue, erro
 	var configValue ConfigValue
 	if err := json.Unmarshal(resp.Kvs[0].Value, &configValue); err != nil {
 		cc.logger.Error("解析配置值失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 		)
 		return nil, fmt.Errorf("failed to unmarshal config value: %w", err)
@@ -133,7 +133,7 @@ func (cc *configCenter) Set(ctx context.Context, key string, value interface{}, 
 	_, err = cc.client.Put(ctx, configKey, string(configData))
 	if err != nil {
 		cc.logger.Error("设置配置失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 			clog.Int64("version", configValue.Version),
 		)
@@ -144,7 +144,7 @@ func (cc *configCenter) Set(ctx context.Context, key string, value interface{}, 
 	if cc.config.EnableVersioning {
 		if err := cc.saveVersionHistory(ctx, configValue); err != nil {
 			cc.logger.Warn("保存版本历史失败",
-				clog.ErrorValue(err),
+				clog.Err(err),
 				clog.String("key", key),
 				clog.Int64("version", configValue.Version),
 			)
@@ -186,7 +186,7 @@ func (cc *configCenter) Delete(ctx context.Context, key string, version int64) e
 	_, err := cc.client.Delete(ctx, configKey)
 	if err != nil {
 		cc.logger.Error("删除配置失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 		)
 		return fmt.Errorf("failed to delete config: %w", err)
@@ -196,7 +196,7 @@ func (cc *configCenter) Delete(ctx context.Context, key string, version int64) e
 	if cc.config.EnableVersioning {
 		if err := cc.cleanVersionHistory(ctx, key); err != nil {
 			cc.logger.Warn("清理版本历史失败",
-				clog.ErrorValue(err),
+				clog.Err(err),
 				clog.String("key", key),
 			)
 		}
@@ -241,7 +241,7 @@ func (cc *configCenter) GetHistory(ctx context.Context, key string, limit int) (
 	resp, err := cc.client.Get(ctx, historyPrefix, clientv3.WithPrefix(), clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend))
 	if err != nil {
 		cc.logger.Error("获取配置历史失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 		)
 		return nil, fmt.Errorf("failed to get config history: %w", err)
@@ -257,7 +257,7 @@ func (cc *configCenter) GetHistory(ctx context.Context, key string, limit int) (
 		var version ConfigVersion
 		if err := json.Unmarshal(kv.Value, &version); err != nil {
 			cc.logger.Warn("解析历史版本失败",
-				clog.ErrorValue(err),
+				clog.Err(err),
 				clog.String("key", string(kv.Key)),
 			)
 			continue
@@ -316,7 +316,7 @@ func (cc *configCenter) Watch(ctx context.Context, key string) (<-chan *ConfigCh
 
 				if watchResp.Err() != nil {
 					cc.logger.Error("监听配置变化失败",
-						clog.ErrorValue(watchResp.Err()),
+						clog.Err(watchResp.Err()),
 						clog.String("key", key),
 					)
 					continue
@@ -381,7 +381,7 @@ func (cc *configCenter) WatchPrefix(ctx context.Context, prefix string) (<-chan 
 
 				if watchResp.Err() != nil {
 					cc.logger.Error("监听配置前缀变化失败",
-						clog.ErrorValue(watchResp.Err()),
+						clog.Err(watchResp.Err()),
 						clog.String("prefix", prefix),
 					)
 					continue
@@ -514,7 +514,7 @@ func (cc *configCenter) cleanOldVersionHistory(ctx context.Context, key string) 
 	resp, err := cc.client.Get(ctx, historyPrefix, clientv3.WithPrefix(), clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend))
 	if err != nil {
 		cc.logger.Warn("获取历史版本列表失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("key", key),
 		)
 		return
@@ -529,7 +529,7 @@ func (cc *configCenter) cleanOldVersionHistory(ctx context.Context, key string) 
 		_, err := cc.client.Delete(ctx, string(resp.Kvs[i].Key))
 		if err != nil {
 			cc.logger.Warn("删除过期历史版本失败",
-				clog.ErrorValue(err),
+				clog.Err(err),
 				clog.String("history_key", string(resp.Kvs[i].Key)),
 			)
 		}

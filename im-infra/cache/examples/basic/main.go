@@ -42,13 +42,13 @@ func demonstrateGlobalMethods(ctx context.Context) {
 	// 基本的字符串操作
 	err := cache.Set(ctx, "user:123", "John Doe", time.Hour)
 	if err != nil {
-		clog.Error("设置缓存失败", clog.ErrorValue(err))
+		clog.Error("设置缓存失败", clog.Err(err))
 		return
 	}
 
 	value, err := cache.Get(ctx, "user:123")
 	if err != nil {
-		clog.Error("获取缓存失败", clog.ErrorValue(err))
+		clog.Error("获取缓存失败", clog.Err(err))
 		return
 	}
 	clog.Info("获取用户信息", clog.String("user", value))
@@ -56,13 +56,13 @@ func demonstrateGlobalMethods(ctx context.Context) {
 	// 数值操作
 	err = cache.Set(ctx, "counter", 0, time.Hour)
 	if err != nil {
-		clog.Error("设置计数器失败", clog.ErrorValue(err))
+		clog.Error("设置计数器失败", clog.Err(err))
 		return
 	}
 
 	newValue, err := cache.Incr(ctx, "counter")
 	if err != nil {
-		clog.Error("递增计数器失败", clog.ErrorValue(err))
+		clog.Error("递增计数器失败", clog.Err(err))
 		return
 	}
 	clog.Info("计数器递增", clog.Int64("value", newValue))
@@ -70,13 +70,13 @@ func demonstrateGlobalMethods(ctx context.Context) {
 	// 过期时间操作
 	err = cache.Expire(ctx, "user:123", time.Minute*30)
 	if err != nil {
-		clog.Error("设置过期时间失败", clog.ErrorValue(err))
+		clog.Error("设置过期时间失败", clog.Err(err))
 		return
 	}
 
 	ttl, err := cache.TTL(ctx, "user:123")
 	if err != nil {
-		clog.Error("获取TTL失败", clog.ErrorValue(err))
+		clog.Error("获取TTL失败", clog.Err(err))
 		return
 	}
 	clog.Info("获取TTL", clog.Duration("ttl", ttl))
@@ -95,7 +95,7 @@ func demonstrateCustomInstances(ctx context.Context) {
 		Build()
 	userCache, err := cache.New(userCfg)
 	if err != nil {
-		clog.Error("创建用户缓存失败", clog.ErrorValue(err))
+		clog.Error("创建用户缓存失败", clog.Err(err))
 		return
 	}
 
@@ -106,7 +106,7 @@ func demonstrateCustomInstances(ctx context.Context) {
 		Build()
 	sessionCache, err := cache.New(sessionCfg)
 	if err != nil {
-		clog.Error("创建会话缓存失败", clog.ErrorValue(err))
+		clog.Error("创建会话缓存失败", clog.Err(err))
 		return
 	}
 
@@ -118,7 +118,7 @@ func demonstrateCustomInstances(ctx context.Context) {
 	}
 	err = userCache.Set(ctx, "123", fmt.Sprintf("%+v", userData), time.Hour)
 	if err != nil {
-		clog.Error("设置用户缓存失败", clog.ErrorValue(err))
+		clog.Error("设置用户缓存失败", clog.Err(err))
 		return
 	}
 
@@ -126,21 +126,21 @@ func demonstrateCustomInstances(ctx context.Context) {
 	sessionData := "session_token_abc123"
 	err = sessionCache.Set(ctx, "abc", sessionData, time.Minute*30)
 	if err != nil {
-		clog.Error("设置会话缓存失败", clog.ErrorValue(err))
+		clog.Error("设置会话缓存失败", clog.Err(err))
 		return
 	}
 
 	// 验证缓存实例独立性
 	user, err := userCache.Get(ctx, "123")
 	if err != nil {
-		clog.Error("获取用户缓存失败", clog.ErrorValue(err))
+		clog.Error("获取用户缓存失败", clog.Err(err))
 		return
 	}
 	clog.Info("获取用户缓存数据", clog.String("user", user))
 
 	session, err := sessionCache.Get(ctx, "abc")
 	if err != nil {
-		clog.Error("获取会话缓存失败", clog.ErrorValue(err))
+		clog.Error("获取会话缓存失败", clog.Err(err))
 		return
 	}
 	clog.Info("获取会话缓存数据", clog.String("session", session))
@@ -252,20 +252,20 @@ func demonstrateCustomConfig(ctx context.Context) {
 	// 创建自定义缓存实例
 	customCache, err := cache.New(cfg)
 	if err != nil {
-		clog.Error("创建自定义缓存失败", clog.ErrorValue(err))
+		clog.Error("创建自定义缓存失败", clog.Err(err))
 		return
 	}
 
 	// 使用自定义缓存
 	err = customCache.Set(ctx, "custom:key", "custom value", time.Hour)
 	if err != nil {
-		clog.Error("设置自定义缓存失败", clog.ErrorValue(err))
+		clog.Error("设置自定义缓存失败", clog.Err(err))
 		return
 	}
 
 	value, err := customCache.Get(ctx, "custom:key")
 	if err != nil {
-		clog.Error("获取自定义缓存失败", clog.ErrorValue(err))
+		clog.Error("获取自定义缓存失败", clog.Err(err))
 		return
 	}
 	clog.Info("自定义缓存操作", clog.String("value", value))
@@ -273,7 +273,7 @@ func demonstrateCustomConfig(ctx context.Context) {
 	// 测试连接
 	err = customCache.Ping(ctx)
 	if err != nil {
-		clog.Error("自定义缓存连接测试失败", clog.ErrorValue(err))
+		clog.Error("自定义缓存连接测试失败", clog.Err(err))
 		return
 	}
 	clog.Info("自定义缓存连接正常")

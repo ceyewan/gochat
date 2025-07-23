@@ -89,7 +89,7 @@ func getDefaultMQ() MQ {
 		var err error
 		defaultMQ, err = internal.NewMQ(cfg)
 		if err != nil {
-			logger.Error("创建默认MQ实例失败", clog.ErrorValue(err))
+			logger.Error("创建默认MQ实例失败", clog.Err(err))
 			panic(err)
 		}
 		logger.Info("默认MQ实例创建成功")

@@ -93,7 +93,7 @@ func getDefaultCoordinator() Coordinator {
 		var err error
 		defaultCoordinator, err = internal.NewCoordinator(cfg)
 		if err != nil {
-			logger.Error("创建默认协调器实例失败", clog.ErrorValue(err))
+			logger.Error("创建默认协调器实例失败", clog.Err(err))
 			panic(err)
 		}
 		logger.Info("默认协调器实例创建成功")

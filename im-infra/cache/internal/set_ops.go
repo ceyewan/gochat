@@ -20,16 +20,16 @@ func (c *cache) SAdd(ctx context.Context, key string, members ...interface{}) er
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	// 序列化所有成员
 	serializedMembers := make([]interface{}, len(members))
 	for i, member := range members {
 		serializedValue, err := c.serialize(member)
 		if err != nil {
-			c.logger.Error("序列化成员失败", 
+			c.logger.Error("序列化成员失败",
 				clog.String("key", key),
 				clog.Int("memberIndex", i),
-				clog.ErrorValue(err),
+				clog.Err(err),
 			)
 			return fmt.Errorf("failed to serialize member at index %d for key %s: %w", i, key, err)
 		}
@@ -41,13 +41,13 @@ func (c *cache) SAdd(ctx context.Context, key string, members ...interface{}) er
 		if err != nil {
 			return c.handleRedisError("SADD", key, err)
 		}
-		
+
 		c.logger.Debug("添加集合成员完成",
 			clog.String("key", key),
 			clog.Int("memberCount", len(members)),
 			clog.Int64("addedCount", addedCount),
 		)
-		
+
 		return nil
 	})
 }
@@ -65,16 +65,16 @@ func (c *cache) SRem(ctx context.Context, key string, members ...interface{}) er
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	// 序列化所有成员
 	serializedMembers := make([]interface{}, len(members))
 	for i, member := range members {
 		serializedValue, err := c.serialize(member)
 		if err != nil {
-			c.logger.Error("序列化成员失败", 
+			c.logger.Error("序列化成员失败",
 				clog.String("key", key),
 				clog.Int("memberIndex", i),
-				clog.ErrorValue(err),
+				clog.Err(err),
 			)
 			return fmt.Errorf("failed to serialize member at index %d for key %s: %w", i, key, err)
 		}
@@ -86,13 +86,13 @@ func (c *cache) SRem(ctx context.Context, key string, members ...interface{}) er
 		if err != nil {
 			return c.handleRedisError("SREM", key, err)
 		}
-		
+
 		c.logger.Debug("移除集合成员完成",
 			clog.String("key", key),
 			clog.Int("memberCount", len(members)),
 			clog.Int64("removedCount", removedCount),
 		)
-		
+
 		return nil
 	})
 }
@@ -107,7 +107,7 @@ func (c *cache) SMembers(ctx context.Context, key string) ([]string, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result []string
 	err := c.executeWithLogging(ctx, "SMEMBERS", key, func() error {
 		members, err := c.client.SMembers(ctx, formattedKey).Result()
@@ -133,13 +133,13 @@ func (c *cache) SIsMember(ctx context.Context, key string, member interface{}) (
 	formattedKey := c.formatKey(key)
 	serializedMember, err := c.serialize(member)
 	if err != nil {
-		c.logger.Error("序列化成员失败", 
+		c.logger.Error("序列化成员失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return false, fmt.Errorf("failed to serialize member for key %s: %w", key, err)
 	}
-	
+
 	var result bool
 	err = c.executeWithLogging(ctx, "SISMEMBER", key, func() error {
 		isMember, err := c.client.SIsMember(ctx, formattedKey, serializedMember).Result()
@@ -163,7 +163,7 @@ func (c *cache) SCard(ctx context.Context, key string) (int64, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result int64
 	err := c.executeWithLogging(ctx, "SCARD", key, func() error {
 		count, err := c.client.SCard(ctx, formattedKey).Result()
@@ -187,7 +187,7 @@ func (c *cache) SPop(ctx context.Context, key string) (string, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result string
 	err := c.executeWithLogging(ctx, "SPOP", key, func() error {
 		member, err := c.client.SPop(ctx, formattedKey).Result()
@@ -214,7 +214,7 @@ func (c *cache) SPopN(ctx context.Context, key string, count int64) ([]string, e
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result []string
 	err := c.executeWithLogging(ctx, "SPOPN", key, func() error {
 		members, err := c.client.SPopN(ctx, formattedKey, count).Result()
@@ -238,7 +238,7 @@ func (c *cache) SRandMember(ctx context.Context, key string) (string, error) {
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result string
 	err := c.executeWithLogging(ctx, "SRANDMEMBER", key, func() error {
 		member, err := c.client.SRandMember(ctx, formattedKey).Result()
@@ -262,7 +262,7 @@ func (c *cache) SRandMemberN(ctx context.Context, key string, count int64) ([]st
 	}
 
 	formattedKey := c.formatKey(key)
-	
+
 	var result []string
 	err := c.executeWithLogging(ctx, "SRANDMEMBERN", key, func() error {
 		members, err := c.client.SRandMemberN(ctx, formattedKey, count).Result()
@@ -290,7 +290,7 @@ func (c *cache) SUnion(ctx context.Context, keys ...string) ([]string, error) {
 	for i, key := range keys {
 		formattedKeys[i] = c.formatKey(key)
 	}
-	
+
 	var result []string
 	err := c.executeWithLogging(ctx, "SUNION", fmt.Sprintf("%v", keys), func() error {
 		members, err := c.client.SUnion(ctx, formattedKeys...).Result()
@@ -318,7 +318,7 @@ func (c *cache) SInter(ctx context.Context, keys ...string) ([]string, error) {
 	for i, key := range keys {
 		formattedKeys[i] = c.formatKey(key)
 	}
-	
+
 	var result []string
 	err := c.executeWithLogging(ctx, "SINTER", fmt.Sprintf("%v", keys), func() error {
 		members, err := c.client.SInter(ctx, formattedKeys...).Result()
@@ -346,7 +346,7 @@ func (c *cache) SDiff(ctx context.Context, keys ...string) ([]string, error) {
 	for i, key := range keys {
 		formattedKeys[i] = c.formatKey(key)
 	}
-	
+
 	var result []string
 	err := c.executeWithLogging(ctx, "SDIFF", fmt.Sprintf("%v", keys), func() error {
 		members, err := c.client.SDiff(ctx, formattedKeys...).Result()

@@ -47,13 +47,13 @@ func (c *client) Ping(ctx context.Context) error {
 
 	sqlDB, err := c.db.DB()
 	if err != nil {
-		c.logger.Error("获取底层数据库连接失败", clog.ErrorValue(err))
+		c.logger.Error("获取底层数据库连接失败", clog.Err(err))
 		return fmt.Errorf("failed to get underlying database connection: %w", err)
 	}
 
 	err = sqlDB.PingContext(ctx)
 	if err != nil {
-		c.logger.Error("数据库 Ping 失败", clog.ErrorValue(err))
+		c.logger.Error("数据库 Ping 失败", clog.Err(err))
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 
@@ -67,13 +67,13 @@ func (c *client) Close() error {
 
 	sqlDB, err := c.db.DB()
 	if err != nil {
-		c.logger.Error("获取底层数据库连接失败", clog.ErrorValue(err))
+		c.logger.Error("获取底层数据库连接失败", clog.Err(err))
 		return fmt.Errorf("failed to get underlying database connection: %w", err)
 	}
 
 	err = sqlDB.Close()
 	if err != nil {
-		c.logger.Error("关闭数据库连接失败", clog.ErrorValue(err))
+		c.logger.Error("关闭数据库连接失败", clog.Err(err))
 		return fmt.Errorf("failed to close database connection: %w", err)
 	}
 
@@ -85,7 +85,7 @@ func (c *client) Close() error {
 func (c *client) Stats() sql.DBStats {
 	sqlDB, err := c.db.DB()
 	if err != nil {
-		c.logger.Error("获取底层数据库连接失败", clog.ErrorValue(err))
+		c.logger.Error("获取底层数据库连接失败", clog.Err(err))
 		return sql.DBStats{}
 	}
 
@@ -122,7 +122,7 @@ func (c *client) Transaction(fn func(tx *gorm.DB) error) error {
 
 	if err != nil {
 		c.logger.Error("数据库事务失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.Duration("duration", duration),
 		)
 		return err
@@ -147,7 +147,7 @@ func (c *client) AutoMigrate(dst ...interface{}) error {
 
 	if err != nil {
 		c.logger.Error("数据库自动迁移失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.Duration("duration", duration),
 		)
 		return fmt.Errorf("auto migrate failed: %w", err)
@@ -168,7 +168,7 @@ func (c *client) CreateDatabaseIfNotExists(dbName string) error {
 	// 获取底层数据库连接
 	sqlDB, err := c.db.DB()
 	if err != nil {
-		c.logger.Error("获取底层数据库连接失败", clog.ErrorValue(err))
+		c.logger.Error("获取底层数据库连接失败", clog.Err(err))
 		return fmt.Errorf("failed to get underlying database connection: %w", err)
 	}
 
@@ -183,7 +183,7 @@ func (c *client) CreateDatabaseIfNotExists(dbName string) error {
 		checkSQL := "SELECT EXISTS(SELECT datname FROM pg_catalog.pg_database WHERE datname = $1)"
 		err = sqlDB.QueryRow(checkSQL, dbName).Scan(&exists)
 		if err != nil {
-			c.logger.Error("检查 PostgreSQL 数据库是否存在失败", clog.ErrorValue(err))
+			c.logger.Error("检查 PostgreSQL 数据库是否存在失败", clog.Err(err))
 			return fmt.Errorf("failed to check if database exists: %w", err)
 		}
 
@@ -205,7 +205,7 @@ func (c *client) CreateDatabaseIfNotExists(dbName string) error {
 	_, err = sqlDB.Exec(createSQL)
 	if err != nil {
 		c.logger.Error("创建数据库失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("database", dbName),
 			clog.String("sql", createSQL),
 		)
@@ -263,13 +263,13 @@ func NewDB(cfg Config) (DB, error) {
 	if err != nil && cfg.AutoCreateDatabase && isDatabaseNotExistError(err, cfg.Driver) {
 		moduleLogger.Info("检测到数据库不存在，尝试自动创建",
 			clog.String("driver", cfg.Driver),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 
 		// 解析数据库名称
 		dbName, parseErr := parseDatabaseName(cfg.DSN, cfg.Driver)
 		if parseErr != nil {
-			moduleLogger.Error("解析数据库名称失败", clog.ErrorValue(parseErr))
+			moduleLogger.Error("解析数据库名称失败", clog.Err(parseErr))
 			return nil, fmt.Errorf("failed to parse database name: %w", parseErr)
 		}
 
@@ -277,7 +277,7 @@ func NewDB(cfg Config) (DB, error) {
 			// 创建系统数据库连接DSN
 			systemDSN, systemErr := createSystemDSN(cfg.DSN, cfg.Driver)
 			if systemErr != nil {
-				moduleLogger.Error("创建系统数据库DSN失败", clog.ErrorValue(systemErr))
+				moduleLogger.Error("创建系统数据库DSN失败", clog.Err(systemErr))
 				return nil, fmt.Errorf("failed to create system DSN: %w", systemErr)
 			}
 
@@ -294,7 +294,7 @@ func NewDB(cfg Config) (DB, error) {
 			// 创建临时数据库连接
 			tempDB, tempErr := NewDB(tempCfg)
 			if tempErr != nil {
-				moduleLogger.Error("连接系统数据库失败", clog.ErrorValue(tempErr))
+				moduleLogger.Error("连接系统数据库失败", clog.Err(tempErr))
 				return nil, fmt.Errorf("failed to connect to system database: %w", tempErr)
 			}
 			defer tempDB.Close()
@@ -303,7 +303,7 @@ func NewDB(cfg Config) (DB, error) {
 			createErr := tempDB.CreateDatabaseIfNotExists(dbName)
 			if createErr != nil {
 				moduleLogger.Error("自动创建数据库失败",
-					clog.ErrorValue(createErr),
+					clog.Err(createErr),
 					clog.String("database", dbName),
 				)
 				return nil, fmt.Errorf("failed to auto-create database '%s': %w", dbName, createErr)
@@ -327,7 +327,7 @@ func NewDB(cfg Config) (DB, error) {
 
 	if err != nil {
 		moduleLogger.Error("数据库连接失败",
-			clog.ErrorValue(err),
+			clog.Err(err),
 			clog.String("driver", cfg.Driver),
 		)
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -335,14 +335,14 @@ func NewDB(cfg Config) (DB, error) {
 
 	// 配置连接池
 	if err := configureConnectionPool(db, cfg); err != nil {
-		moduleLogger.Error("配置连接池失败", clog.ErrorValue(err))
+		moduleLogger.Error("配置连接池失败", clog.Err(err))
 		return nil, fmt.Errorf("failed to configure connection pool: %w", err)
 	}
 
 	// 配置分库分表（如果启用）
 	if cfg.Sharding != nil {
 		if err := configureSharding(db, cfg.Sharding); err != nil {
-			moduleLogger.Error("配置分库分表失败", clog.ErrorValue(err))
+			moduleLogger.Error("配置分库分表失败", clog.Err(err))
 			return nil, fmt.Errorf("failed to configure sharding: %w", err)
 		}
 	}

@@ -20,7 +20,7 @@ func NewCache(cfg Config) (Cache, error) {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	logger.Info("创建缓存实例", 
+	logger.Info("创建缓存实例",
 		clog.String("addr", cfg.Addr),
 		clog.Int("db", cfg.DB),
 		clog.Int("poolSize", cfg.PoolSize),
@@ -51,11 +51,11 @@ func NewCache(cfg Config) (Cache, error) {
 
 	// 创建缓存实例
 	cache := &cache{
-		client:     rdb,
-		config:     cfg,
-		lockConfig: DefaultLockConfig(),
+		client:      rdb,
+		config:      cfg,
+		lockConfig:  DefaultLockConfig(),
 		bloomConfig: DefaultBloomConfig(),
-		logger:     logger,
+		logger:      logger,
 	}
 
 	logger.Info("缓存实例创建成功")
@@ -69,7 +69,7 @@ func NewDefaultCache() Cache {
 	cache, err := NewCache(cfg)
 	if err != nil {
 		// 这不应该发生，但如果发生了，我们将记录错误并返回 nil
-		logger.Error("创建默认缓存实例失败", clog.ErrorValue(err))
+		logger.Error("创建默认缓存实例失败", clog.Err(err))
 		return nil
 	}
 	return cache

@@ -189,7 +189,7 @@ func Execute(ctx context.Context, key string, ttl time.Duration, callback func()
 	if err != nil {
 		logger.Error("幂等操作回调执行失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return nil, err
 	}
@@ -249,12 +249,12 @@ func ExecuteSimple(ctx context.Context, key string, ttl time.Duration, callback 
 		if deleteErr != nil {
 			logger.Error("删除失败的幂等标记时出错",
 				clog.String("key", key),
-				clog.ErrorValue(deleteErr),
+				clog.Err(deleteErr),
 			)
 		}
 		logger.Error("幂等操作回调执行失败",
 			clog.String("key", key),
-			clog.ErrorValue(err),
+			clog.Err(err),
 		)
 		return err
 	}

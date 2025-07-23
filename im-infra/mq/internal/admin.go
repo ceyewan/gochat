@@ -110,7 +110,7 @@ func (ac *adminClient) CreateTopic(ctx context.Context, config TopicConfig) erro
 	if err != nil {
 		ac.logger.Error("创建topic失败",
 			clog.String("topic", config.Name),
-			clog.ErrorValue(err))
+			clog.Err(err))
 		return fmt.Errorf("创建topic失败: %w", err)
 	}
 
@@ -119,7 +119,7 @@ func (ac *adminClient) CreateTopic(ctx context.Context, config TopicConfig) erro
 		if result.Err != nil {
 			ac.logger.Error("创建topic失败",
 				clog.String("topic", result.Topic),
-				clog.ErrorValue(result.Err))
+				clog.Err(result.Err))
 			return fmt.Errorf("创建topic %s 失败: %w", result.Topic, result.Err)
 		}
 	}
@@ -136,7 +136,7 @@ func (ac *adminClient) DeleteTopic(ctx context.Context, topicName string) error 
 	if err != nil {
 		ac.logger.Error("删除topic失败",
 			clog.String("topic", topicName),
-			clog.ErrorValue(err))
+			clog.Err(err))
 		return fmt.Errorf("删除topic失败: %w", err)
 	}
 
@@ -145,7 +145,7 @@ func (ac *adminClient) DeleteTopic(ctx context.Context, topicName string) error 
 		if result.Err != nil {
 			ac.logger.Error("删除topic失败",
 				clog.String("topic", result.Topic),
-				clog.ErrorValue(result.Err))
+				clog.Err(result.Err))
 			return fmt.Errorf("删除topic %s 失败: %w", result.Topic, result.Err)
 		}
 	}
@@ -158,7 +158,7 @@ func (ac *adminClient) DeleteTopic(ctx context.Context, topicName string) error 
 func (ac *adminClient) ListTopics(ctx context.Context) ([]string, error) {
 	metadata, err := ac.admin.Metadata(ctx)
 	if err != nil {
-		ac.logger.Error("获取topic列表失败", clog.ErrorValue(err))
+		ac.logger.Error("获取topic列表失败", clog.Err(err))
 		return nil, fmt.Errorf("获取topic列表失败: %w", err)
 	}
 

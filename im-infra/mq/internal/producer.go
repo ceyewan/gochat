@@ -209,7 +209,7 @@ func (p *producer) SendSyncWithHeaders(ctx context.Context, topic string, key []
 		p.logger.Error("同步发送消息失败",
 			clog.String("topic", topic),
 			clog.Int("message_size", len(message)),
-			clog.ErrorValue(err))
+			clog.Err(err))
 		return NewProducerError("发送消息失败", err)
 	}
 
@@ -282,7 +282,7 @@ func (p *producer) SendAsyncWithHeaders(ctx context.Context, topic string, key [
 				clog.String("topic", topic),
 				clog.Int("message_size", len(message)),
 				clog.Duration("latency", latency),
-				clog.ErrorValue(err))
+				clog.Err(err))
 
 			if callback != nil {
 				callback(NewProducerError("发送消息失败", err))
@@ -534,7 +534,7 @@ func (p *producer) sendBatchInternal(batch *MessageBatch) {
 
 	_, err := p.SendBatchSync(ctx, *batch)
 	if err != nil {
-		p.logger.Error("批次发送失败", clog.ErrorValue(err))
+		p.logger.Error("批次发送失败", clog.Err(err))
 	}
 }
 

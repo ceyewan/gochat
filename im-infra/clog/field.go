@@ -65,22 +65,6 @@ func Duration(key string, value time.Duration) Field {
 	return Field{Key: key, Value: value}
 }
 
-// ErrorValue 创建一个 error 类型的日志字段
-func ErrorValue(err error) Field {
-	if err == nil {
-		return Field{Key: "error", Value: nil}
-	}
-	return Field{Key: "error", Value: err.Error()}
-}
-
-// ErrorField 创建一个自定义键名的 error 类型日志字段
-func ErrorField(key string, err error) Field {
-	if err == nil {
-		return Field{Key: key, Value: nil}
-	}
-	return Field{Key: key, Value: err.Error()}
-}
-
 // Any 创建一个任意类型的日志字段
 func Any(key string, value any) Field {
 	return Field{Key: key, Value: value}
@@ -113,12 +97,3 @@ func Ints(key string, values []int) Field {
 func Err(err error) Field {
 	return Field{Key: "error", Value: err}
 }
-
-// // fieldsToArgs 将 Field 切片转换为 slog 兼容的参数列表
-// func fieldsToArgs(fields []Field) []any {
-// 	args := make([]any, 0, len(fields)*2)
-// 	for _, field := range fields {
-// 		args = append(args, field.Key, field.Value)
-// 	}
-// 	return args
-// }
