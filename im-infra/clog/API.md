@@ -19,11 +19,13 @@ func New() Logger                                    // 创建独立日志器实
 func Module(name string) Logger                      // 创建模块日志器（带缓存）
 
 // 全局日志方法
+func Debug(msg string, fields ...Field)              // Debug 级别
 func Info(msg string, fields ...Field)              // Info 级别
 func Warn(msg string, fields ...Field)              // Warn 级别
 func Error(msg string, fields ...Field)             // Error 级别
 
 // 带 Context 的全局方法（自动注入 TraceID）
+func DebugContext(ctx context.Context, msg string, fields ...Field)
 func InfoContext(ctx context.Context, msg string, fields ...Field)
 func WarnContext(ctx context.Context, msg string, fields ...Field)
 func ErrorContext(ctx context.Context, msg string, fields ...Field)
@@ -34,15 +36,17 @@ func ErrorContext(ctx context.Context, msg string, fields ...Field)
 ```go
 type Logger interface {
     // 基础日志方法
+    Debug(msg string, fields ...Field)
     Info(msg string, fields ...Field)
     Warn(msg string, fields ...Field)
     Error(msg string, fields ...Field)
-    
+
     // 带 Context 的方法（自动注入 TraceID）
+    DebugContext(ctx context.Context, msg string, fields ...Field)
     InfoContext(ctx context.Context, msg string, fields ...Field)
     WarnContext(ctx context.Context, msg string, fields ...Field)
     ErrorContext(ctx context.Context, msg string, fields ...Field)
-    
+
     // 扩展方法
     With(fields ...Field) Logger        // 添加通用字段
     Module(name string) Logger          // 创建子模块日志器
@@ -65,7 +69,7 @@ func main() {
     clog.Info("服务启动成功", clog.String("version", "1.0.0"))
     clog.Warn("配置文件缺失，使用默认配置")
     clog.Error("数据库连接失败", clog.Err(err), clog.Int("retry_count", 3))
-    
+
     // 带 Context 的日志（自动注入 TraceID）
     ctx := context.WithValue(context.Background(), "trace_id", "req-123")
     clog.InfoContext(ctx, "处理用户请求", clog.String("user_id", "alice"))
@@ -76,7 +80,7 @@ func main() {
 ```json
 {
   "time": "2024-01-15T10:30:45.123Z",
-  "level": "INFO", 
+  "level": "INFO",
   "source": {"function": "main.main", "file": "main.go", "line": 8},
   "msg": "服务启动成功",
   "version": "1.0.0"
@@ -95,21 +99,21 @@ import "github.com/ceyewan/gochat/im-infra/clog"
 // 在包级别缓存模块日志器（最佳性能）
 var (
     dbLogger   = clog.Module("database")
-    apiLogger  = clog.Module("api") 
+    apiLogger  = clog.Module("api")
     authLogger = clog.Module("auth")
 )
 
 func handleLogin() {
     // 每条日志自动带有 "module": "auth" 字段
-    authLogger.Info("用户登录请求", 
+    authLogger.Info("用户登录请求",
         clog.String("username", "alice"),
         clog.String("ip", "192.168.1.100"))
-    
+
     // 数据库操作，自动带有 "module": "database" 字段
-    dbLogger.Info("查询用户信息", 
+    dbLogger.Info("查询用户信息",
         clog.String("query", "SELECT * FROM users"),
         clog.Int("rows", 1))
-    
+
     // API 响应，自动带有 "module": "api" 字段
     apiLogger.Info("登录成功", clog.String("user_id", "12345"))
 }
@@ -120,7 +124,7 @@ func handleLogin() {
 {
   "time": "2024-01-15T10:30:45.456Z",
   "level": "INFO",
-  "source": {"function": "main.handleLogin", "file": "main.go", "line": 15}, 
+  "source": {"function": "main.handleLogin", "file": "main.go", "line": 15},
   "msg": "用户登录请求",
   "module": "auth",
   "username": "alice",
@@ -140,15 +144,15 @@ import "github.com/ceyewan/gochat/im-infra/clog"
 func main() {
     // 创建独立的日志器实例
     logger := clog.New()
-    
+
     // 添加通用字段
     serviceLogger := logger.With(
         clog.String("service", "user-service"),
         clog.String("version", "2.1.0"),
         clog.String("environment", "production"))
-    
+
     serviceLogger.Info("服务初始化完成")
-    
+
     // 从实例创建模块日志器
     dbModule := serviceLogger.Module("database")
     dbModule.Info("连接池初始化", clog.Int("pool_size", 10))
@@ -198,7 +202,7 @@ clog.Ints(key string, values []int) Field          // 整数数组
 **使用示例**：
 
 ```go
-clog.Info("用户操作", 
+clog.Info("用户操作",
     clog.String("action", "login"),
     clog.Int("user_id", 12345),
     clog.Bool("success", true),
@@ -229,8 +233,8 @@ clog.Info("用户操作",
   "time": "2024-01-15T10:30:45.123456789Z",     // 时间戳
   "level": "INFO",                               // 日志级别
   "source": {                                    // 源码信息
-    "function": "main.handleRequest", 
-    "file": "handler.go", 
+    "function": "main.handleRequest",
+    "file": "handler.go",
     "line": 42
   },
   "msg": "处理用户请求",                          // 日志消息
@@ -305,7 +309,7 @@ func Connect() error {
 ```go
 // ✅ 推荐：完整的错误信息
 if err := db.Connect(); err != nil {
-    clog.Error("数据库连接失败", 
+    clog.Error("数据库连接失败",
         clog.Err(err),                    // 完整错误信息
         clog.String("operation", "connect"),
         clog.Int("retry_count", 3))
@@ -322,15 +326,15 @@ clog.Error("数据库连接失败", clog.String("error", err.Error()))
 ```go
 func handleRequest(ctx context.Context, req *Request) {
     // 自动注入 TraceID
-    clog.InfoContext(ctx, "开始处理请求", 
+    clog.InfoContext(ctx, "开始处理请求",
         clog.String("request_id", req.ID))
-    
+
     // 传递 context 到下游服务
     if err := callDownstream(ctx, req); err != nil {
         clog.ErrorContext(ctx, "下游调用失败", clog.Err(err))
         return
     }
-    
+
     clog.InfoContext(ctx, "请求处理完成")
 }
 ```
@@ -341,21 +345,21 @@ func handleRequest(ctx context.Context, req *Request) {
 
 ```go
 // ✅ 推荐：结构化，便于查询和分析
-clog.Info("用户登录", 
+clog.Info("用户登录",
     clog.String("user_id", userID),
-    clog.String("username", username), 
+    clog.String("username", username),
     clog.String("ip", clientIP),
     clog.Int("login_count", count))
 
 // ❌ 不推荐：非结构化，难以查询
-clog.Info(fmt.Sprintf("用户 %s (ID: %s) 从 %s 第 %d 次登录", 
+clog.Info(fmt.Sprintf("用户 %s (ID: %s) 从 %s 第 %d 次登录",
     username, userID, clientIP, count))
 ```
 
 ### 5. 日志级别选择
 
 - **Info**：正常业务流程、重要状态变更
-- **Warn**：异常情况但不影响正常流程  
+- **Warn**：异常情况但不影响正常流程
 - **Error**：错误情况、需要关注的问题
 
 ```go
@@ -398,7 +402,7 @@ log.Printf("User %s login from %s", userID, ip)
 // 👇
 clog.Info("用户登录", clog.String("user_id", userID), clog.String("ip", ip))
 
-// 从 logrus 迁移  
+// 从 logrus 迁移
 logrus.WithFields(logrus.Fields{"user_id": userID}).Info("User login")
 // 👇
 clog.Info("用户登录", clog.String("user_id", userID))
