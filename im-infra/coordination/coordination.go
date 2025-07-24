@@ -2,13 +2,37 @@ package coordination
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
+	"github.com/ceyewan/gochat/im-infra/coordination/pkg/client"
+	"github.com/ceyewan/gochat/im-infra/coordination/pkg/config"
+	"github.com/ceyewan/gochat/im-infra/coordination/pkg/lock"
+	"github.com/ceyewan/gochat/im-infra/coordination/pkg/registry"
 )
 
 // 模块日志器
 var logger = clog.Module("coordination")
+
+// coordinator 主协调器实现
+type coordinator struct {
+	client   *client.EtcdClient
+	lock     DistributedLock
+	registry ServiceRegistry
+	config   ConfigCenter
+	logger   clog.Logger
+	closed   bool
+	mu       sync.RWMutex
+}
+
+// 全局变量管理
+var (
+	// 全局默认协调器实例
+	defaultCoordinator Coordinator
+	// 确保默认协调器只初始化一次
+	defaultCoordinatorOnce sync.Once
+)
 
 // ===== 全局服务注册方法 =====
 
@@ -119,7 +143,44 @@ func Close() error {
 	return nil
 }
 
-// ===== 便利方法 =====
+// ===== 协调器创建和管理 =====
+
+// NewCoordinator 创建协调器实例
+func NewCoordinator(opts CoordinatorOptions) (Coordinator, error) {
+	// 验证选项
+	if err := opts.Validate(); err != nil {
+		return nil, err
+	}
+
+	logger := clog.Module("coordination")
+	logger.Info("创建协调器实例",
+		clog.Strings("endpoints", opts.Endpoints),
+		clog.Duration("timeout", opts.Timeout))
+
+	// 创建 etcd 客户端
+	etcdClient, err := client.NewEtcdClient(opts)
+	if err != nil {
+		logger.Error("创建 etcd 客户端失败", clog.Err(err))
+		return nil, err
+	}
+
+	// 创建各个子模块
+	lockService := lock.NewEtcdDistributedLock(etcdClient, "/locks")
+	registryService := registry.NewEtcdServiceRegistry(etcdClient, "/services")
+	configService := config.NewEtcdConfigCenter(etcdClient, "/config")
+
+	coord := &coordinator{
+		client:   etcdClient,
+		lock:     lockService,
+		registry: registryService,
+		config:   configService,
+		logger:   logger,
+		closed:   false,
+	}
+
+	logger.Info("协调器实例创建成功")
+	return coord, nil
+}
 
 // New 创建新的协调器实例（别名方法，保持向后兼容）
 func New(opts CoordinatorOptions) (Coordinator, error) {
@@ -129,4 +190,86 @@ func New(opts CoordinatorOptions) (Coordinator, error) {
 // Default 获取默认协调器实例
 func Default() Coordinator {
 	return getDefaultCoordinator()
+}
+
+// getDefaultCoordinator 获取全局默认协调器实例
+func getDefaultCoordinator() Coordinator {
+	defaultCoordinatorOnce.Do(func() {
+		opts := DefaultCoordinatorOptions()
+		var err error
+		defaultCoordinator, err = NewCoordinator(opts)
+		if err != nil {
+			logger := clog.Module("coordination")
+			logger.Error("创建默认协调器实例失败", clog.Err(err))
+			panic(err)
+		}
+	})
+	return defaultCoordinator
+}
+
+// ===== coordinator 方法实现 =====
+
+// Lock 获取分布式锁服务
+func (c *coordinator) Lock() DistributedLock {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.closed {
+		c.logger.Warn("尝试从已关闭的协调器获取锁服务")
+		return nil
+	}
+
+	return c.lock
+}
+
+// Registry 获取服务注册发现
+func (c *coordinator) Registry() ServiceRegistry {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.closed {
+		c.logger.Warn("尝试从已关闭的协调器获取注册发现服务")
+		return nil
+	}
+
+	return c.registry
+}
+
+// Config 获取配置中心
+func (c *coordinator) Config() ConfigCenter {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.closed {
+		c.logger.Warn("尝试从已关闭的协调器获取配置中心服务")
+		return nil
+	}
+
+	return c.config
+}
+
+// Close 关闭协调器
+func (c *coordinator) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.closed {
+		c.logger.Debug("协调器已经关闭")
+		return nil
+	}
+
+	c.logger.Info("关闭协调器")
+
+	var err error
+	if c.client != nil {
+		if closeErr := c.client.Close(); closeErr != nil {
+			c.logger.Error("关闭 etcd 客户端失败", clog.Err(closeErr))
+			err = closeErr
+		}
+	}
+
+	c.closed = true
+	c.logger.Info("协调器关闭完成")
+
+	return err
 }

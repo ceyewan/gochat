@@ -7,7 +7,6 @@
 ## 核心特性
 
 - 🌟 **全局方法**：支持 `coordination.RegisterService()` 等全局方法，无需显式创建协调器
-- 📦 **模块协调器**：`coordination.Module("service-name")` 创建服务特定协调器，单例模式，配置继承
 - 🚀 **基于 etcd**：充分利用 etcd 的强一致性和高可用性
 - 🔧 **服务注册发现**：支持健康检查、负载均衡、服务监听
 - 🔒 **分布式锁**：支持基础锁、可重入锁、读写锁，自动续期
@@ -20,9 +19,6 @@
 ```go
 // 创建协调器实例
 func New(cfg Config) (Coordinator, error)
-
-// 获取模块特定协调器
-func Module(name string) Coordinator
 
 // 检查连接状态
 func Ping(ctx context.Context) error
@@ -403,13 +399,7 @@ defer coordinator.Close()
 err = coordination.RegisterService(ctx, serviceInfo)
 ```
 
-### 模块协调器
 
-```go
-// 创建服务特定协调器
-userCoordinator := coordination.Module("user-service")
-registry := userCoordinator.ServiceRegistry()
-```
 
 ### 自定义配置
 
@@ -439,6 +429,5 @@ coordinator, err := coordination.New(cfg)
 ## 性能考虑
 
 - 复用协调器实例以减少连接开销
-- 使用模块协调器进行服务隔离
 - 合理设置超时和重试参数
 - 监控 etcd 集群性能和健康状态

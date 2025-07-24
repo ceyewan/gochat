@@ -143,17 +143,7 @@ func main() {
 }
 ```
 
-### 模块化使用
 
-```go
-// 在不同模块中使用独立的协调器实例
-userCoord := coordination.Module("user-service")
-chatCoord := coordination.Module("chat-service")
-
-// 每个模块协调器都有独立的日志上下文
-userCoord.Lock().Acquire(ctx, "user-lock", time.Minute)
-chatCoord.Registry().Register(ctx, serviceInfo)
-```
 
 ## API 参考
 
