@@ -8,10 +8,53 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coordination"
 	"github.com/ceyewan/gochat/im-infra/coordination/pkg/client"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
+
+// EventType 事件类型
+type EventType string
+
+const (
+	// EventTypePut 设置事件
+	EventTypePut EventType = "PUT"
+
+	// EventTypeDelete 删除事件
+	EventTypeDelete EventType = "DELETE"
+)
+
+// ServiceInfo 服务信息
+type ServiceInfo struct {
+	// ID 服务实例ID
+	ID string `json:"id"`
+
+	// Name 服务名称
+	Name string `json:"name"`
+
+	// Address 服务地址
+	Address string `json:"address"`
+
+	// Port 服务端口
+	Port int `json:"port"`
+
+	// Metadata 服务元数据
+	Metadata map[string]string `json:"metadata"`
+
+	// TTL 服务TTL
+	TTL time.Duration `json:"ttl"`
+}
+
+// ServiceEvent 服务变化事件
+type ServiceEvent struct {
+	// Type 事件类型
+	Type EventType `json:"type"`
+
+	// Service 服务信息
+	Service ServiceInfo `json:"service"`
+
+	// Timestamp 事件时间
+	Timestamp time.Time `json:"timestamp"`
+}
 
 // EtcdServiceRegistry 基于 etcd 的服务注册发现实现
 type EtcdServiceRegistry struct {
@@ -34,7 +77,7 @@ func NewEtcdServiceRegistry(client *client.EtcdClient, prefix string) *EtcdServi
 }
 
 // Register 注册服务
-func (r *EtcdServiceRegistry) Register(ctx context.Context, service coordination.ServiceInfo) error {
+func (r *EtcdServiceRegistry) Register(ctx context.Context, service ServiceInfo) error {
 	if err := r.validateServiceInfo(service); err != nil {
 		return err
 	}
@@ -55,8 +98,8 @@ func (r *EtcdServiceRegistry) Register(ctx context.Context, service coordination
 			clog.String("service_name", service.Name),
 			clog.String("service_id", service.ID),
 			clog.Err(err))
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"failed to serialize service info",
 			err,
 		)
@@ -109,8 +152,8 @@ func (r *EtcdServiceRegistry) Register(ctx context.Context, service coordination
 // Unregister 注销服务
 func (r *EtcdServiceRegistry) Unregister(ctx context.Context, serviceID string) error {
 	if serviceID == "" {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service ID cannot be empty",
 			nil,
 		)
@@ -128,8 +171,8 @@ func (r *EtcdServiceRegistry) Unregister(ctx context.Context, serviceID string) 
 	if serviceKey == "" {
 		r.logger.Debug("service not found for unregistration",
 			clog.String("service_id", serviceID))
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeNotFound,
+		return client.NewCoordinationError(
+			client.ErrCodeNotFound,
 			"service not found",
 			nil,
 		)
@@ -149,8 +192,8 @@ func (r *EtcdServiceRegistry) Unregister(ctx context.Context, serviceID string) 
 		r.logger.Debug("service key not found for deletion",
 			clog.String("service_id", serviceID),
 			clog.String("service_key", serviceKey))
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeNotFound,
+		return client.NewCoordinationError(
+			client.ErrCodeNotFound,
 			"service not found",
 			nil,
 		)
@@ -163,10 +206,10 @@ func (r *EtcdServiceRegistry) Unregister(ctx context.Context, serviceID string) 
 }
 
 // Discover 发现服务
-func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) ([]coordination.ServiceInfo, error) {
+func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) ([]ServiceInfo, error) {
 	if serviceName == "" {
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return nil, client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service name cannot be empty",
 			nil,
 		)
@@ -186,9 +229,9 @@ func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) 
 		return nil, err
 	}
 
-	var services []coordination.ServiceInfo
+	var services []ServiceInfo
 	for _, kv := range resp.Kvs {
-		var service coordination.ServiceInfo
+		var service ServiceInfo
 		if err := json.Unmarshal(kv.Value, &service); err != nil {
 			r.logger.Warn("failed to unmarshal service info, skipping",
 				clog.String("key", string(kv.Key)),
@@ -207,10 +250,10 @@ func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) 
 }
 
 // Watch 监听服务变化
-func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-chan coordination.ServiceEvent, error) {
+func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-chan ServiceEvent, error) {
 	if serviceName == "" {
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return nil, client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service name cannot be empty",
 			nil,
 		)
@@ -223,7 +266,7 @@ func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-
 		clog.String("prefix", servicePrefix))
 
 	watchCh := r.client.Watch(ctx, servicePrefix, clientv3.WithPrefix())
-	eventCh := make(chan coordination.ServiceEvent, 10)
+	eventCh := make(chan ServiceEvent, 10)
 
 	go func() {
 		defer close(eventCh)
@@ -260,42 +303,42 @@ func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-
 }
 
 // validateServiceInfo 验证服务信息
-func (r *EtcdServiceRegistry) validateServiceInfo(service coordination.ServiceInfo) error {
+func (r *EtcdServiceRegistry) validateServiceInfo(service ServiceInfo) error {
 	if service.ID == "" {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service ID cannot be empty",
 			nil,
 		)
 	}
 
 	if service.Name == "" {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service name cannot be empty",
 			nil,
 		)
 	}
 
 	if service.Address == "" {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service address cannot be empty",
 			nil,
 		)
 	}
 
 	if service.Port <= 0 || service.Port > 65535 {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service port must be between 1 and 65535",
 			nil,
 		)
 	}
 
 	if service.TTL <= 0 {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"service TTL must be positive",
 			nil,
 		)
@@ -323,7 +366,7 @@ func (r *EtcdServiceRegistry) findServiceKey(ctx context.Context, serviceID stri
 	}
 
 	for _, kv := range resp.Kvs {
-		var service coordination.ServiceInfo
+		var service ServiceInfo
 		if err := json.Unmarshal(kv.Value, &service); err != nil {
 			continue
 		}
@@ -337,7 +380,7 @@ func (r *EtcdServiceRegistry) findServiceKey(ctx context.Context, serviceID stri
 }
 
 // convertEvent 转换 etcd 事件为服务事件
-func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *coordination.ServiceEvent {
+func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *ServiceEvent {
 	key := string(event.Kv.Key)
 
 	// 检查是否为服务键
@@ -345,12 +388,12 @@ func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *coordination.
 		return nil
 	}
 
-	var eventType coordination.EventType
-	var service coordination.ServiceInfo
+	var eventType EventType
+	var service ServiceInfo
 
 	switch event.Type {
 	case clientv3.EventTypePut:
-		eventType = coordination.EventTypePut
+		eventType = EventTypePut
 		if err := json.Unmarshal(event.Kv.Value, &service); err != nil {
 			r.logger.Warn("failed to unmarshal service info in event",
 				clog.String("key", key),
@@ -358,7 +401,7 @@ func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *coordination.
 			return nil
 		}
 	case clientv3.EventTypeDelete:
-		eventType = coordination.EventTypeDelete
+		eventType = EventTypeDelete
 		// 对于删除事件，尝试从键中提取服务信息
 		parts := strings.Split(strings.TrimPrefix(key, r.prefix+"/"), "/")
 		if len(parts) >= 2 {
@@ -369,7 +412,7 @@ func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *coordination.
 		return nil
 	}
 
-	return &coordination.ServiceEvent{
+	return &ServiceEvent{
 		Type:      eventType,
 		Service:   service,
 		Timestamp: time.Now(),

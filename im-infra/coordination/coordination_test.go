@@ -1,105 +1,56 @@
 package coordination
 
 import (
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/ceyewan/gochat/im-infra/coordination/internal"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
-
-	// 验证默认配置
-	if len(cfg.Endpoints) == 0 {
-		t.Error("默认配置应该包含 etcd 端点")
-	}
-
-	if cfg.DialTimeout <= 0 {
-		t.Error("默认配置应该有正的连接超时时间")
-	}
-
-	if cfg.ServiceRegistry.KeyPrefix == "" {
-		t.Error("服务注册配置应该有键前缀")
-	}
-
-	if cfg.DistributedLock.KeyPrefix == "" {
-		t.Error("分布式锁配置应该有键前缀")
-	}
-
-	if cfg.ConfigCenter.KeyPrefix == "" {
-		t.Error("配置中心配置应该有键前缀")
-	}
-}
-
-func TestDevelopmentConfig(t *testing.T) {
-	cfg := DevelopmentConfig()
-
-	if cfg.LogLevel != "debug" {
-		t.Errorf("开发配置的日志级别应该是 debug，实际是 %s", cfg.LogLevel)
-	}
-
-	if cfg.ServiceRegistry.TTL != 15*time.Second {
-		t.Errorf("开发配置的服务 TTL 应该是 15s，实际是 %v", cfg.ServiceRegistry.TTL)
-	}
-}
-
-func TestProductionConfig(t *testing.T) {
-	cfg := ProductionConfig()
-
-	if cfg.LogLevel != "warn" {
-		t.Errorf("生产配置的日志级别应该是 warn，实际是 %s", cfg.LogLevel)
-	}
-
-	if !cfg.EnableMetrics {
-		t.Error("生产配置应该启用指标收集")
-	}
-
-	if !cfg.EnableTracing {
-		t.Error("生产配置应该启用链路追踪")
-	}
-}
-
-func TestTestConfig(t *testing.T) {
-	cfg := TestConfig()
-
-	if cfg.LogLevel != "debug" {
-		t.Errorf("测试配置的日志级别应该是 debug，实际是 %s", cfg.LogLevel)
-	}
-
-	if cfg.ServiceRegistry.TTL != 5*time.Second {
-		t.Errorf("测试配置的服务 TTL 应该是 5s，实际是 %v", cfg.ServiceRegistry.TTL)
-	}
-
-	if cfg.Retry.MaxRetries != 1 {
-		t.Errorf("测试配置的最大重试次数应该是 1，实际是 %d", cfg.Retry.MaxRetries)
-	}
-}
-
-func TestConfigValidation(t *testing.T) {
+func TestCoordinatorOptions_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  Config
+		opts    CoordinatorOptions
 		wantErr bool
 	}{
 		{
-			name:    "有效的默认配置",
-			config:  DefaultConfig(),
+			name: "valid options",
+			opts: CoordinatorOptions{
+				Endpoints: []string{"localhost:2379"},
+				Timeout:   5 * time.Second,
+			},
 			wantErr: false,
 		},
 		{
-			name: "空的端点列表",
-			config: Config{
-				Endpoints:   []string{},
-				DialTimeout: 5 * time.Second,
+			name: "empty endpoints",
+			opts: CoordinatorOptions{
+				Endpoints: []string{},
+				Timeout:   5 * time.Second,
 			},
 			wantErr: true,
 		},
 		{
-			name: "负的连接超时",
-			config: Config{
-				Endpoints:   []string{"localhost:2379"},
-				DialTimeout: -1 * time.Second,
+			name: "zero timeout",
+			opts: CoordinatorOptions{
+				Endpoints: []string{"localhost:2379"},
+				Timeout:   0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid retry config",
+			opts: CoordinatorOptions{
+				Endpoints: []string{"localhost:2379"},
+				Timeout:   5 * time.Second,
+				RetryConfig: &RetryConfig{
+					MaxAttempts:  -1,
+					InitialDelay: time.Second,
+					MaxDelay:     5 * time.Second,
+					Multiplier:   2.0,
+				},
 			},
 			wantErr: true,
 		},
@@ -107,185 +58,342 @@ func TestConfigValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.Validate()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Config.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			err := tt.opts.Validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
 }
 
-func TestServiceInfo(t *testing.T) {
-	service := ServiceInfo{
-		Name:       "test-service",
-		InstanceID: "test-instance",
-		Address:    "localhost:8080",
-		Metadata: map[string]string{
-			"version": "1.0.0",
+func TestDefaultCoordinatorOptions(t *testing.T) {
+	opts := DefaultCoordinatorOptions()
+
+	assert.NotEmpty(t, opts.Endpoints)
+	assert.Greater(t, opts.Timeout, time.Duration(0))
+	assert.NotNil(t, opts.RetryConfig)
+	assert.Greater(t, opts.RetryConfig.MaxAttempts, 0)
+	assert.Greater(t, opts.RetryConfig.InitialDelay, time.Duration(0))
+	assert.Greater(t, opts.RetryConfig.MaxDelay, time.Duration(0))
+	assert.Greater(t, opts.RetryConfig.Multiplier, 1.0)
+
+	// 验证默认选项是有效的
+	assert.NoError(t, opts.Validate())
+}
+
+func TestCoordinationError(t *testing.T) {
+	// 测试错误创建
+	err := NewCoordinationError(ErrCodeValidation, "test error", nil)
+	assert.Equal(t, ErrCodeValidation, err.Code)
+	assert.Equal(t, "test error", err.Message)
+	assert.Nil(t, err.Cause)
+	assert.Equal(t, "[VALIDATION_ERROR] test error", err.Error())
+
+	// 测试带原因的错误
+	cause := assert.AnError
+	err = NewCoordinationError(ErrCodeConnection, "connection failed", cause)
+	assert.Equal(t, ErrCodeConnection, err.Code)
+	assert.Equal(t, "connection failed", err.Message)
+	assert.Equal(t, cause, err.Cause)
+	assert.Contains(t, err.Error(), "connection failed")
+	assert.Contains(t, err.Error(), cause.Error())
+
+	// 测试错误检查函数
+	assert.True(t, IsCoordinationError(err))
+	assert.False(t, IsCoordinationError(assert.AnError))
+
+	// 测试错误码获取
+	assert.Equal(t, ErrCodeConnection, GetErrorCode(err))
+	assert.Equal(t, ErrorCode(""), GetErrorCode(assert.AnError))
+}
+
+func TestNewCoordinator(t *testing.T) {
+	// 测试无效配置
+	opts := CoordinatorOptions{
+		Endpoints: []string{}, // 空端点应该失败
+		Timeout:   5 * time.Second,
+	}
+
+	_, err := NewCoordinator(opts)
+	assert.Error(t, err)
+	assert.True(t, IsCoordinationError(err))
+	assert.Equal(t, ErrCodeValidation, GetErrorCode(err))
+}
+
+// 集成测试 - 需要 etcd 运行
+func TestCoordinatorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过集成测试")
+	}
+
+	opts := CoordinatorOptions{
+		Endpoints: []string{"localhost:2379"},
+		Timeout:   3 * time.Second,
+		RetryConfig: &RetryConfig{
+			MaxAttempts:  2,
+			InitialDelay: 100 * time.Millisecond,
+			MaxDelay:     1 * time.Second,
+			Multiplier:   2.0,
 		},
-		Health: internal.HealthHealthy,
 	}
 
-	if service.Name != "test-service" {
-		t.Errorf("服务名称不匹配，期望 test-service，实际 %s", service.Name)
+	coord, err := NewCoordinator(opts)
+	if err != nil {
+		t.Skipf("无法连接到 etcd，跳过集成测试: %v", err)
+		return
 	}
+	defer coord.Close()
 
-	if service.Health.String() != "healthy" {
-		t.Errorf("健康状态字符串不匹配，期望 healthy，实际 %s", service.Health.String())
-	}
+	ctx := context.Background()
+
+	// 测试分布式锁
+	t.Run("DistributedLock", func(t *testing.T) {
+		lockService := coord.Lock()
+		require.NotNil(t, lockService)
+
+		// 获取锁
+		lock, err := lockService.Acquire(ctx, "test-lock", 10*time.Second)
+		require.NoError(t, err)
+		require.NotNil(t, lock)
+		assert.Equal(t, "/locks/test-lock", lock.Key())
+
+		// 检查 TTL
+		ttl, err := lock.TTL(ctx)
+		require.NoError(t, err)
+		assert.Greater(t, ttl, 5*time.Second)
+
+		// 释放锁
+		err = lock.Unlock(ctx)
+		require.NoError(t, err)
+
+		// 尝试非阻塞获取锁
+		tryLock, err := lockService.TryAcquire(ctx, "test-try-lock", 5*time.Second)
+		require.NoError(t, err)
+		require.NotNil(t, tryLock)
+		tryLock.Unlock(ctx)
+	})
+
+	// 测试配置中心
+	t.Run("ConfigCenter", func(t *testing.T) {
+		configService := coord.Config()
+		require.NotNil(t, configService)
+
+		testKey := "test-config"
+		testValue := "test-value"
+
+		// 设置配置
+		err := configService.Set(ctx, testKey, testValue)
+		require.NoError(t, err)
+
+		// 获取配置
+		value, err := configService.Get(ctx, testKey)
+		require.NoError(t, err)
+		assert.Equal(t, testValue, value)
+
+		// 列出配置
+		keys, err := configService.List(ctx, "")
+		require.NoError(t, err)
+		assert.Contains(t, keys, testKey)
+
+		// 删除配置
+		err = configService.Delete(ctx, testKey)
+		require.NoError(t, err)
+
+		// 验证删除
+		_, err = configService.Get(ctx, testKey)
+		assert.Error(t, err)
+		assert.True(t, IsCoordinationError(err))
+		assert.Equal(t, ErrCodeNotFound, GetErrorCode(err))
+	})
+
+	// 测试服务注册发现
+	t.Run("ServiceRegistry", func(t *testing.T) {
+		registryService := coord.Registry()
+		require.NotNil(t, registryService)
+
+		service := ServiceInfo{
+			ID:      "test-service-001",
+			Name:    "test-service",
+			Address: "127.0.0.1",
+			Port:    8080,
+			Metadata: map[string]string{
+				"version": "1.0.0",
+			},
+			TTL: 30 * time.Second,
+		}
+
+		// 注册服务
+		err := registryService.Register(ctx, service)
+		require.NoError(t, err)
+
+		// 发现服务
+		services, err := registryService.Discover(ctx, "test-service")
+		require.NoError(t, err)
+		require.Len(t, services, 1)
+		assert.Equal(t, service.ID, services[0].ID)
+		assert.Equal(t, service.Name, services[0].Name)
+		assert.Equal(t, service.Address, services[0].Address)
+		assert.Equal(t, service.Port, services[0].Port)
+
+		// 注销服务
+		err = registryService.Unregister(ctx, service.ID)
+		require.NoError(t, err)
+
+		// 验证注销
+		services, err = registryService.Discover(ctx, "test-service")
+		require.NoError(t, err)
+		assert.Empty(t, services)
+	})
 }
 
-func TestHealthStatus(t *testing.T) {
-	tests := []struct {
-		status   HealthStatus
-		expected string
-	}{
-		{internal.HealthHealthy, "healthy"},
-		{internal.HealthUnhealthy, "unhealthy"},
-		{internal.HealthMaintenance, "maintenance"},
-		{internal.HealthUnknown, "unknown"},
+// 全局方法测试
+func TestGlobalMethods(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过集成测试")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			if got := tt.status.String(); got != tt.expected {
-				t.Errorf("HealthStatus.String() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
+	ctx := context.Background()
 
-func TestLoadBalanceStrategy(t *testing.T) {
-	tests := []struct {
-		strategy LoadBalanceStrategy
-		expected string
-	}{
-		{internal.LoadBalanceRoundRobin, "round_robin"},
-		{internal.LoadBalanceRandom, "random"},
-		{internal.LoadBalanceWeighted, "weighted"},
-		{internal.LoadBalanceLeastConn, "least_conn"},
-	}
+	// 测试全局锁方法
+	t.Run("GlobalLockMethods", func(t *testing.T) {
+		lock, err := AcquireLock(ctx, "global-test-lock", 10*time.Second)
+		if err != nil {
+			t.Skipf("无法连接到 etcd，跳过全局方法测试: %v", err)
+			return
+		}
+		require.NotNil(t, lock)
 
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			if got := tt.strategy.String(); got != tt.expected {
-				t.Errorf("LoadBalanceStrategy.String() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
+		err = lock.Unlock(ctx)
+		require.NoError(t, err)
 
-func TestConfigChangeType(t *testing.T) {
-	tests := []struct {
-		changeType internal.ConfigChangeType
-		expected   string
-	}{
-		{internal.ConfigChangeCreate, "create"},
-		{internal.ConfigChangeUpdate, "update"},
-		{internal.ConfigChangeDelete, "delete"},
-	}
+		// 测试尝试获取锁
+		tryLock, err := TryAcquireLock(ctx, "global-try-lock", 5*time.Second)
+		require.NoError(t, err)
+		require.NotNil(t, tryLock)
+		tryLock.Unlock(ctx)
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			if got := tt.changeType.String(); got != tt.expected {
-				t.Errorf("ConfigChangeType.String() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
+	// 测试全局配置方法
+	t.Run("GlobalConfigMethods", func(t *testing.T) {
+		testKey := "global-test-config"
+		testValue := "global-test-value"
 
-func TestNewServiceRegistryConfig(t *testing.T) {
-	config := NewServiceRegistryConfig(
-		"/test-services",
-		60*time.Second,
-		20*time.Second,
-		true,
-	)
+		err := SetConfig(ctx, testKey, testValue)
+		if err != nil {
+			t.Skipf("无法连接到 etcd，跳过全局配置测试: %v", err)
+			return
+		}
 
-	if config.KeyPrefix != "/test-services" {
-		t.Errorf("键前缀不匹配，期望 /test-services，实际 %s", config.KeyPrefix)
-	}
+		value, err := GetConfig(ctx, testKey)
+		require.NoError(t, err)
+		assert.Equal(t, testValue, value)
 
-	if config.TTL != 60*time.Second {
-		t.Errorf("TTL 不匹配，期望 60s，实际 %v", config.TTL)
-	}
+		keys, err := ListConfigs(ctx, "")
+		require.NoError(t, err)
+		assert.Contains(t, keys, testKey)
 
-	if !config.EnableHealthCheck {
-		t.Error("应该启用健康检查")
-	}
-}
+		err = DeleteConfig(ctx, testKey)
+		require.NoError(t, err)
+	})
 
-func TestNewDistributedLockConfig(t *testing.T) {
-	config := NewDistributedLockConfig(
-		"/test-locks",
-		45*time.Second,
-		15*time.Second,
-		true,
-	)
+	// 测试全局服务注册方法
+	t.Run("GlobalRegistryMethods", func(t *testing.T) {
+		service := ServiceInfo{
+			ID:      "global-test-service-001",
+			Name:    "global-test-service",
+			Address: "127.0.0.1",
+			Port:    9090,
+			TTL:     30 * time.Second,
+		}
 
-	if config.KeyPrefix != "/test-locks" {
-		t.Errorf("键前缀不匹配，期望 /test-locks，实际 %s", config.KeyPrefix)
-	}
+		err := RegisterService(ctx, service)
+		if err != nil {
+			t.Skipf("无法连接到 etcd，跳过全局服务注册测试: %v", err)
+			return
+		}
 
-	if config.DefaultTTL != 45*time.Second {
-		t.Errorf("默认 TTL 不匹配，期望 45s，实际 %v", config.DefaultTTL)
-	}
+		services, err := DiscoverServices(ctx, "global-test-service")
+		require.NoError(t, err)
+		require.Len(t, services, 1)
+		assert.Equal(t, service.ID, services[0].ID)
 
-	if !config.EnableReentrant {
-		t.Error("应该启用可重入锁")
-	}
-}
-
-func TestNewConfigCenterConfig(t *testing.T) {
-	config := NewConfigCenterConfig(
-		"/test-config",
-		true,
-		50,
-		true,
-	)
-
-	if config.KeyPrefix != "/test-config" {
-		t.Errorf("键前缀不匹配，期望 /test-config，实际 %s", config.KeyPrefix)
-	}
-
-	if !config.EnableVersioning {
-		t.Error("应该启用版本控制")
-	}
-
-	if config.MaxVersionHistory != 50 {
-		t.Errorf("最大版本历史不匹配，期望 50，实际 %d", config.MaxVersionHistory)
-	}
-}
-
-func TestNewRetryConfig(t *testing.T) {
-	config := NewRetryConfig(
-		5,
-		200*time.Millisecond,
-		10*time.Second,
-		1.5,
-	)
-
-	if config.MaxRetries != 5 {
-		t.Errorf("最大重试次数不匹配，期望 5，实际 %d", config.MaxRetries)
-	}
-
-	if config.Multiplier != 1.5 {
-		t.Errorf("倍数不匹配，期望 1.5，实际 %f", config.Multiplier)
-	}
+		err = UnregisterService(ctx, service.ID)
+		require.NoError(t, err)
+	})
 }
 
 // 基准测试
-func BenchmarkDefaultConfig(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_ = DefaultConfig()
+func BenchmarkLockAcquireRelease(b *testing.B) {
+	if testing.Short() {
+		b.Skip("跳过基准测试")
 	}
+
+	opts := DefaultCoordinatorOptions()
+	coord, err := NewCoordinator(opts)
+	if err != nil {
+		b.Skipf("无法连接到 etcd，跳过基准测试: %v", err)
+		return
+	}
+	defer coord.Close()
+
+	ctx := context.Background()
+	lockService := coord.Lock()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			lockKey := fmt.Sprintf("bench-lock-%d", i)
+			lock, err := lockService.Acquire(ctx, lockKey, 5*time.Second)
+			if err != nil {
+				b.Errorf("获取锁失败: %v", err)
+				continue
+			}
+			lock.Unlock(ctx)
+			i++
+		}
+	})
 }
 
-func BenchmarkConfigValidation(b *testing.B) {
-	cfg := DefaultConfig()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		_ = cfg.Validate()
+func BenchmarkConfigSetGet(b *testing.B) {
+	if testing.Short() {
+		b.Skip("跳过基准测试")
 	}
+
+	opts := DefaultCoordinatorOptions()
+	coord, err := NewCoordinator(opts)
+	if err != nil {
+		b.Skipf("无法连接到 etcd，跳过基准测试: %v", err)
+		return
+	}
+	defer coord.Close()
+
+	ctx := context.Background()
+	configService := coord.Config()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			key := fmt.Sprintf("bench-config-%d", i)
+			value := fmt.Sprintf("bench-value-%d", i)
+
+			err := configService.Set(ctx, key, value)
+			if err != nil {
+				b.Errorf("设置配置失败: %v", err)
+				continue
+			}
+
+			_, err = configService.Get(ctx, key)
+			if err != nil {
+				b.Errorf("获取配置失败: %v", err)
+				continue
+			}
+
+			configService.Delete(ctx, key)
+			i++
+		}
+	})
 }

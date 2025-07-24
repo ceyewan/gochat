@@ -8,10 +8,35 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coordination"
 	"github.com/ceyewan/gochat/im-infra/coordination/pkg/client"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
+
+// EventType 事件类型
+type EventType string
+
+const (
+	// EventTypePut 设置事件
+	EventTypePut EventType = "PUT"
+
+	// EventTypeDelete 删除事件
+	EventTypeDelete EventType = "DELETE"
+)
+
+// ConfigEvent 配置变化事件
+type ConfigEvent struct {
+	// Type 事件类型：PUT, DELETE
+	Type EventType `json:"type"`
+
+	// Key 配置键
+	Key string `json:"key"`
+
+	// Value 配置值（支持任意类型）
+	Value interface{} `json:"value"`
+
+	// Timestamp 事件时间
+	Timestamp time.Time `json:"timestamp"`
+}
 
 // EtcdConfigCenter 基于 etcd 的配置中心实现
 type EtcdConfigCenter struct {
@@ -36,8 +61,8 @@ func NewEtcdConfigCenter(client *client.EtcdClient, prefix string) *EtcdConfigCe
 // Get 获取配置值
 func (c *EtcdConfigCenter) Get(ctx context.Context, key string) (interface{}, error) {
 	if key == "" {
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return nil, client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"config key cannot be empty",
 			nil,
 		)
@@ -59,8 +84,8 @@ func (c *EtcdConfigCenter) Get(ctx context.Context, key string) (interface{}, er
 	if len(resp.Kvs) == 0 {
 		c.logger.Debug("config key not found",
 			clog.String("key", configKey))
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeNotFound,
+		return nil, client.NewCoordinationError(
+			client.ErrCodeNotFound,
 			"config key not found",
 			nil,
 		)
@@ -85,8 +110,8 @@ func (c *EtcdConfigCenter) Get(ctx context.Context, key string) (interface{}, er
 // Set 设置配置值（支持任意可序列化对象）
 func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{}) error {
 	if key == "" {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"config key cannot be empty",
 			nil,
 		)
@@ -110,8 +135,8 @@ func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{
 			c.logger.Error("failed to serialize config value",
 				clog.String("key", configKey),
 				clog.Err(err))
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeValidation,
+			return client.NewCoordinationError(
+				client.ErrCodeValidation,
 				"failed to serialize config value",
 				err,
 			)
@@ -139,8 +164,8 @@ func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{
 // Delete 删除配置
 func (c *EtcdConfigCenter) Delete(ctx context.Context, key string) error {
 	if key == "" {
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"config key cannot be empty",
 			nil,
 		)
@@ -162,8 +187,8 @@ func (c *EtcdConfigCenter) Delete(ctx context.Context, key string) error {
 	if resp.Deleted == 0 {
 		c.logger.Debug("config key not found for deletion",
 			clog.String("key", configKey))
-		return coordination.NewCoordinationError(
-			coordination.ErrCodeNotFound,
+		return client.NewCoordinationError(
+			client.ErrCodeNotFound,
 			"config key not found",
 			nil,
 		)
@@ -176,10 +201,10 @@ func (c *EtcdConfigCenter) Delete(ctx context.Context, key string) error {
 }
 
 // Watch 监听配置变化
-func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan coordination.ConfigEvent, error) {
+func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan ConfigEvent, error) {
 	if key == "" {
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeValidation,
+		return nil, client.NewCoordinationError(
+			client.ErrCodeValidation,
 			"config key cannot be empty",
 			nil,
 		)
@@ -191,7 +216,7 @@ func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan coordi
 		clog.String("key", configKey))
 
 	watchCh := c.client.Watch(ctx, configKey)
-	eventCh := make(chan coordination.ConfigEvent, 10)
+	eventCh := make(chan ConfigEvent, 10)
 
 	go func() {
 		defer close(eventCh)
@@ -264,7 +289,7 @@ func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, e
 }
 
 // convertEvent 转换 etcd 事件为配置事件
-func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event) *coordination.ConfigEvent {
+func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event) *ConfigEvent {
 	key := string(event.Kv.Key)
 
 	// 移除前缀，只返回相对键名
@@ -273,25 +298,25 @@ func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event) *coordination.Con
 	}
 	relativeKey := strings.TrimPrefix(key, c.prefix+"/")
 
-	var eventType coordination.EventType
+	var eventType EventType
 	var value interface{}
 
 	switch event.Type {
 	case clientv3.EventTypePut:
-		eventType = coordination.EventTypePut
+		eventType = EventTypePut
 		// 尝试解析为 JSON，如果失败则返回原始字符串
 		valueBytes := event.Kv.Value
 		if err := json.Unmarshal(valueBytes, &value); err != nil {
 			value = string(valueBytes)
 		}
 	case clientv3.EventTypeDelete:
-		eventType = coordination.EventTypeDelete
+		eventType = EventTypeDelete
 		value = nil
 	default:
 		return nil
 	}
 
-	return &coordination.ConfigEvent{
+	return &ConfigEvent{
 		Type:      eventType,
 		Key:       relativeKey,
 		Value:     value,

@@ -2,22 +2,138 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coordination"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
+
+// CoordinatorOptions 协调器配置选项
+type CoordinatorOptions struct {
+	// Endpoints etcd 服务器地址列表
+	Endpoints []string `json:"endpoints"`
+
+	// Username etcd 用户名（可选）
+	Username string `json:"username,omitempty"`
+
+	// Password etcd 密码（可选）
+	Password string `json:"password,omitempty"`
+
+	// Timeout 连接超时时间
+	Timeout time.Duration `json:"timeout"`
+
+	// RetryConfig 重试配置
+	RetryConfig *RetryConfig `json:"retry_config,omitempty"`
+}
+
+// RetryConfig 重试机制配置
+type RetryConfig struct {
+	// MaxAttempts 最大重试次数
+	MaxAttempts int `json:"max_attempts"`
+
+	// InitialDelay 初始延迟
+	InitialDelay time.Duration `json:"initial_delay"`
+
+	// MaxDelay 最大延迟
+	MaxDelay time.Duration `json:"max_delay"`
+
+	// Multiplier 退避倍数
+	Multiplier float64 `json:"multiplier"`
+}
+
+// CoordinationError 协调器错误类型
+type CoordinationError struct {
+	// Code 错误码
+	Code ErrorCode `json:"code"`
+
+	// Message 错误消息
+	Message string `json:"message"`
+
+	// Cause 原始错误
+	Cause error `json:"cause,omitempty"`
+}
+
+// ErrorCode 错误码定义
+type ErrorCode string
+
+const (
+	// ErrCodeConnection 连接错误
+	ErrCodeConnection ErrorCode = "CONNECTION_ERROR"
+
+	// ErrCodeTimeout 超时错误
+	ErrCodeTimeout ErrorCode = "TIMEOUT_ERROR"
+
+	// ErrCodeNotFound 未找到错误
+	ErrCodeNotFound ErrorCode = "NOT_FOUND"
+
+	// ErrCodeConflict 冲突错误
+	ErrCodeConflict ErrorCode = "CONFLICT"
+
+	// ErrCodeValidation 验证错误
+	ErrCodeValidation ErrorCode = "VALIDATION_ERROR"
+
+	// ErrCodeUnavailable 服务不可用错误
+	ErrCodeUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
+)
+
+// Error 实现 error 接口
+func (e *CoordinationError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("[%s] %s: %v", e.Code, e.Message, e.Cause)
+	}
+	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
+}
+
+// NewCoordinationError 创建协调器错误
+func NewCoordinationError(code ErrorCode, message string, cause error) *CoordinationError {
+	return &CoordinationError{
+		Code:    code,
+		Message: message,
+		Cause:   cause,
+	}
+}
+
+// Validate 验证选项有效性
+func (opts *CoordinatorOptions) Validate() error {
+	if len(opts.Endpoints) == 0 {
+		return NewCoordinationError(ErrCodeValidation, "endpoints cannot be empty", nil)
+	}
+
+	if opts.Timeout <= 0 {
+		return NewCoordinationError(ErrCodeValidation, "timeout must be positive", nil)
+	}
+
+	if opts.RetryConfig != nil {
+		if opts.RetryConfig.MaxAttempts < 0 {
+			return NewCoordinationError(ErrCodeValidation, "max_attempts cannot be negative", nil)
+		}
+
+		if opts.RetryConfig.InitialDelay <= 0 {
+			return NewCoordinationError(ErrCodeValidation, "initial_delay must be positive", nil)
+		}
+
+		if opts.RetryConfig.MaxDelay <= 0 {
+			return NewCoordinationError(ErrCodeValidation, "max_delay must be positive", nil)
+		}
+
+		if opts.RetryConfig.Multiplier <= 1.0 {
+			return NewCoordinationError(ErrCodeValidation, "multiplier must be greater than 1.0", nil)
+		}
+	}
+
+	return nil
+}
 
 // EtcdClient etcd 客户端封装
 type EtcdClient struct {
 	client      *clientv3.Client
-	retryConfig *coordination.RetryConfig
+	retryConfig *RetryConfig
 	logger      clog.Logger
 }
 
 // NewEtcdClient 创建新的 etcd 客户端
-func NewEtcdClient(opts coordination.CoordinatorOptions) (*EtcdClient, error) {
+func NewEtcdClient(opts CoordinatorOptions) (*EtcdClient, error) {
 	// 验证选项
 	if err := opts.Validate(); err != nil {
 		return nil, err
@@ -34,8 +150,8 @@ func NewEtcdClient(opts coordination.CoordinatorOptions) (*EtcdClient, error) {
 	// 创建 etcd 客户端
 	client, err := clientv3.New(config)
 	if err != nil {
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeConnection,
+		return nil, NewCoordinationError(
+			ErrCodeConnection,
 			"failed to create etcd client",
 			err,
 		)
@@ -47,8 +163,8 @@ func NewEtcdClient(opts coordination.CoordinatorOptions) (*EtcdClient, error) {
 
 	if _, err := client.Status(ctx, opts.Endpoints[0]); err != nil {
 		client.Close()
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeConnection,
+		return nil, NewCoordinationError(
+			ErrCodeConnection,
 			"failed to connect to etcd",
 			err,
 		)
@@ -76,8 +192,8 @@ func (c *EtcdClient) Close() error {
 		err := c.client.Close()
 		if err != nil {
 			c.logger.Error("failed to close etcd client", clog.Err(err))
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeConnection,
+			return NewCoordinationError(
+				ErrCodeConnection,
 				"failed to close etcd client",
 				err,
 			)
@@ -92,8 +208,8 @@ func (c *EtcdClient) Ping(ctx context.Context) error {
 	return c.retryOperation(ctx, func() error {
 		_, err := c.client.Status(ctx, c.client.Endpoints()[0])
 		if err != nil {
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeConnection,
+			return NewCoordinationError(
+				ErrCodeConnection,
 				"etcd ping failed",
 				err,
 			)
@@ -131,8 +247,8 @@ func (c *EtcdClient) retryOperation(ctx context.Context, operation func() error)
 		if attempt < c.retryConfig.MaxAttempts-1 {
 			select {
 			case <-ctx.Done():
-				return coordination.NewCoordinationError(
-					coordination.ErrCodeTimeout,
+				return NewCoordinationError(
+					ErrCodeTimeout,
 					"context cancelled during retry",
 					ctx.Err(),
 				)
@@ -161,8 +277,8 @@ func (c *EtcdClient) Put(ctx context.Context, key, value string, opts ...clientv
 		var err error
 		resp, err = c.client.Put(ctx, key, value, opts...)
 		if err != nil {
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeConnection,
+			return NewCoordinationError(
+				ErrCodeConnection,
 				"etcd put operation failed",
 				err,
 			)
@@ -179,8 +295,8 @@ func (c *EtcdClient) Get(ctx context.Context, key string, opts ...clientv3.OpOpt
 		var err error
 		resp, err = c.client.Get(ctx, key, opts...)
 		if err != nil {
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeConnection,
+			return NewCoordinationError(
+				ErrCodeConnection,
 				"etcd get operation failed",
 				err,
 			)
@@ -197,8 +313,8 @@ func (c *EtcdClient) Delete(ctx context.Context, key string, opts ...clientv3.Op
 		var err error
 		resp, err = c.client.Delete(ctx, key, opts...)
 		if err != nil {
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeConnection,
+			return NewCoordinationError(
+				ErrCodeConnection,
 				"etcd delete operation failed",
 				err,
 			)
@@ -220,8 +336,8 @@ func (c *EtcdClient) Grant(ctx context.Context, ttl int64) (*clientv3.LeaseGrant
 		var err error
 		resp, err = c.client.Grant(ctx, ttl)
 		if err != nil {
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeConnection,
+			return NewCoordinationError(
+				ErrCodeConnection,
 				"etcd grant operation failed",
 				err,
 			)
@@ -235,8 +351,8 @@ func (c *EtcdClient) Grant(ctx context.Context, ttl int64) (*clientv3.LeaseGrant
 func (c *EtcdClient) KeepAlive(ctx context.Context, id clientv3.LeaseID) (<-chan *clientv3.LeaseKeepAliveResponse, error) {
 	ch, err := c.client.KeepAlive(ctx, id)
 	if err != nil {
-		return nil, coordination.NewCoordinationError(
-			coordination.ErrCodeConnection,
+		return nil, NewCoordinationError(
+			ErrCodeConnection,
 			"etcd keep alive failed",
 			err,
 		)
@@ -251,8 +367,8 @@ func (c *EtcdClient) Revoke(ctx context.Context, id clientv3.LeaseID) (*clientv3
 		var err error
 		resp, err = c.client.Revoke(ctx, id)
 		if err != nil {
-			return coordination.NewCoordinationError(
-				coordination.ErrCodeConnection,
+			return NewCoordinationError(
+				ErrCodeConnection,
 				"etcd revoke operation failed",
 				err,
 			)
