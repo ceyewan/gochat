@@ -236,6 +236,12 @@ func (c *EtcdClient) retryOperation(ctx context.Context, operation func() error)
 			return nil
 		} else {
 			lastErr = err
+
+			// 检查是否为不应该重试的错误
+			if c.shouldNotRetry(err) {
+				return err
+			}
+
 			c.logger.Warn("operation failed, will retry",
 				clog.Int("attempt", attempt+1),
 				clog.Int("max_attempts", c.retryConfig.MaxAttempts),
@@ -268,6 +274,21 @@ func (c *EtcdClient) retryOperation(ctx context.Context, operation func() error)
 		clog.Err(lastErr))
 
 	return lastErr
+}
+
+// shouldNotRetry 检查是否不应该重试的错误
+func (c *EtcdClient) shouldNotRetry(err error) bool {
+	if coordErr, ok := err.(*CoordinationError); ok {
+		// 对于 NotFound 错误（如租约不存在），不应该重试
+		if coordErr.Code == ErrCodeNotFound {
+			return true
+		}
+		// 对于验证错误，不应该重试
+		if coordErr.Code == ErrCodeValidation {
+			return true
+		}
+	}
+	return false
 }
 
 // Put 设置键值对
@@ -367,6 +388,14 @@ func (c *EtcdClient) Revoke(ctx context.Context, id clientv3.LeaseID) (*clientv3
 		var err error
 		resp, err = c.client.Revoke(ctx, id)
 		if err != nil {
+			// 如果租约不存在，这是正常情况，不需要重试
+			if c.isLeaseNotFoundError(err) {
+				return NewCoordinationError(
+					ErrCodeNotFound,
+					"lease not found (already expired)",
+					err,
+				)
+			}
 			return NewCoordinationError(
 				ErrCodeConnection,
 				"etcd revoke operation failed",
@@ -376,6 +405,16 @@ func (c *EtcdClient) Revoke(ctx context.Context, id clientv3.LeaseID) (*clientv3
 		return nil
 	})
 	return resp, err
+}
+
+// isLeaseNotFoundError 检查是否为租约未找到错误
+func (c *EtcdClient) isLeaseNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return errStr == "etcdserver: requested lease not found" ||
+		errStr == "rpc error: code = NotFound desc = etcdserver: requested lease not found"
 }
 
 // Txn 创建事务

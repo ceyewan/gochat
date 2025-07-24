@@ -104,9 +104,12 @@ func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl t
 		)
 	}
 
-	// 启动租约续期
-	keepAliveCh, err := l.client.KeepAlive(ctx, leaseID)
+	// 启动租约续期 - 使用独立的 context，不依赖于用户传入的 context
+	// 这样即使用户的 context 被取消，租约续期也会继续工作
+	keepAliveCtx, keepAliveCancel := context.WithCancel(context.Background())
+	keepAliveCh, err := l.client.KeepAlive(keepAliveCtx, leaseID)
 	if err != nil {
+		keepAliveCancel()
 		l.client.Revoke(context.Background(), leaseID)
 		l.logger.Error("failed to start lease keep alive",
 			clog.String("key", lockKey),
@@ -116,12 +119,13 @@ func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl t
 
 	// 创建锁对象
 	lock := &EtcdLock{
-		client:      l.client,
-		key:         lockKey,
-		leaseID:     leaseID,
-		keepAliveCh: keepAliveCh,
-		logger:      l.logger,
-		originalTTL: ttl,
+		client:          l.client,
+		key:             lockKey,
+		leaseID:         leaseID,
+		keepAliveCh:     keepAliveCh,
+		keepAliveCancel: keepAliveCancel,
+		logger:          l.logger,
+		originalTTL:     ttl,
 	}
 
 	// 启动后台 goroutine 处理 keep alive 响应
@@ -205,13 +209,14 @@ type Lock interface {
 
 // EtcdLock 基于 etcd 的锁实现
 type EtcdLock struct {
-	client      *client.EtcdClient
-	key         string
-	leaseID     clientv3.LeaseID
-	keepAliveCh <-chan *clientv3.LeaseKeepAliveResponse
-	logger      clog.Logger
-	originalTTL time.Duration
-	closed      bool
+	client          *client.EtcdClient
+	key             string
+	leaseID         clientv3.LeaseID
+	keepAliveCh     <-chan *clientv3.LeaseKeepAliveResponse
+	keepAliveCancel context.CancelFunc
+	logger          clog.Logger
+	originalTTL     time.Duration
+	closed          bool
 }
 
 // Unlock 释放锁
@@ -227,6 +232,11 @@ func (l *EtcdLock) Unlock(ctx context.Context) error {
 	l.logger.Info("releasing lock",
 		clog.String("key", l.key),
 		clog.Int64("lease_id", int64(l.leaseID)))
+
+	// 停止租约续期
+	if l.keepAliveCancel != nil {
+		l.keepAliveCancel()
+	}
 
 	// 先尝试删除锁键，这样即使租约已过期也能正常释放
 	_, err := l.client.Delete(ctx, l.key)

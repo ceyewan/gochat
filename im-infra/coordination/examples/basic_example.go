@@ -66,6 +66,9 @@ func lockExample(ctx context.Context, coord coordination.Coordinator) error {
 	}
 	fmt.Printf("锁获取成功，键名: %s\n", lock.Key())
 
+	// 稍微等待一下，确保锁的租约已经稳定
+	time.Sleep(100 * time.Millisecond)
+
 	// 检查锁的 TTL
 	ttl, err := lock.TTL(ctx)
 	if err != nil {

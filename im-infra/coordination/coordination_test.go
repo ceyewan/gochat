@@ -375,10 +375,11 @@ func BenchmarkConfigSetGet(b *testing.B) {
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
+		goroutineID := time.Now().UnixNano() // 使用纳秒时间戳作为 goroutine 标识
 		i := 0
 		for pb.Next() {
-			key := fmt.Sprintf("bench-config-%d", i)
-			value := fmt.Sprintf("bench-value-%d", i)
+			key := fmt.Sprintf("bench-config-%d-%d", goroutineID, i)
+			value := fmt.Sprintf("bench-value-%d-%d", goroutineID, i)
 
 			err := configService.Set(ctx, key, value)
 			if err != nil {
