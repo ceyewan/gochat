@@ -251,3 +251,23 @@ func (c *cache) validateKeys(keys []string) error {
 
 	return nil
 }
+
+// ===== Scripting Operations =====
+
+// ScriptLoad loads a Lua script into the Redis script cache.
+func (c *cache) ScriptLoad(ctx context.Context, script string) (string, error) {
+	return c.client.ScriptLoad(ctx, script).Result()
+}
+
+// EvalSha executes a pre-loaded Lua script.
+func (c *cache) EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) (interface{}, error) {
+	return c.client.EvalSha(ctx, sha1, keys, args...).Result()
+}
+
+// ===== Connection Management =====
+
+// Client returns the underlying go-redis client.
+// Note: This is for advanced use cases. Prefer using the abstracted methods.
+func (c *cache) Client() *redis.Client {
+	return c.client
+}
