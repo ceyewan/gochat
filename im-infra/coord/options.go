@@ -3,7 +3,7 @@ package coordination
 import (
 	"time"
 
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/client"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/client"
 )
 
 // CoordinatorOptions 协调器配置选项

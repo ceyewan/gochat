@@ -1,9 +1,9 @@
 package coordination
 
 import (
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/config"
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/lock"
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/registry"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/config"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/lock"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/registry"
 )
 
 // Coordinator 主协调器接口

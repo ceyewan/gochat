@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/client"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/client"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )

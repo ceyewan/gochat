@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/idempotent/internal"
+	"github.com/ceyewan/gochat/im-infra/once/internal"
 )
 
 // Idempotent 定义幂等操作的核心接口。

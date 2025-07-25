@@ -8,7 +8,7 @@ import (
 
 	"github.com/ceyewan/gochat/im-infra/cache"
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coordination"
+	coordination "github.com/ceyewan/gochat/im-infra/coord"
 )
 
 // limiter 是 RateLimiter 接口的内部实现。

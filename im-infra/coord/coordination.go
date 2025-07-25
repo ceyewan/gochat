@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/client"
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/config"
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/lock"
-	"github.com/ceyewan/gochat/im-infra/coordination/pkg/registry"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/client"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/config"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/lock"
+	"github.com/ceyewan/gochat/im-infra/coord/pkg/registry"
 )
 
 // 模块日志器

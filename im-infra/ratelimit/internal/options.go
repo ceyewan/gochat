@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/cache"
-	"github.com/ceyewan/gochat/im-infra/coordination"
+	coordination "github.com/ceyewan/gochat/im-infra/coord"
 )
 
 // Options 用于配置 RateLimiter 的行为。
