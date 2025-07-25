@@ -155,7 +155,7 @@ func TestSetOperations(t *testing.T) {
 }
 
 func TestCustomConfig(t *testing.T) {
-	// Test config builder
+	// Test configimpl builder
 	cfg := NewConfigBuilder().
 		Addr("localhost:6379").
 		DB(1).
@@ -179,7 +179,7 @@ func TestCustomConfig(t *testing.T) {
 		t.Errorf("Expected KeyPrefix 'test', got '%s'", cfg.KeyPrefix)
 	}
 
-	// Test config validation
+	// Test configimpl validation
 	err := ValidateConfig(cfg)
 	if err != nil {
 		t.Fatalf("Config validation failed: %v", err)
@@ -187,19 +187,19 @@ func TestCustomConfig(t *testing.T) {
 }
 
 func TestPresetConfigs(t *testing.T) {
-	// Test development config
+	// Test development configimpl
 	devCfg := DevelopmentConfig()
 	if devCfg.KeyPrefix != "dev" {
 		t.Errorf("Expected dev KeyPrefix 'dev', got '%s'", devCfg.KeyPrefix)
 	}
 
-	// Test production config
+	// Test production configimpl
 	prodCfg := ProductionConfig()
 	if prodCfg.KeyPrefix != "prod" {
 		t.Errorf("Expected prod KeyPrefix 'prod', got '%s'", prodCfg.KeyPrefix)
 	}
 
-	// Test test config
+	// Test test configimpl
 	testCfg := TestConfig()
 	if testCfg.KeyPrefix != "test" {
 		t.Errorf("Expected test KeyPrefix 'test', got '%s'", testCfg.KeyPrefix)

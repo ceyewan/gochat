@@ -24,10 +24,10 @@ package main
 
 // func main() {
 // 	// 使用默认配置初始化日志
-// 	config := clog.DefaultConfig()
-// 	config.ConsoleOutput = true // 同时输出到控制台
+// 	configimpl := clog.DefaultConfig()
+// 	configimpl.ConsoleOutput = true // 同时输出到控制台
 
-// 	err := clog.Init(config)
+// 	err := clog.Init(configimpl)
 // 	if err != nil {
 // 		panic(err)
 // 	}

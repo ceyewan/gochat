@@ -1,42 +1,16 @@
-package config
+package configimpl
 
 import (
 	"context"
 	"encoding/json"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coord/pkg/client"
+	"github.com/ceyewan/gochat/im-infra/coord/internal/client"
+	"github.com/ceyewan/gochat/im-infra/coord/internal/types"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
-
-// EventType 事件类型
-type EventType string
-
-const (
-	// EventTypePut 设置事件
-	EventTypePut EventType = "PUT"
-
-	// EventTypeDelete 删除事件
-	EventTypeDelete EventType = "DELETE"
-)
-
-// ConfigEvent 配置变化事件
-type ConfigEvent struct {
-	// Type 事件类型：PUT, DELETE
-	Type EventType `json:"type"`
-
-	// Key 配置键
-	Key string `json:"key"`
-
-	// Value 配置值（支持任意类型）
-	Value interface{} `json:"value"`
-
-	// Timestamp 事件时间
-	Timestamp time.Time `json:"timestamp"`
-}
 
 // EtcdConfigCenter 基于 etcd 的配置中心实现
 type EtcdConfigCenter struct {
@@ -48,13 +22,13 @@ type EtcdConfigCenter struct {
 // NewEtcdConfigCenter 创建新的配置中心实例
 func NewEtcdConfigCenter(client *client.EtcdClient, prefix string) *EtcdConfigCenter {
 	if prefix == "" {
-		prefix = "/config"
+		prefix = "/configimpl"
 	}
 
 	return &EtcdConfigCenter{
 		client: client,
 		prefix: prefix,
-		logger: clog.Module("coordination.config"),
+		logger: clog.Module("coordination.configimpl"),
 	}
 }
 
@@ -63,30 +37,30 @@ func (c *EtcdConfigCenter) Get(ctx context.Context, key string) (interface{}, er
 	if key == "" {
 		return nil, client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"config key cannot be empty",
+			"configimpl key cannot be empty",
 			nil,
 		)
 	}
 
 	configKey := path.Join(c.prefix, key)
 
-	c.logger.Info("getting config value",
+	c.logger.Info("getting configimpl value",
 		clog.String("key", configKey))
 
 	resp, err := c.client.Get(ctx, configKey)
 	if err != nil {
-		c.logger.Error("failed to get config value",
+		c.logger.Error("failed to get configimpl value",
 			clog.String("key", configKey),
 			clog.Err(err))
 		return nil, err
 	}
 
 	if len(resp.Kvs) == 0 {
-		c.logger.Debug("config key not found",
+		c.logger.Debug("configimpl key not found",
 			clog.String("key", configKey))
 		return nil, client.NewCoordinationError(
 			client.ErrCodeNotFound,
-			"config key not found",
+			"configimpl key not found",
 			nil,
 		)
 	}
@@ -100,7 +74,7 @@ func (c *EtcdConfigCenter) Get(ctx context.Context, key string) (interface{}, er
 		result = string(value)
 	}
 
-	c.logger.Info("config value retrieved successfully",
+	c.logger.Info("configimpl value retrieved successfully",
 		clog.String("key", configKey),
 		clog.String("value", string(value)))
 
@@ -112,7 +86,7 @@ func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{
 	if key == "" {
 		return client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"config key cannot be empty",
+			"configimpl key cannot be empty",
 			nil,
 		)
 	}
@@ -132,30 +106,30 @@ func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{
 		// 对于其他类型，使用 JSON 序列化
 		valueBytes, err = json.Marshal(value)
 		if err != nil {
-			c.logger.Error("failed to serialize config value",
+			c.logger.Error("failed to serialize configimpl value",
 				clog.String("key", configKey),
 				clog.Err(err))
 			return client.NewCoordinationError(
 				client.ErrCodeValidation,
-				"failed to serialize config value",
+				"failed to serialize configimpl value",
 				err,
 			)
 		}
 	}
 
-	c.logger.Info("setting config value",
+	c.logger.Info("setting configimpl value",
 		clog.String("key", configKey),
 		clog.String("value", string(valueBytes)))
 
 	_, err = c.client.Put(ctx, configKey, string(valueBytes))
 	if err != nil {
-		c.logger.Error("failed to set config value",
+		c.logger.Error("failed to set configimpl value",
 			clog.String("key", configKey),
 			clog.Err(err))
 		return err
 	}
 
-	c.logger.Info("config value set successfully",
+	c.logger.Info("configimpl value set successfully",
 		clog.String("key", configKey))
 
 	return nil
@@ -166,61 +140,61 @@ func (c *EtcdConfigCenter) Delete(ctx context.Context, key string) error {
 	if key == "" {
 		return client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"config key cannot be empty",
+			"configimpl key cannot be empty",
 			nil,
 		)
 	}
 
 	configKey := path.Join(c.prefix, key)
 
-	c.logger.Info("deleting config value",
+	c.logger.Info("deleting configimpl value",
 		clog.String("key", configKey))
 
 	resp, err := c.client.Delete(ctx, configKey)
 	if err != nil {
-		c.logger.Error("failed to delete config value",
+		c.logger.Error("failed to delete configimpl value",
 			clog.String("key", configKey),
 			clog.Err(err))
 		return err
 	}
 
 	if resp.Deleted == 0 {
-		c.logger.Debug("config key not found for deletion",
+		c.logger.Debug("configimpl key not found for deletion",
 			clog.String("key", configKey))
 		return client.NewCoordinationError(
 			client.ErrCodeNotFound,
-			"config key not found",
+			"configimpl key not found",
 			nil,
 		)
 	}
 
-	c.logger.Info("config value deleted successfully",
+	c.logger.Info("configimpl value deleted successfully",
 		clog.String("key", configKey))
 
 	return nil
 }
 
 // Watch 监听配置变化
-func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan ConfigEvent, error) {
+func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan types.ConfigEvent, error) {
 	if key == "" {
 		return nil, client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"config key cannot be empty",
+			"configimpl key cannot be empty",
 			nil,
 		)
 	}
 
 	configKey := path.Join(c.prefix, key)
 
-	c.logger.Info("starting to watch config changes",
+	c.logger.Info("starting to watch configimpl changes",
 		clog.String("key", configKey))
 
 	watchCh := c.client.Watch(ctx, configKey)
-	eventCh := make(chan ConfigEvent, 10)
+	eventCh := make(chan types.ConfigEvent, 10)
 
 	go func() {
 		defer close(eventCh)
-		defer c.logger.Info("config watch stopped",
+		defer c.logger.Info("configimpl watch stopped",
 			clog.String("key", configKey))
 
 		for resp := range watchCh {
@@ -234,7 +208,7 @@ func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan Config
 			for _, event := range resp.Events {
 				configEvent := c.convertEvent(event)
 				if configEvent != nil {
-					c.logger.Info("config change detected",
+					c.logger.Info("configimpl change detected",
 						clog.String("key", configKey),
 						clog.String("type", string(configEvent.Type)))
 
@@ -260,12 +234,12 @@ func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, e
 		searchPrefix = path.Join(c.prefix, prefix)
 	}
 
-	c.logger.Info("listing config keys",
+	c.logger.Info("listing configimpl keys",
 		clog.String("prefix", searchPrefix))
 
 	resp, err := c.client.Get(ctx, searchPrefix, clientv3.WithPrefix())
 	if err != nil {
-		c.logger.Error("failed to list config keys",
+		c.logger.Error("failed to list configimpl keys",
 			clog.String("prefix", searchPrefix),
 			clog.Err(err))
 		return nil, err
@@ -281,7 +255,7 @@ func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, e
 		}
 	}
 
-	c.logger.Info("config keys listed successfully",
+	c.logger.Info("configimpl keys listed successfully",
 		clog.String("prefix", searchPrefix),
 		clog.Int("count", len(keys)))
 
@@ -289,7 +263,7 @@ func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, e
 }
 
 // convertEvent 转换 etcd 事件为配置事件
-func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event) *ConfigEvent {
+func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event) *types.ConfigEvent {
 	key := string(event.Kv.Key)
 
 	// 移除前缀，只返回相对键名
@@ -298,28 +272,27 @@ func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event) *ConfigEvent {
 	}
 	relativeKey := strings.TrimPrefix(key, c.prefix+"/")
 
-	var eventType EventType
+	var eventType types.EventType
 	var value interface{}
 
 	switch event.Type {
 	case clientv3.EventTypePut:
-		eventType = EventTypePut
+		eventType = types.EventTypePut
 		// 尝试解析为 JSON，如果失败则返回原始字符串
 		valueBytes := event.Kv.Value
 		if err := json.Unmarshal(valueBytes, &value); err != nil {
 			value = string(valueBytes)
 		}
 	case clientv3.EventTypeDelete:
-		eventType = EventTypeDelete
+		eventType = types.EventTypeDelete
 		value = nil
 	default:
 		return nil
 	}
 
-	return &ConfigEvent{
-		Type:      eventType,
-		Key:       relativeKey,
-		Value:     value,
-		Timestamp: time.Now(),
+	return &types.ConfigEvent{
+		Type:  eventType,
+		Key:   relativeKey,
+		Value: value,
 	}
 }

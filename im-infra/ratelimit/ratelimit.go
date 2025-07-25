@@ -20,7 +20,7 @@ type RateLimiter = internal.RateLimiter
 
 // New 创建一个新的限流器实例。
 // serviceName 用于构建从 coordination 服务获取配置的路径。
-// 例如，如果 serviceName 是 "im-gateway"，它会尝试从 "/config/{env}/im-gateway/ratelimit/..." 获取规则。
+// 例如，如果 serviceName 是 "im-gateway"，它会尝试从 "/configimpl/{env}/im-gateway/ratelimit/..." 获取规则。
 func New(ctx context.Context, serviceName string, opts ...Option) (RateLimiter, error) {
 	return internal.New(ctx, serviceName, opts...)
 }

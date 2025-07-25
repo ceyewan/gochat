@@ -20,7 +20,7 @@ type uuidGenerator struct {
 // NewUUIDGenerator 创建新的 UUID 生成器
 func NewUUIDGenerator(config UUIDConfig) (UUIDGenerator, error) {
 	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid uuid config: %w", err)
+		return nil, fmt.Errorf("invalid uuid configimpl: %w", err)
 	}
 
 	logger := clog.Module("idgen")

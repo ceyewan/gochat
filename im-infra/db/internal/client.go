@@ -221,7 +221,7 @@ func (c *client) CreateDatabaseIfNotExists(dbName string) error {
 func NewDB(cfg Config) (DB, error) {
 	// 验证配置
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config: %w", err)
+		return nil, fmt.Errorf("invalid configimpl: %w", err)
 	}
 
 	moduleLogger.Info("创建数据库实例",

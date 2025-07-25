@@ -101,7 +101,7 @@ func main() {
     
     // 发送消息
     ctx := context.Background()
-    err = producer.SendSync(ctx, "chat-messages", []byte("Hello from custom config!"))
+    err = producer.SendSync(ctx, "chat-messages", []byte("Hello from custom configimpl!"))
     if err != nil {
         log.Fatal(err)
     }

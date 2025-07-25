@@ -1,4 +1,4 @@
-package lock
+package lockimpl
 
 import (
 	"context"
@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coord/pkg/client"
+	"github.com/ceyewan/gochat/im-infra/coord/internal/client"
+	"github.com/ceyewan/gochat/im-infra/coord/lock"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
@@ -27,26 +28,26 @@ func NewEtcdDistributedLock(client *client.EtcdClient, prefix string) *EtcdDistr
 	return &EtcdDistributedLock{
 		client: client,
 		prefix: prefix,
-		logger: clog.Module("coordination.lock"),
+		logger: clog.Module("coordination.lockimpl"),
 	}
 }
 
 // Acquire 获取互斥锁
-func (l *EtcdDistributedLock) Acquire(ctx context.Context, key string, ttl time.Duration) (Lock, error) {
+func (l *EtcdDistributedLock) Acquire(ctx context.Context, key string, ttl time.Duration) (lock.Lock, error) {
 	return l.acquireLock(ctx, key, ttl, true)
 }
 
 // TryAcquire 尝试获取锁（非阻塞）
-func (l *EtcdDistributedLock) TryAcquire(ctx context.Context, key string, ttl time.Duration) (Lock, error) {
+func (l *EtcdDistributedLock) TryAcquire(ctx context.Context, key string, ttl time.Duration) (lock.Lock, error) {
 	return l.acquireLock(ctx, key, ttl, false)
 }
 
 // acquireLock 内部获取锁的实现
-func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl time.Duration, blocking bool) (Lock, error) {
+func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl time.Duration, blocking bool) (lock.Lock, error) {
 	if key == "" {
 		return nil, client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"lock key cannot be empty",
+			"lockimpl key cannot be empty",
 			nil,
 		)
 	}
@@ -54,14 +55,14 @@ func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl t
 	if ttl <= 0 {
 		return nil, client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"lock ttl must be positive",
+			"lockimpl ttl must be positive",
 			nil,
 		)
 	}
 
 	lockKey := path.Join(l.prefix, key)
 
-	l.logger.Info("attempting to acquire lock",
+	l.logger.Info("attempting to acquire lockimpl",
 		clog.String("key", lockKey),
 		clog.Duration("ttl", ttl),
 		clog.Bool("blocking", blocking))
@@ -69,7 +70,7 @@ func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl t
 	// 创建租约
 	leaseResp, err := l.client.Grant(ctx, int64(ttl.Seconds()))
 	if err != nil {
-		l.logger.Error("failed to create lease for lock",
+		l.logger.Error("failed to create lease for lockimpl",
 			clog.String("key", lockKey),
 			clog.Err(err))
 		return nil, err
@@ -88,7 +89,7 @@ func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl t
 	if err != nil {
 		// 如果获取锁失败，撤销租约
 		l.client.Revoke(context.Background(), leaseID)
-		l.logger.Error("failed to acquire lock",
+		l.logger.Error("failed to acquire lockimpl",
 			clog.String("key", lockKey),
 			clog.Err(err))
 		return nil, err
@@ -99,7 +100,7 @@ func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl t
 		l.client.Revoke(context.Background(), leaseID)
 		return nil, client.NewCoordinationError(
 			client.ErrCodeConflict,
-			"lock is already held by another client",
+			"lockimpl is already held by another client",
 			nil,
 		)
 	}
@@ -131,7 +132,7 @@ func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl t
 	// 启动后台 goroutine 处理 keep alive 响应
 	go lock.handleKeepAlive()
 
-	l.logger.Info("lock acquired successfully",
+	l.logger.Info("lockimpl acquired successfully",
 		clog.String("key", lockKey),
 		clog.Int64("lease_id", int64(leaseID)))
 
@@ -159,13 +160,13 @@ func (l *EtcdDistributedLock) acquireBlocking(ctx context.Context, key string, l
 		if err == context.DeadlineExceeded || err == context.Canceled {
 			return false, client.NewCoordinationError(
 				client.ErrCodeTimeout,
-				"lock acquisition timeout",
+				"lockimpl acquisition timeout",
 				err,
 			)
 		}
 		return false, client.NewCoordinationError(
 			client.ErrCodeConnection,
-			"failed to acquire lock",
+			"failed to acquire lockimpl",
 			err,
 		)
 	}
@@ -184,27 +185,12 @@ func (l *EtcdDistributedLock) acquireNonBlocking(ctx context.Context, key string
 	if err != nil {
 		return false, client.NewCoordinationError(
 			client.ErrCodeConnection,
-			"failed to execute lock transaction",
+			"failed to execute lockimpl transaction",
 			err,
 		)
 	}
 
 	return resp.Succeeded, nil
-}
-
-// Lock 接口定义
-type Lock interface {
-	// Unlock 释放锁
-	Unlock(ctx context.Context) error
-
-	// Renew 续期锁
-	Renew(ctx context.Context, ttl time.Duration) error
-
-	// TTL 获取锁的剩余有效时间
-	TTL(ctx context.Context) (time.Duration, error)
-
-	// Key 获取锁的键
-	Key() string
 }
 
 // EtcdLock 基于 etcd 的锁实现
@@ -224,12 +210,12 @@ func (l *EtcdLock) Unlock(ctx context.Context) error {
 	if l.closed {
 		return client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"lock is already closed",
+			"lockimpl is already closed",
 			nil,
 		)
 	}
 
-	l.logger.Info("releasing lock",
+	l.logger.Info("releasing lockimpl",
 		clog.String("key", l.key),
 		clog.Int64("lease_id", int64(l.leaseID)))
 
@@ -241,7 +227,7 @@ func (l *EtcdLock) Unlock(ctx context.Context) error {
 	// 先尝试删除锁键，这样即使租约已过期也能正常释放
 	_, err := l.client.Delete(ctx, l.key)
 	if err != nil {
-		l.logger.Warn("failed to delete lock key, will try to revoke lease",
+		l.logger.Warn("failed to delete lockimpl key, will try to revoke lease",
 			clog.String("key", l.key),
 			clog.Err(err))
 	}
@@ -263,7 +249,7 @@ func (l *EtcdLock) Unlock(ctx context.Context) error {
 			if err != nil {
 				return client.NewCoordinationError(
 					client.ErrCodeConnection,
-					"failed to release lock",
+					"failed to release lockimpl",
 					revokeErr,
 				)
 			}
@@ -271,7 +257,7 @@ func (l *EtcdLock) Unlock(ctx context.Context) error {
 	}
 
 	l.closed = true
-	l.logger.Info("lock released successfully",
+	l.logger.Info("lockimpl released successfully",
 		clog.String("key", l.key))
 
 	return nil
@@ -292,7 +278,7 @@ func (l *EtcdLock) Renew(ctx context.Context, ttl time.Duration) error {
 	if l.closed {
 		return client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"lock is already closed",
+			"lockimpl is already closed",
 			nil,
 		)
 	}
@@ -305,7 +291,7 @@ func (l *EtcdLock) Renew(ctx context.Context, ttl time.Duration) error {
 		)
 	}
 
-	l.logger.Info("renewing lock",
+	l.logger.Info("renewing lockimpl",
 		clog.String("key", l.key),
 		clog.Duration("ttl", ttl))
 
@@ -313,7 +299,7 @@ func (l *EtcdLock) Renew(ctx context.Context, ttl time.Duration) error {
 	// 这里我们只是更新 TTL 记录用于 TTL() 方法
 	l.originalTTL = ttl
 
-	l.logger.Info("lock renewed successfully",
+	l.logger.Info("lockimpl renewed successfully",
 		clog.String("key", l.key),
 		clog.Duration("new_ttl", ttl))
 
@@ -325,7 +311,7 @@ func (l *EtcdLock) TTL(ctx context.Context) (time.Duration, error) {
 	if l.closed {
 		return 0, client.NewCoordinationError(
 			client.ErrCodeValidation,
-			"lock is already closed",
+			"lockimpl is already closed",
 			nil,
 		)
 	}
@@ -339,7 +325,7 @@ func (l *EtcdLock) TTL(ctx context.Context) (time.Duration, error) {
 			clog.Err(err))
 		return 0, client.NewCoordinationError(
 			client.ErrCodeConnection,
-			"failed to get lock TTL",
+			"failed to get lockimpl TTL",
 			err,
 		)
 	}
@@ -347,7 +333,7 @@ func (l *EtcdLock) TTL(ctx context.Context) (time.Duration, error) {
 	if resp.TTL <= 0 {
 		return 0, client.NewCoordinationError(
 			client.ErrCodeNotFound,
-			"lock has expired",
+			"lockimpl has expired",
 			nil,
 		)
 	}

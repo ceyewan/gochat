@@ -233,7 +233,7 @@ func demonstrateErrorHandling(ctx context.Context) {
 	}
 
 	// 4. 锁获取失败
-	lock1, err := cache.AcquireLock(ctx, "error:demo:lock", time.Minute)
+	lock1, err := cache.AcquireLock(ctx, "error:demo:lockimpl", time.Minute)
 	if err != nil {
 		clog.Error("获取第一个锁失败", clog.Err(err))
 		return
@@ -241,7 +241,7 @@ func demonstrateErrorHandling(ctx context.Context) {
 	defer lock1.Unlock(ctx)
 
 	// 尝试获取同一个锁（应该失败）
-	_, err = cache.AcquireLock(ctx, "error:demo:lock", time.Minute)
+	_, err = cache.AcquireLock(ctx, "error:demo:lockimpl", time.Minute)
 	if err != nil {
 		clog.Info("处理锁竞争错误", clog.Err(err))
 	}

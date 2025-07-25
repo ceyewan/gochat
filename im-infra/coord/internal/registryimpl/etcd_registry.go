@@ -1,60 +1,17 @@
-package registry
+package registryimpl
 
 import (
 	"context"
 	"encoding/json"
+	"github.com/ceyewan/gochat/im-infra/coord/registry"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/coord/pkg/client"
+	"github.com/ceyewan/gochat/im-infra/coord/internal/client"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
-
-// EventType 事件类型
-type EventType string
-
-const (
-	// EventTypePut 设置事件
-	EventTypePut EventType = "PUT"
-
-	// EventTypeDelete 删除事件
-	EventTypeDelete EventType = "DELETE"
-)
-
-// ServiceInfo 服务信息
-type ServiceInfo struct {
-	// ID 服务实例ID
-	ID string `json:"id"`
-
-	// Name 服务名称
-	Name string `json:"name"`
-
-	// Address 服务地址
-	Address string `json:"address"`
-
-	// Port 服务端口
-	Port int `json:"port"`
-
-	// Metadata 服务元数据
-	Metadata map[string]string `json:"metadata"`
-
-	// TTL 服务TTL
-	TTL time.Duration `json:"ttl"`
-}
-
-// ServiceEvent 服务变化事件
-type ServiceEvent struct {
-	// Type 事件类型
-	Type EventType `json:"type"`
-
-	// Service 服务信息
-	Service ServiceInfo `json:"service"`
-
-	// Timestamp 事件时间
-	Timestamp time.Time `json:"timestamp"`
-}
 
 // EtcdServiceRegistry 基于 etcd 的服务注册发现实现
 type EtcdServiceRegistry struct {
@@ -77,8 +34,11 @@ func NewEtcdServiceRegistry(client *client.EtcdClient, prefix string) *EtcdServi
 }
 
 // Register 注册服务
-func (r *EtcdServiceRegistry) Register(ctx context.Context, service ServiceInfo) error {
-	if err := r.validateServiceInfo(service); err != nil {
+func (r *EtcdServiceRegistry) Register(ctx context.Context, service registry.ServiceInfo) error {
+	// 注意：内部仍然可以使用一个更详细的结构体，但对外的接口必须是 registry.ServiceInfo
+	internalService := toInternalServiceInfo(service)
+
+	if err := r.validateServiceInfo(internalService); err != nil {
 		return err
 	}
 
@@ -92,7 +52,7 @@ func (r *EtcdServiceRegistry) Register(ctx context.Context, service ServiceInfo)
 		clog.Duration("ttl", service.TTL))
 
 	// 序列化服务信息
-	serviceData, err := json.Marshal(service)
+	serviceData, err := json.Marshal(internalService)
 	if err != nil {
 		r.logger.Error("failed to serialize service info",
 			clog.String("service_name", service.Name),
@@ -206,7 +166,7 @@ func (r *EtcdServiceRegistry) Unregister(ctx context.Context, serviceID string) 
 }
 
 // Discover 发现服务
-func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) ([]ServiceInfo, error) {
+func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) ([]registry.ServiceInfo, error) {
 	if serviceName == "" {
 		return nil, client.NewCoordinationError(
 			client.ErrCodeValidation,
@@ -229,17 +189,16 @@ func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) 
 		return nil, err
 	}
 
-	var services []ServiceInfo
+	var services []registry.ServiceInfo
 	for _, kv := range resp.Kvs {
-		var service ServiceInfo
+		var service internalServiceInfo
 		if err := json.Unmarshal(kv.Value, &service); err != nil {
 			r.logger.Warn("failed to unmarshal service info, skipping",
 				clog.String("key", string(kv.Key)),
 				clog.Err(err))
 			continue
 		}
-
-		services = append(services, service)
+		services = append(services, toPublicServiceInfo(service))
 	}
 
 	r.logger.Info("services discovered successfully",
@@ -250,7 +209,7 @@ func (r *EtcdServiceRegistry) Discover(ctx context.Context, serviceName string) 
 }
 
 // Watch 监听服务变化
-func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-chan ServiceEvent, error) {
+func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-chan registry.ServiceEvent, error) {
 	if serviceName == "" {
 		return nil, client.NewCoordinationError(
 			client.ErrCodeValidation,
@@ -266,7 +225,7 @@ func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-
 		clog.String("prefix", servicePrefix))
 
 	watchCh := r.client.Watch(ctx, servicePrefix, clientv3.WithPrefix())
-	eventCh := make(chan ServiceEvent, 10)
+	eventCh := make(chan registry.ServiceEvent, 10)
 
 	go func() {
 		defer close(eventCh)
@@ -303,7 +262,7 @@ func (r *EtcdServiceRegistry) Watch(ctx context.Context, serviceName string) (<-
 }
 
 // validateServiceInfo 验证服务信息
-func (r *EtcdServiceRegistry) validateServiceInfo(service ServiceInfo) error {
+func (r *EtcdServiceRegistry) validateServiceInfo(service internalServiceInfo) error {
 	if service.ID == "" {
 		return client.NewCoordinationError(
 			client.ErrCodeValidation,
@@ -366,7 +325,7 @@ func (r *EtcdServiceRegistry) findServiceKey(ctx context.Context, serviceID stri
 	}
 
 	for _, kv := range resp.Kvs {
-		var service ServiceInfo
+		var service internalServiceInfo
 		if err := json.Unmarshal(kv.Value, &service); err != nil {
 			continue
 		}
@@ -380,7 +339,7 @@ func (r *EtcdServiceRegistry) findServiceKey(ctx context.Context, serviceID stri
 }
 
 // convertEvent 转换 etcd 事件为服务事件
-func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *ServiceEvent {
+func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *registry.ServiceEvent {
 	key := string(event.Kv.Key)
 
 	// 检查是否为服务键
@@ -388,12 +347,12 @@ func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *ServiceEvent 
 		return nil
 	}
 
-	var eventType EventType
-	var service ServiceInfo
+	var eventType registry.EventType
+	var service internalServiceInfo
 
 	switch event.Type {
 	case clientv3.EventTypePut:
-		eventType = EventTypePut
+		eventType = registry.EventTypePut
 		if err := json.Unmarshal(event.Kv.Value, &service); err != nil {
 			r.logger.Warn("failed to unmarshal service info in event",
 				clog.String("key", key),
@@ -401,7 +360,7 @@ func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *ServiceEvent 
 			return nil
 		}
 	case clientv3.EventTypeDelete:
-		eventType = EventTypeDelete
+		eventType = registry.EventTypeDelete
 		// 对于删除事件，尝试从键中提取服务信息
 		parts := strings.Split(strings.TrimPrefix(key, r.prefix+"/"), "/")
 		if len(parts) >= 2 {
@@ -412,10 +371,42 @@ func (r *EtcdServiceRegistry) convertEvent(event *clientv3.Event) *ServiceEvent 
 		return nil
 	}
 
-	return &ServiceEvent{
-		Type:      eventType,
-		Service:   service,
-		Timestamp: time.Now(),
+	return &registry.ServiceEvent{
+		Type:    eventType,
+		Service: toPublicServiceInfo(service),
+	}
+}
+
+// internalServiceInfo 包含内部实现细节（如TTL）的服务信息
+type internalServiceInfo struct {
+	ID       string            `json:"id"`
+	Name     string            `json:"name"`
+	Address  string            `json:"address"`
+	Metadata map[string]string `json:"metadata,omitempty"`
+	TTL      time.Duration     `json:"ttl"`
+	Port     int               `json:"port"` // 假设 Port 也是内部细节
+}
+
+// toInternalServiceInfo 将公共API结构转换为内部结构
+func toInternalServiceInfo(s registry.ServiceInfo) internalServiceInfo {
+	// 默认 TTL
+	ttl := 30 * time.Second
+	return internalServiceInfo{
+		ID:       s.ID,
+		Name:     s.Name,
+		Address:  s.Address,
+		Metadata: s.Metadata,
+		TTL:      ttl, // 在这里处理默认值或从元数据解析
+	}
+}
+
+// toPublicServiceInfo 将内部结构转换为公共API结构
+func toPublicServiceInfo(s internalServiceInfo) registry.ServiceInfo {
+	return registry.ServiceInfo{
+		ID:       s.ID,
+		Name:     s.Name,
+		Address:  s.Address,
+		Metadata: s.Metadata,
 	}
 }
 

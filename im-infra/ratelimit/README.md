@@ -42,7 +42,7 @@ func main() {
 	// 初始化限流器
 	limiter, err := ratelimit.New(
 		context.Background(),
-		"my-service", // 用于在 etcd 中查找 /config/{env}/my-service/ratelimit/*
+		"my-service", // 用于在 etcd 中查找 /configimpl/{env}/my-service/ratelimit/*
 		ratelimit.WithDefaultRules(defaultRules),
 	)
 	if err != nil {

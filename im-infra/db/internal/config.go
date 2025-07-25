@@ -214,7 +214,7 @@ func (c *Config) Validate() error {
 	// 验证分库分表配置
 	if c.Sharding != nil {
 		if err := c.validateShardingConfig(); err != nil {
-			return fmt.Errorf("invalid sharding config: %w", err)
+			return fmt.Errorf("invalid sharding configimpl: %w", err)
 		}
 	}
 

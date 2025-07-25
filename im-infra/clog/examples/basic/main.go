@@ -13,7 +13,7 @@ func main() {
 	// 1. 全局日志方法（最简单的使用方式）
 	fmt.Println("1. 全局日志方法:")
 	clog.Info("服务启动成功", clog.String("version", "1.0.0"))
-	clog.Warn("配置文件缺失，使用默认配置", clog.String("config", "app.yaml"))
+	clog.Warn("配置文件缺失，使用默认配置", clog.String("configimpl", "app.yaml"))
 	clog.Error("数据库连接失败", clog.String("host", "localhost"), clog.Int("port", 5432))
 
 	// 2. 带 Context 的全局日志方法（自动注入 TraceID）

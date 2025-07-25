@@ -23,7 +23,7 @@ type client struct {
 // NewIdempotentClient 创建新的幂等客户端
 func NewIdempotentClient(cfg Config) (Idempotent, error) {
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config: %w", err)
+		return nil, fmt.Errorf("invalid configimpl: %w", err)
 	}
 
 	// 创建缓存实例

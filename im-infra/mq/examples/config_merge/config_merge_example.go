@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	fmt.Println("Testing MQ config merging...")
+	fmt.Println("Testing MQ configimpl merging...")
 
-	// Test 1: Partial config with only main fields
-	fmt.Println("\n=== Test 1: Partial config with main fields ===")
+	// Test 1: Partial configimpl with only main fields
+	fmt.Println("\n=== Test 1: Partial configimpl with main fields ===")
 	cfg1 := mq.Config{
 		Brokers:  []string{"localhost:19092"},
 		ClientID: "test-client",
@@ -32,18 +32,18 @@ func main() {
 	fmt.Printf("Merged ProducerConfig.ClientID: %s\n", merged1.ProducerConfig.ClientID)
 	fmt.Printf("Merged ConsumerConfig.ClientID: %s\n", merged1.ConsumerConfig.ClientID)
 
-	// Test 2: Try to create MQ instance with partial config
-	fmt.Println("\n=== Test 2: Creating MQ instance with partial config ===")
+	// Test 2: Try to create MQ instance with partial configimpl
+	fmt.Println("\n=== Test 2: Creating MQ instance with partial configimpl ===")
 	mqInstance, err := mq.New(cfg1)
 	if err != nil {
 		log.Printf("Failed to create MQ instance: %v", err)
 	} else {
-		fmt.Println("✅ Successfully created MQ instance with partial config!")
+		fmt.Println("✅ Successfully created MQ instance with partial configimpl!")
 		mqInstance.Close()
 	}
 
-	// Test 3: Empty config should get all defaults
-	fmt.Println("\n=== Test 3: Empty config gets all defaults ===")
+	// Test 3: Empty configimpl should get all defaults
+	fmt.Println("\n=== Test 3: Empty configimpl gets all defaults ===")
 	emptyCfg := mq.Config{}
 	mergedEmpty := mq.MergeWithDefaults(emptyCfg)
 	fmt.Printf("Default Brokers: %v\n", mergedEmpty.Brokers)
@@ -51,8 +51,8 @@ func main() {
 	fmt.Printf("Default ProducerConfig.Brokers: %v\n", mergedEmpty.ProducerConfig.Brokers)
 	fmt.Printf("Default ConsumerConfig.Brokers: %v\n", mergedEmpty.ConsumerConfig.Brokers)
 
-	// Test 4: Show that the original chat example config now works
-	fmt.Println("\n=== Test 4: Original chat example config ===")
+	// Test 4: Show that the original chat example configimpl now works
+	fmt.Println("\n=== Test 4: Original chat example configimpl ===")
 	chatCfg := mq.Config{
 		Brokers:  []string{"localhost:19092"},
 		ClientID: "chat-example",
@@ -72,7 +72,7 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to create chat MQ instance: %v", err)
 	} else {
-		fmt.Println("✅ Successfully created MQ instance with chat example config!")
+		fmt.Println("✅ Successfully created MQ instance with chat example configimpl!")
 		chatMqInstance.Close()
 	}
 

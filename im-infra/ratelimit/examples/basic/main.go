@@ -19,7 +19,7 @@ func main() {
 	// 在真实应用中，ctx 应该来自应用的生命周期管理
 	limiter, err := ratelimit.New(
 		context.Background(),
-		"my_awesome_app", // 这将用于在 etcd 中查找 /config/{env}/my_awesome_app/ratelimit/*
+		"my_awesome_app", // 这将用于在 etcd 中查找 /configimpl/{env}/my_awesome_app/ratelimit/*
 		ratelimit.WithDefaultRules(defaultRules),
 	)
 	if err != nil {

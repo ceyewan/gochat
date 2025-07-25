@@ -15,17 +15,17 @@ import (
 
 // snowflakeGenerator 雪花算法 ID 生成器的实现
 type snowflakeGenerator struct {
-	config SnowflakeConfig
-	node   *snowflake.Node
-	logger clog.Logger
-	once   sync.Once
+	config  SnowflakeConfig
+	node    *snowflake.Node
+	logger  clog.Logger
+	once    sync.Once
 	initErr error
 }
 
 // NewSnowflakeGenerator 创建新的雪花算法 ID 生成器
 func NewSnowflakeGenerator(config SnowflakeConfig) (SnowflakeGenerator, error) {
 	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid snowflake config: %w", err)
+		return nil, fmt.Errorf("invalid snowflake configimpl: %w", err)
 	}
 
 	logger := clog.Module("idgen")
@@ -149,16 +149,16 @@ func (g *snowflakeGenerator) GetNodeID() int64 {
 func (g *snowflakeGenerator) ParseID(id int64) (timestamp int64, nodeID int64, sequence int64) {
 	// 雪花算法 ID 结构：
 	// 1 位符号位（始终为 0）+ 41 位时间戳 + 10 位节点 ID + 12 位序列号
-	
+
 	// 提取序列号（低 12 位）
 	sequence = id & 0xFFF
-	
+
 	// 提取节点 ID（第 12-21 位）
 	nodeID = (id >> 12) & 0x3FF
-	
+
 	// 提取时间戳（第 22-62 位）
 	timestamp = (id >> 22) + snowflake.Epoch
-	
+
 	return timestamp, nodeID, sequence
 }
 

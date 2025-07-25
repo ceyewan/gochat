@@ -9,10 +9,10 @@ import (
 // NewIDGenerator 根据配置创建 ID 生成器
 func NewIDGenerator(cfg Config) (IDGenerator, error) {
 	logger := clog.Module("idgen")
-	
+
 	if err := cfg.Validate(); err != nil {
 		logger.Error("配置验证失败", clog.Err(err))
-		return nil, fmt.Errorf("invalid config: %w", err)
+		return nil, fmt.Errorf("invalid configimpl: %w", err)
 	}
 
 	logger.Info("创建 ID 生成器", clog.String("type", cfg.Type.String()))
@@ -20,13 +20,13 @@ func NewIDGenerator(cfg Config) (IDGenerator, error) {
 	switch cfg.Type {
 	case SnowflakeType:
 		return NewSnowflakeGenerator(*cfg.Snowflake)
-		
+
 	case UUIDType:
 		return NewUUIDGenerator(*cfg.UUID)
-		
+
 	case RedisType:
 		return NewRedisIDGenerator(*cfg.Redis)
-		
+
 	default:
 		logger.Error("不支持的生成器类型", clog.String("type", cfg.Type.String()))
 		return nil, fmt.Errorf("unsupported generator type: %s", cfg.Type)
@@ -60,7 +60,7 @@ func NewUUIDIDGenerator(config *UUIDConfig) (UUIDGenerator, error) {
 // NewRedisIDIDGenerator 创建 Redis 自增 ID 生成器的便捷方法
 func NewRedisIDIDGenerator(config *RedisConfig) (RedisIDGenerator, error) {
 	if config == nil {
-		return nil, fmt.Errorf("redis config is required")
+		return nil, fmt.Errorf("redis configimpl is required")
 	}
 	return NewRedisIDGenerator(*config)
 }

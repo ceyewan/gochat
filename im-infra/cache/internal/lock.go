@@ -32,10 +32,10 @@ func (c *cache) Lock(ctx context.Context, key string, expiration time.Duration) 
 		expiration = c.lockConfig.DefaultExpiration
 	}
 
-	formattedKey := c.formatKey("lock:" + key)
+	formattedKey := c.formatKey("lockimpl:" + key)
 	lockValue := generateLockValue()
 
-	lockLogger := clog.Module("cache.lock")
+	lockLogger := clog.Module("cache.lockimpl")
 
 	// 尝试获取锁，使用 SET NX EX 命令
 	var acquired bool
@@ -57,7 +57,7 @@ func (c *cache) Lock(ctx context.Context, key string, expiration time.Duration) 
 			clog.String("key", key),
 			clog.Duration("expiration", expiration),
 		)
-		return nil, fmt.Errorf("failed to acquire lock for key %s: lock already held", key)
+		return nil, fmt.Errorf("failed to acquire lockimpl for key %s: lockimpl already held", key)
 	}
 
 	lockLogger.Info("成功获取锁",
@@ -111,7 +111,7 @@ func (l *lock) Unlock(ctx context.Context) error {
 			clog.String("value", l.value),
 			clog.Duration("duration", duration),
 		)
-		return fmt.Errorf("failed to unlock key %s: lock not held or expired", l.key)
+		return fmt.Errorf("failed to unlock key %s: lockimpl not held or expired", l.key)
 	}
 
 	l.logger.Info("成功释放锁",
@@ -153,7 +153,7 @@ func (l *lock) Refresh(ctx context.Context, expiration time.Duration) error {
 			clog.Duration("duration", duration),
 			clog.Err(err),
 		)
-		return fmt.Errorf("failed to refresh lock for key %s: %w", l.key, err)
+		return fmt.Errorf("failed to refresh lockimpl for key %s: %w", l.key, err)
 	}
 
 	refreshed := result.(int64)
@@ -164,7 +164,7 @@ func (l *lock) Refresh(ctx context.Context, expiration time.Duration) error {
 			clog.Duration("newExpiration", expiration),
 			clog.Duration("duration", duration),
 		)
-		return fmt.Errorf("failed to refresh lock for key %s: lock not held or expired", l.key)
+		return fmt.Errorf("failed to refresh lockimpl for key %s: lockimpl not held or expired", l.key)
 	}
 
 	l.expiration = expiration
@@ -207,7 +207,7 @@ func (l *lock) IsLocked(ctx context.Context) (bool, error) {
 			clog.Duration("duration", duration),
 			clog.Err(err),
 		)
-		return false, fmt.Errorf("failed to check lock status for key %s: %w", l.key, err)
+		return false, fmt.Errorf("failed to check lockimpl status for key %s: %w", l.key, err)
 	}
 
 	isLocked := value == l.value
@@ -256,7 +256,7 @@ func (c *cache) TryLock(ctx context.Context, key string, expiration time.Duratio
 	}
 
 	var lastErr error
-	lockLogger := clog.Module("cache.lock")
+	lockLogger := clog.Module("cache.lockimpl")
 
 	for i := 0; i <= maxRetries; i++ {
 		if i > 0 {

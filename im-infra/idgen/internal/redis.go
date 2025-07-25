@@ -20,7 +20,7 @@ type redisIDGenerator struct {
 // NewRedisIDGenerator 创建新的 Redis 自增 ID 生成器
 func NewRedisIDGenerator(config RedisConfig) (RedisIDGenerator, error) {
 	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid redis config: %w", err)
+		return nil, fmt.Errorf("invalid redis configimpl: %w", err)
 	}
 
 	logger := clog.Module("idgen")
@@ -42,7 +42,7 @@ func NewRedisIDGenerator(config RedisConfig) (RedisIDGenerator, error) {
 	// 测试连接
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	if err := cacheInstance.Ping(ctx); err != nil {
 		logger.Error("Redis 连接测试失败", clog.Err(err))
 		return nil, fmt.Errorf("failed to ping redis: %w", err)
@@ -140,7 +140,7 @@ func (g *redisIDGenerator) Reset(ctx context.Context, key string) error {
 	}()
 
 	fullKey := g.formatKey(key)
-	
+
 	err := g.cache.Set(ctx, fullKey, g.config.InitialValue, g.config.TTL)
 	if err != nil {
 		g.logger.Error("重置计数器失败", clog.String("key", fullKey), clog.Err(err))
@@ -163,7 +163,7 @@ func (g *redisIDGenerator) GetCurrent(ctx context.Context, key string) (int64, e
 	}()
 
 	fullKey := g.formatKey(key)
-	
+
 	value, err := g.cache.Get(ctx, fullKey)
 	if err != nil {
 		g.logger.Error("获取当前计数值失败", clog.String("key", fullKey), clog.Err(err))

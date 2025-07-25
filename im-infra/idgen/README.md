@@ -328,7 +328,7 @@ type SnowflakeGenerator interface {
 参考 `im-infra/db` 库的设计，采用配置驱动的架构：
 
 ```go
-// internal/config.go - 配置结构体设计
+// internal/configimpl.go - 配置结构体设计
 type Config struct {
     Type      GeneratorType    `json:"type"`
     Snowflake *SnowflakeConfig `json:"snowflake,omitempty"`
@@ -357,7 +357,7 @@ func (c *Config) Validate() error {
 // internal/client.go - 工厂方法
 func NewIDGenerator(cfg Config) (IDGenerator, error) {
     if err := cfg.Validate(); err != nil {
-        return nil, fmt.Errorf("invalid config: %w", err)
+        return nil, fmt.Errorf("invalid configimpl: %w", err)
     }
 
     switch cfg.Type {

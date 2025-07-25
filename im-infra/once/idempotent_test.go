@@ -341,14 +341,14 @@ func TestConfigValidation(t *testing.T) {
 
 	err := cfg.Validate()
 	if err == nil {
-		t.Error("Expected config validation to fail")
+		t.Error("Expected configimpl validation to fail")
 	}
 
 	// 测试有效配置
 	cfg = DefaultConfig()
 	err = cfg.Validate()
 	if err != nil {
-		t.Errorf("Expected default config to be valid: %v", err)
+		t.Errorf("Expected default configimpl to be valid: %v", err)
 	}
 }
 

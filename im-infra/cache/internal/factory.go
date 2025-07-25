@@ -17,7 +17,7 @@ var (
 func NewCache(cfg Config) (Cache, error) {
 	// 验证配置
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config: %w", err)
+		return nil, fmt.Errorf("invalid configimpl: %w", err)
 	}
 
 	logger.Info("创建缓存实例",

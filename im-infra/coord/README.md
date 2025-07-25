@@ -61,7 +61,7 @@ func main() {
     ctx := context.Background()
     
     // 使用分布式锁
-    lock, err := coord.Lock().Acquire(ctx, "my-lock", 30*time.Second)
+    lock, err := coord.Lock().Acquire(ctx, "my-lockimpl", 30*time.Second)
     if err != nil {
         panic(err)
     }
@@ -110,7 +110,7 @@ func main() {
     ctx := context.Background()
     
     // 全局锁方法
-    lock, err := coordination.AcquireLock(ctx, "global-lock", 30*time.Second)
+    lock, err := coordination.AcquireLock(ctx, "global-lockimpl", 30*time.Second)
     if err != nil {
         panic(err)
     }
@@ -321,7 +321,7 @@ opts := coordination.CoordinatorOptions{
 ### 配置变化监听
 
 ```go
-watchCh, err := coord.Config().Watch(ctx, "app.config")
+watchCh, err := coord.Config().Watch(ctx, "app.configimpl")
 if err != nil {
     panic(err)
 }

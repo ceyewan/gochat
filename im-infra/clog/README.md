@@ -39,7 +39,7 @@ import (
 func main() {
     // 1. 直接使用全局方法（最简单）
     clog.Info("服务启动成功", clog.String("version", "1.0.0"))
-    clog.Warn("配置文件不存在，使用默认配置", clog.String("file", "config.yaml"))
+    clog.Warn("配置文件不存在，使用默认配置", clog.String("file", "configimpl.yaml"))
     clog.Error("数据库连接失败", clog.Err(err), clog.Int("retry", 3))
 
     // 2. 带 Context 的日志（自动注入 TraceID）

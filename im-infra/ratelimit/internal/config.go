@@ -88,13 +88,13 @@ func (l *limiter) startRuleRefresher() {
 }
 
 // buildConfigPath 构建用于获取配置的 etcd 路径。
-// 格式: /config/{env}/{serviceName}/ratelimit
+// 格式: /configimpl/{env}/{serviceName}/ratelimit
 func (l *limiter) buildConfigPath() string {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "dev" // 默认环境
 	}
-	return fmt.Sprintf("/config/%s/%s/ratelimit", env, l.serviceName)
+	return fmt.Sprintf("/configimpl/%s/%s/ratelimit", env, l.serviceName)
 }
 
 // getRule 获取一个规则。

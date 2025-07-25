@@ -333,7 +333,7 @@ spec:
         - containerPort: 8080
         env:
         - name: CONFIG_PATH
-          value: "/etc/config/config.yaml"
+          value: "/etc/configimpl/configimpl.yaml"
         resources:
           requests:
             memory: "256Mi"
