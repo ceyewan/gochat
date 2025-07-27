@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
-	"github.com/ceyewan/gochat/im-infra/id-gen/internal"
+	"github.com/ceyewan/gochat/im-infra/idgen/internal"
 )
 
 // IDGenerator 定义 ID 生成器的核心接口

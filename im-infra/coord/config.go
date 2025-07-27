@@ -35,8 +35,8 @@ type RetryConfig struct {
 	Multiplier float64 `json:"multiplier"`
 }
 
-// DefaultCoordinatorOptionsConfig 返回默认的协调器配置
-func DefaultCoordinatorConfig() CoordinatorConfig {
+// DefaultConfig returns a default configuration for the coordinator.
+func DefaultConfig() CoordinatorConfig {
 	return CoordinatorConfig{
 		Endpoints: []string{"localhost:23791", "localhost:23792", "localhost:23793"},
 		Timeout:   5 * time.Second,

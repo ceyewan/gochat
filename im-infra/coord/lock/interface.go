@@ -18,8 +18,6 @@ type DistributedLock interface {
 type Lock interface {
 	// Unlock 释放锁
 	Unlock(ctx context.Context) error
-	// Renew 续期锁
-	Renew(ctx context.Context, ttl time.Duration) error
 	// TTL 获取锁的剩余有效时间
 	TTL(ctx context.Context) (time.Duration, error)
 	// Key 获取锁的键

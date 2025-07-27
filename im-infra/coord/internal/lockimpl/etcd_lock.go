@@ -8,357 +8,141 @@ import (
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-infra/coord/internal/client"
 	"github.com/ceyewan/gochat/im-infra/coord/lock"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
-// EtcdDistributedLock 基于 etcd 的分布式锁实现
-type EtcdDistributedLock struct {
+// EtcdLockFactory is a factory for creating etcd-based distributed locks.
+// It implements the lock.DistributedLock interface.
+type EtcdLockFactory struct {
 	client *client.EtcdClient
 	prefix string
 	logger clog.Logger
 }
 
-// NewEtcdDistributedLock 创建新的分布式锁实例
-func NewEtcdDistributedLock(client *client.EtcdClient, prefix string) *EtcdDistributedLock {
+// NewEtcdLockFactory creates a new factory for etcd distributed locks.
+func NewEtcdLockFactory(c *client.EtcdClient, prefix string, logger clog.Logger) *EtcdLockFactory {
 	if prefix == "" {
 		prefix = "/locks"
 	}
-
-	return &EtcdDistributedLock{
-		client: client,
+	if logger == nil {
+		logger = clog.Module("coordination.lock")
+	}
+	return &EtcdLockFactory{
+		client: c,
 		prefix: prefix,
-		logger: clog.Module("coordination.lockimpl"),
+		logger: logger,
 	}
 }
 
-// Acquire 获取互斥锁
-func (l *EtcdDistributedLock) Acquire(ctx context.Context, key string, ttl time.Duration) (lock.Lock, error) {
-	return l.acquireLock(ctx, key, ttl, true)
+// Acquire obtains a new lock, blocking until the lock is acquired or the context is canceled.
+func (f *EtcdLockFactory) Acquire(ctx context.Context, key string, ttl time.Duration) (lock.Lock, error) {
+	return f.acquire(ctx, key, ttl, true)
 }
 
-// TryAcquire 尝试获取锁（非阻塞）
-func (l *EtcdDistributedLock) TryAcquire(ctx context.Context, key string, ttl time.Duration) (lock.Lock, error) {
-	return l.acquireLock(ctx, key, ttl, false)
+// TryAcquire attempts to obtain a new lock without blocking.
+func (f *EtcdLockFactory) TryAcquire(ctx context.Context, key string, ttl time.Duration) (lock.Lock, error) {
+	return f.acquire(ctx, key, ttl, false)
 }
 
-// acquireLock 内部获取锁的实现
-func (l *EtcdDistributedLock) acquireLock(ctx context.Context, key string, ttl time.Duration, blocking bool) (lock.Lock, error) {
+func (f *EtcdLockFactory) acquire(ctx context.Context, key string, ttl time.Duration, blocking bool) (lock.Lock, error) {
 	if key == "" {
-		return nil, client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"lockimpl key cannot be empty",
-			nil,
-		)
+		return nil, client.NewError(client.ErrCodeValidation, "lock key cannot be empty", nil)
 	}
-
 	if ttl <= 0 {
-		return nil, client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"lockimpl ttl must be positive",
-			nil,
-		)
+		return nil, client.NewError(client.ErrCodeValidation, "lock ttl must be positive", nil)
 	}
 
-	lockKey := path.Join(l.prefix, key)
+	// The session is the key. It bundles a lease and manages its keep-alive.
+	// The session will be closed when the lock is released.
+	session, err := concurrency.NewSession(f.client.Client(), concurrency.WithTTL(int(ttl.Seconds())))
+	if err != nil {
+		return nil, client.NewError(client.ErrCodeConnection, "failed to create etcd session", err)
+	}
 
-	l.logger.Info("attempting to acquire lockimpl",
+	lockKey := path.Join(f.prefix, key)
+	mutex := concurrency.NewMutex(session, lockKey)
+
+	f.logger.Debug("Attempting to acquire lock",
 		clog.String("key", lockKey),
-		clog.Duration("ttl", ttl),
+		clog.Int64("lease", int64(session.Lease())),
 		clog.Bool("blocking", blocking))
 
-	// 创建租约
-	leaseResp, err := l.client.Grant(ctx, int64(ttl.Seconds()))
-	if err != nil {
-		l.logger.Error("failed to create lease for lockimpl",
-			clog.String("key", lockKey),
-			clog.Err(err))
-		return nil, err
-	}
-
-	leaseID := leaseResp.ID
-
-	// 尝试获取锁
-	var acquired bool
+	var lockErr error
 	if blocking {
-		acquired, err = l.acquireBlocking(ctx, lockKey, leaseID)
+		// This blocks until the lock is acquired or context is canceled.
+		lockErr = mutex.Lock(ctx)
 	} else {
-		acquired, err = l.acquireNonBlocking(ctx, lockKey, leaseID)
+		// This attempts to acquire the lock and returns immediately.
+		lockErr = mutex.TryLock(ctx)
 	}
 
-	if err != nil {
-		// 如果获取锁失败，撤销租约
-		l.client.Revoke(context.Background(), leaseID)
-		l.logger.Error("failed to acquire lockimpl",
-			clog.String("key", lockKey),
-			clog.Err(err))
-		return nil, err
+	if lockErr != nil {
+		_ = session.Close() // Best-effort close the session.
+		if lockErr == concurrency.ErrLocked {
+			return nil, client.NewError(client.ErrCodeConflict, "lock is already held", lockErr)
+		}
+		return nil, client.NewError(client.ErrCodeConnection, "failed to acquire lock", lockErr)
 	}
 
-	if !acquired {
-		// 如果没有获取到锁，撤销租约
-		l.client.Revoke(context.Background(), leaseID)
-		return nil, client.NewCoordinationError(
-			client.ErrCodeConflict,
-			"lockimpl is already held by another client",
-			nil,
-		)
-	}
-
-	// 启动租约续期 - 使用独立的 context，不依赖于用户传入的 context
-	// 这样即使用户的 context 被取消，租约续期也会继续工作
-	keepAliveCtx, keepAliveCancel := context.WithCancel(context.Background())
-	keepAliveCh, err := l.client.KeepAlive(keepAliveCtx, leaseID)
-	if err != nil {
-		keepAliveCancel()
-		l.client.Revoke(context.Background(), leaseID)
-		l.logger.Error("failed to start lease keep alive",
-			clog.String("key", lockKey),
-			clog.Err(err))
-		return nil, err
-	}
-
-	// 创建锁对象
-	lock := &EtcdLock{
-		client:          l.client,
-		key:             lockKey,
-		leaseID:         leaseID,
-		keepAliveCh:     keepAliveCh,
-		keepAliveCancel: keepAliveCancel,
-		logger:          l.logger,
-		originalTTL:     ttl,
-	}
-
-	// 启动后台 goroutine 处理 keep alive 响应
-	go lock.handleKeepAlive()
-
-	l.logger.Info("lockimpl acquired successfully",
+	f.logger.Info("Lock acquired successfully",
 		clog.String("key", lockKey),
-		clog.Int64("lease_id", int64(leaseID)))
+		clog.Int64("lease", int64(session.Lease())))
 
-	return lock, nil
+	return &etcdLock{
+		session: session,
+		mutex:   mutex,
+		client:  f.client,
+		logger:  f.logger,
+	}, nil
 }
 
-// acquireBlocking 阻塞式获取锁
-func (l *EtcdDistributedLock) acquireBlocking(ctx context.Context, key string, leaseID clientv3.LeaseID) (bool, error) {
-	// 创建会话
-	session, err := concurrency.NewSession(l.client.Client(), concurrency.WithLease(leaseID))
-	if err != nil {
-		return false, client.NewCoordinationError(
-			client.ErrCodeConnection,
-			"failed to create etcd session",
-			err,
-		)
-	}
-	defer session.Close()
-
-	// 创建互斥锁
-	mutex := concurrency.NewMutex(session, key)
-
-	// 获取锁
-	if err := mutex.Lock(ctx); err != nil {
-		if err == context.DeadlineExceeded || err == context.Canceled {
-			return false, client.NewCoordinationError(
-				client.ErrCodeTimeout,
-				"lockimpl acquisition timeout",
-				err,
-			)
-		}
-		return false, client.NewCoordinationError(
-			client.ErrCodeConnection,
-			"failed to acquire lockimpl",
-			err,
-		)
-	}
-
-	return true, nil
+// etcdLock represents a held distributed lock.
+type etcdLock struct {
+	session *concurrency.Session
+	mutex   *concurrency.Mutex
+	client  *client.EtcdClient
+	logger  clog.Logger
 }
 
-// acquireNonBlocking 非阻塞式获取锁
-func (l *EtcdDistributedLock) acquireNonBlocking(ctx context.Context, key string, leaseID clientv3.LeaseID) (bool, error) {
-	// 使用原子操作尝试创建锁
-	txn := l.client.Txn(ctx)
-	txn = txn.If(clientv3.Compare(clientv3.CreateRevision(key), "=", 0))
-	txn = txn.Then(clientv3.OpPut(key, "", clientv3.WithLease(leaseID)))
+// Unlock releases the lock.
+func (l *etcdLock) Unlock(ctx context.Context) error {
+	l.logger.Debug("Releasing lock",
+		clog.String("key", l.mutex.Key()),
+		clog.Int64("lease", int64(l.session.Lease())))
 
-	resp, err := txn.Commit()
-	if err != nil {
-		return false, client.NewCoordinationError(
-			client.ErrCodeConnection,
-			"failed to execute lockimpl transaction",
-			err,
-		)
+	// Unlock the mutex first.
+	if err := l.mutex.Unlock(ctx); err != nil {
+		// Even if unlock fails, we must close the session to release the lease.
+		_ = l.session.Close()
+		return client.NewError(client.ErrCodeConnection, "failed to unlock mutex", err)
 	}
 
-	return resp.Succeeded, nil
-}
-
-// EtcdLock 基于 etcd 的锁实现
-type EtcdLock struct {
-	client          *client.EtcdClient
-	key             string
-	leaseID         clientv3.LeaseID
-	keepAliveCh     <-chan *clientv3.LeaseKeepAliveResponse
-	keepAliveCancel context.CancelFunc
-	logger          clog.Logger
-	originalTTL     time.Duration
-	closed          bool
-}
-
-// Unlock 释放锁
-func (l *EtcdLock) Unlock(ctx context.Context) error {
-	if l.closed {
-		return client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"lockimpl is already closed",
-			nil,
-		)
+	// Closing the session revokes the lease, which is the final step in releasing the lock.
+	if err := l.session.Close(); err != nil {
+		return client.NewError(client.ErrCodeConnection, "failed to close session", err)
 	}
 
-	l.logger.Info("releasing lockimpl",
-		clog.String("key", l.key),
-		clog.Int64("lease_id", int64(l.leaseID)))
-
-	// 停止租约续期
-	if l.keepAliveCancel != nil {
-		l.keepAliveCancel()
-	}
-
-	// 先尝试删除锁键，这样即使租约已过期也能正常释放
-	_, err := l.client.Delete(ctx, l.key)
-	if err != nil {
-		l.logger.Warn("failed to delete lockimpl key, will try to revoke lease",
-			clog.String("key", l.key),
-			clog.Err(err))
-	}
-
-	// 撤销租约，这会自动删除锁（如果还存在的话）
-	_, revokeErr := l.client.Revoke(ctx, l.leaseID)
-	if revokeErr != nil {
-		// 如果租约已经过期，这是正常的，不应该作为错误返回
-		if l.isLeaseNotFoundError(revokeErr) {
-			l.logger.Debug("lease already expired, this is normal",
-				clog.String("key", l.key),
-				clog.Int64("lease_id", int64(l.leaseID)))
-		} else {
-			l.logger.Error("failed to revoke lease",
-				clog.String("key", l.key),
-				clog.Int64("lease_id", int64(l.leaseID)),
-				clog.Err(revokeErr))
-			// 如果删除键成功但撤销租约失败，仍然认为解锁成功
-			if err != nil {
-				return client.NewCoordinationError(
-					client.ErrCodeConnection,
-					"failed to release lockimpl",
-					revokeErr,
-				)
-			}
-		}
-	}
-
-	l.closed = true
-	l.logger.Info("lockimpl released successfully",
-		clog.String("key", l.key))
-
+	l.logger.Info("Lock released successfully", clog.String("key", l.mutex.Key()))
 	return nil
 }
 
-// isLeaseNotFoundError 检查是否为租约未找到错误
-func (l *EtcdLock) isLeaseNotFoundError(err error) bool {
-	if coordErr, ok := err.(*client.CoordinationError); ok {
-		return coordErr.Code == client.ErrCodeConnection &&
-			coordErr.Cause != nil &&
-			coordErr.Cause.Error() == "etcdserver: requested lease not found"
-	}
-	return false
-}
-
-// Renew 续期锁
-func (l *EtcdLock) Renew(ctx context.Context, ttl time.Duration) error {
-	if l.closed {
-		return client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"lockimpl is already closed",
-			nil,
-		)
-	}
-
-	if ttl <= 0 {
-		return client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"ttl must be positive",
-			nil,
-		)
-	}
-
-	l.logger.Info("renewing lockimpl",
-		clog.String("key", l.key),
-		clog.Duration("ttl", ttl))
-
-	// etcd 的租约续期是通过 KeepAlive 自动处理的
-	// 这里我们只是更新 TTL 记录用于 TTL() 方法
-	l.originalTTL = ttl
-
-	l.logger.Info("lockimpl renewed successfully",
-		clog.String("key", l.key),
-		clog.Duration("new_ttl", ttl))
-
-	return nil
-}
-
-// TTL 获取锁的剩余有效时间
-func (l *EtcdLock) TTL(ctx context.Context) (time.Duration, error) {
-	if l.closed {
-		return 0, client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"lockimpl is already closed",
-			nil,
-		)
-	}
-
-	// 查询租约信息
-	resp, err := l.client.Client().TimeToLive(ctx, l.leaseID)
+// TTL returns the remaining time-to-live of the lock's lease.
+func (l *etcdLock) TTL(ctx context.Context) (time.Duration, error) {
+	// The lease ID is available via the session.
+	resp, err := l.client.Client().TimeToLive(ctx, l.session.Lease())
 	if err != nil {
-		l.logger.Error("failed to get lease TTL",
-			clog.String("key", l.key),
-			clog.Int64("lease_id", int64(l.leaseID)),
-			clog.Err(err))
-		return 0, client.NewCoordinationError(
-			client.ErrCodeConnection,
-			"failed to get lockimpl TTL",
-			err,
-		)
+		return 0, client.NewError(client.ErrCodeConnection, "failed to get lock TTL", err)
 	}
 
 	if resp.TTL <= 0 {
-		return 0, client.NewCoordinationError(
-			client.ErrCodeNotFound,
-			"lockimpl has expired",
-			nil,
-		)
+		// This can happen if the lease expires just before this call.
+		return 0, client.NewError(client.ErrCodeNotFound, "lock has expired", nil)
 	}
 
 	return time.Duration(resp.TTL) * time.Second, nil
 }
 
-// Key 获取锁的键
-func (l *EtcdLock) Key() string {
-	return l.key
-}
-
-// handleKeepAlive 处理租约续期响应
-func (l *EtcdLock) handleKeepAlive() {
-	for resp := range l.keepAliveCh {
-		if resp == nil {
-			l.logger.Warn("keep alive channel closed",
-				clog.String("key", l.key),
-				clog.Int64("lease_id", int64(l.leaseID)))
-			break
-		}
-
-		l.logger.Debug("lease keep alive response received",
-			clog.String("key", l.key),
-			clog.Int64("lease_id", int64(l.leaseID)),
-			clog.Int64("ttl", resp.TTL))
-	}
+// Key returns the full key path of the lock in etcd.
+func (l *etcdLock) Key() string {
+	return l.mutex.Key()
 }

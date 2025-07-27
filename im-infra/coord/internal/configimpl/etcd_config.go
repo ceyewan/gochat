@@ -4,217 +4,164 @@ import (
 	"context"
 	"encoding/json"
 	"path"
+	"reflect"
 	"strings"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
+	"github.com/ceyewan/gochat/im-infra/coord/config"
 	"github.com/ceyewan/gochat/im-infra/coord/internal/client"
-	"github.com/ceyewan/gochat/im-infra/coord/internal/types"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-// EtcdConfigCenter 基于 etcd 的配置中心实现
+// EtcdConfigCenter implements the config.ConfigCenter interface using etcd.
 type EtcdConfigCenter struct {
 	client *client.EtcdClient
 	prefix string
 	logger clog.Logger
 }
 
-// NewEtcdConfigCenter 创建新的配置中心实例
-func NewEtcdConfigCenter(client *client.EtcdClient, prefix string) *EtcdConfigCenter {
+// NewEtcdConfigCenter creates a new etcd-based config center.
+func NewEtcdConfigCenter(c *client.EtcdClient, prefix string, logger clog.Logger) *EtcdConfigCenter {
 	if prefix == "" {
-		prefix = "/configimpl"
+		prefix = "/config"
 	}
-
+	if logger == nil {
+		logger = clog.Module("coordination.config")
+	}
 	return &EtcdConfigCenter{
-		client: client,
+		client: c,
 		prefix: prefix,
-		logger: clog.Module("coordination.configimpl"),
+		logger: logger,
 	}
 }
 
-// Get 获取配置值
-func (c *EtcdConfigCenter) Get(ctx context.Context, key string) (interface{}, error) {
+// Get retrieves a configuration value and unmarshals it into the provided type `v`.
+func (c *EtcdConfigCenter) Get(ctx context.Context, key string, v interface{}) error {
 	if key == "" {
-		return nil, client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"configimpl key cannot be empty",
-			nil,
-		)
+		return client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
+	}
+	// Ensure `v` is a non-nil pointer.
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return client.NewError(client.ErrCodeValidation, "target value must be a non-nil pointer", nil)
 	}
 
 	configKey := path.Join(c.prefix, key)
-
-	c.logger.Info("getting configimpl value",
-		clog.String("key", configKey))
-
 	resp, err := c.client.Get(ctx, configKey)
 	if err != nil {
-		c.logger.Error("failed to get configimpl value",
-			clog.String("key", configKey),
-			clog.Err(err))
-		return nil, err
+		return err // The client already wraps this error.
 	}
 
 	if len(resp.Kvs) == 0 {
-		c.logger.Debug("configimpl key not found",
-			clog.String("key", configKey))
-		return nil, client.NewCoordinationError(
-			client.ErrCodeNotFound,
-			"configimpl key not found",
-			nil,
-		)
+		return client.NewError(client.ErrCodeNotFound, "config key not found", nil)
 	}
 
-	value := resp.Kvs[0].Value
-
-	// 尝试解析为 JSON，如果失败则返回原始字符串
-	var result interface{}
-	if err := json.Unmarshal(value, &result); err != nil {
-		// 如果不是有效的 JSON，返回字符串
-		result = string(value)
-	}
-
-	c.logger.Info("configimpl value retrieved successfully",
-		clog.String("key", configKey),
-		clog.String("value", string(value)))
-
-	return result, nil
+	return unmarshalValue(resp.Kvs[0].Value, v)
 }
 
-// Set 设置配置值（支持任意可序列化对象）
+// Set serializes and stores a configuration value.
 func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{}) error {
 	if key == "" {
-		return client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"configimpl key cannot be empty",
-			nil,
-		)
+		return client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
+	}
+
+	valueBytes, err := marshalValue(value)
+	if err != nil {
+		return client.NewError(client.ErrCodeValidation, "failed to serialize config value", err)
 	}
 
 	configKey := path.Join(c.prefix, key)
-
-	// 序列化值
-	var valueBytes []byte
-	var err error
-
-	switch v := value.(type) {
-	case string:
-		valueBytes = []byte(v)
-	case []byte:
-		valueBytes = v
-	default:
-		// 对于其他类型，使用 JSON 序列化
-		valueBytes, err = json.Marshal(value)
-		if err != nil {
-			c.logger.Error("failed to serialize configimpl value",
-				clog.String("key", configKey),
-				clog.Err(err))
-			return client.NewCoordinationError(
-				client.ErrCodeValidation,
-				"failed to serialize configimpl value",
-				err,
-			)
-		}
-	}
-
-	c.logger.Info("setting configimpl value",
-		clog.String("key", configKey),
-		clog.String("value", string(valueBytes)))
-
 	_, err = c.client.Put(ctx, configKey, string(valueBytes))
-	if err != nil {
-		c.logger.Error("failed to set configimpl value",
-			clog.String("key", configKey),
-			clog.Err(err))
-		return err
-	}
-
-	c.logger.Info("configimpl value set successfully",
-		clog.String("key", configKey))
-
-	return nil
+	return err // The client already wraps this error.
 }
 
-// Delete 删除配置
+// Delete removes a configuration key.
 func (c *EtcdConfigCenter) Delete(ctx context.Context, key string) error {
 	if key == "" {
-		return client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"configimpl key cannot be empty",
-			nil,
-		)
+		return client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
 	}
 
 	configKey := path.Join(c.prefix, key)
-
-	c.logger.Info("deleting configimpl value",
-		clog.String("key", configKey))
-
 	resp, err := c.client.Delete(ctx, configKey)
 	if err != nil {
-		c.logger.Error("failed to delete configimpl value",
-			clog.String("key", configKey),
-			clog.Err(err))
 		return err
 	}
-
 	if resp.Deleted == 0 {
-		c.logger.Debug("configimpl key not found for deletion",
-			clog.String("key", configKey))
-		return client.NewCoordinationError(
-			client.ErrCodeNotFound,
-			"configimpl key not found",
-			nil,
-		)
+		return client.NewError(client.ErrCodeNotFound, "config key not found for deletion", nil)
 	}
-
-	c.logger.Info("configimpl value deleted successfully",
-		clog.String("key", configKey))
-
 	return nil
 }
 
-// Watch 监听配置变化
-func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan types.ConfigEvent, error) {
+// Watch watches for changes on a single key.
+func (c *EtcdConfigCenter) Watch(ctx context.Context, key string, v interface{}) (config.Watcher[any], error) {
 	if key == "" {
-		return nil, client.NewCoordinationError(
-			client.ErrCodeValidation,
-			"configimpl key cannot be empty",
-			nil,
-		)
+		return nil, client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
+	}
+	configKey := path.Join(c.prefix, key)
+	return c.watch(ctx, configKey, v, false)
+}
+
+// WatchPrefix watches for changes on all keys under a given prefix.
+func (c *EtcdConfigCenter) WatchPrefix(ctx context.Context, prefix string, v interface{}) (config.Watcher[any], error) {
+	configPrefix := path.Join(c.prefix, prefix)
+	return c.watch(ctx, configPrefix, v, true)
+}
+
+// List lists all keys under a given prefix.
+func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, error) {
+	searchPrefix := path.Join(c.prefix, prefix)
+	if !strings.HasSuffix(searchPrefix, "/") {
+		searchPrefix += "/"
 	}
 
-	configKey := path.Join(c.prefix, key)
+	resp, err := c.client.Get(ctx, searchPrefix, clientv3.WithPrefix(), clientv3.WithKeysOnly())
+	if err != nil {
+		return nil, err
+	}
 
-	c.logger.Info("starting to watch configimpl changes",
-		clog.String("key", configKey))
+	keys := make([]string, len(resp.Kvs))
+	for i, kv := range resp.Kvs {
+		keys[i] = strings.TrimPrefix(string(kv.Key), c.prefix+"/")
+	}
+	return keys, nil
+}
 
-	watchCh := c.client.Watch(ctx, configKey)
-	eventCh := make(chan types.ConfigEvent, 10)
+// watch is the internal implementation for watching keys or prefixes.
+func (c *EtcdConfigCenter) watch(ctx context.Context, keyOrPrefix string, v interface{}, isPrefix bool) (config.Watcher[any], error) {
+	// Ensure `v` is a non-nil pointer to get its type.
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return nil, client.NewError(client.ErrCodeValidation, "target value type must be a non-nil pointer", nil)
+	}
+	valueType := rv.Type().Elem()
+
+	var opts []clientv3.OpOption
+	if isPrefix {
+		opts = append(opts, clientv3.WithPrefix())
+	}
+
+	watchCtx, cancel := context.WithCancel(context.Background())
+	etcdWatchCh := c.client.Watch(watchCtx, keyOrPrefix, opts...)
+	eventCh := make(chan config.ConfigEvent[any], 10)
+
+	w := &etcdWatcher{
+		ch:     eventCh,
+		cancel: cancel,
+	}
 
 	go func() {
 		defer close(eventCh)
-		defer c.logger.Info("configimpl watch stopped",
-			clog.String("key", configKey))
-
-		for resp := range watchCh {
-			if resp.Err() != nil {
-				c.logger.Error("watch error occurred",
-					clog.String("key", configKey),
-					clog.Err(resp.Err()))
-				continue
+		for resp := range etcdWatchCh {
+			if err := resp.Err(); err != nil {
+				c.logger.Error("Watcher error", clog.String("key", keyOrPrefix), clog.Err(err))
+				return
 			}
-
 			for _, event := range resp.Events {
-				configEvent := c.convertEvent(event)
+				configEvent := c.convertEvent(event, valueType)
 				if configEvent != nil {
-					c.logger.Info("configimpl change detected",
-						clog.String("key", configKey),
-						clog.String("type", string(configEvent.Type)))
-
 					select {
 					case eventCh <- *configEvent:
-					case <-ctx.Done():
+					case <-watchCtx.Done():
 						return
 					}
 				}
@@ -222,77 +169,76 @@ func (c *EtcdConfigCenter) Watch(ctx context.Context, key string) (<-chan types.
 		}
 	}()
 
-	return eventCh, nil
+	return w, nil
 }
 
-// List 列出所有配置键
-func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, error) {
-	var searchPrefix string
-	if prefix == "" {
-		searchPrefix = c.prefix + "/"
-	} else {
-		searchPrefix = path.Join(c.prefix, prefix)
-	}
-
-	c.logger.Info("listing configimpl keys",
-		clog.String("prefix", searchPrefix))
-
-	resp, err := c.client.Get(ctx, searchPrefix, clientv3.WithPrefix())
-	if err != nil {
-		c.logger.Error("failed to list configimpl keys",
-			clog.String("prefix", searchPrefix),
-			clog.Err(err))
-		return nil, err
-	}
-
-	var keys []string
-	for _, kv := range resp.Kvs {
-		key := string(kv.Key)
-		// 移除前缀，只返回相对键名
-		if strings.HasPrefix(key, c.prefix+"/") {
-			relativeKey := strings.TrimPrefix(key, c.prefix+"/")
-			keys = append(keys, relativeKey)
-		}
-	}
-
-	c.logger.Info("configimpl keys listed successfully",
-		clog.String("prefix", searchPrefix),
-		clog.Int("count", len(keys)))
-
-	return keys, nil
-}
-
-// convertEvent 转换 etcd 事件为配置事件
-func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event) *types.ConfigEvent {
-	key := string(event.Kv.Key)
-
-	// 移除前缀，只返回相对键名
-	if !strings.HasPrefix(key, c.prefix+"/") {
-		return nil
-	}
-	relativeKey := strings.TrimPrefix(key, c.prefix+"/")
-
-	var eventType types.EventType
+func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event, valueType reflect.Type) *config.ConfigEvent[any] {
+	relativeKey := strings.TrimPrefix(string(event.Kv.Key), c.prefix+"/")
+	var eventType config.EventType
 	var value interface{}
 
 	switch event.Type {
 	case clientv3.EventTypePut:
-		eventType = types.EventTypePut
-		// 尝试解析为 JSON，如果失败则返回原始字符串
-		valueBytes := event.Kv.Value
-		if err := json.Unmarshal(valueBytes, &value); err != nil {
-			value = string(valueBytes)
+		eventType = config.EventTypePut
+		// Create a new instance of the target type to unmarshal into.
+		newValue := reflect.New(valueType).Interface()
+		if err := unmarshalValue(event.Kv.Value, newValue); err != nil {
+			c.logger.Warn("Failed to unmarshal event value", clog.String("key", relativeKey), clog.Err(err))
+			return nil
 		}
+		value = reflect.ValueOf(newValue).Elem().Interface()
 	case clientv3.EventTypeDelete:
-		eventType = types.EventTypeDelete
-		value = nil
+		eventType = config.EventTypeDelete
+		// Value is nil for delete events.
 	default:
 		return nil
 	}
 
-	return &types.ConfigEvent{
+	return &config.ConfigEvent[any]{
 		Type:  eventType,
 		Key:   relativeKey,
 		Value: value,
 	}
+}
+
+// etcdWatcher implements the config.Watcher interface.
+type etcdWatcher struct {
+	ch     chan config.ConfigEvent[any]
+	cancel context.CancelFunc
+}
+
+func (w *etcdWatcher) Chan() <-chan config.ConfigEvent[any] {
+	return w.ch
+}
+
+func (w *etcdWatcher) Close() {
+	w.cancel()
+}
+
+// marshalValue serializes a value. It prioritizes string and []byte, falling back to JSON.
+func marshalValue(value interface{}) ([]byte, error) {
+	switch v := value.(type) {
+	case string:
+		return []byte(v), nil
+	case []byte:
+		return v, nil
+	default:
+		return json.Marshal(value)
+	}
+}
+
+// unmarshalValue deserializes a value. It attempts JSON first, then falls back to a direct string conversion if the target is a string.
+func unmarshalValue(data []byte, v interface{}) error {
+	if err := json.Unmarshal(data, v); err == nil {
+		return nil
+	}
+
+	// If JSON unmarshal fails, check if the target is a *string.
+	if strPtr, ok := v.(*string); ok {
+		*strPtr = string(data)
+		return nil
+	}
+
+	// If it's not a *string and JSON failed, it's an error.
+	return client.NewError(client.ErrCodeValidation, "value is not valid JSON for the target type", nil)
 }

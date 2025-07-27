@@ -19,7 +19,6 @@ type ServiceInfo struct {
 	Name     string            `json:"name"`
 	Address  string            `json:"address"`
 	Port     int               `json:"port"`
-	TTL      time.Duration     `json:"ttl"`
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
@@ -31,8 +30,8 @@ type ServiceEvent struct {
 
 // ServiceRegistry 服务注册发现接口
 type ServiceRegistry interface {
-	// Register 注册服务
-	Register(ctx context.Context, service ServiceInfo) error
+	// Register 注册服务，ttl 是租约的有效期
+	Register(ctx context.Context, service ServiceInfo, ttl time.Duration) error
 	// Unregister 注销服务
 	Unregister(ctx context.Context, serviceID string) error
 	// Discover 发现服务

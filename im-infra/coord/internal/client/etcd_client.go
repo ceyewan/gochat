@@ -7,7 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"errors"
 	"github.com/ceyewan/gochat/im-infra/clog"
+	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -31,6 +33,9 @@ type Config struct {
 
 	// RetryConfig 重试配置
 	RetryConfig *RetryConfig `json:"retry_config,omitempty"`
+
+	// Logger 可选的日志记录器
+	Logger clog.Logger `json:"-"`
 }
 
 // RetryConfig 重试机制配置
@@ -77,6 +82,11 @@ func (e *Error) Error() string {
 		return fmt.Sprintf("[%s] %s: %v", e.Code, e.Message, e.Cause)
 	}
 	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
+}
+
+// Unwrap 支持 Go 1.13+ 的错误包装
+func (e *Error) Unwrap() error {
+	return e.Cause
 }
 
 // NewError 创建协调器错误
@@ -183,7 +193,13 @@ func New(cfg Config) (*EtcdClient, error) {
 		return nil, err
 	}
 
-	logger := clog.Module("coordination.client")
+	var logger clog.Logger
+	if cfg.Logger != nil {
+		logger = cfg.Logger
+	} else {
+		logger = clog.Module("coordination.client")
+	}
+
 	logger.Info("etcd client created successfully",
 		clog.Strings("endpoints", cfg.Endpoints))
 
@@ -250,8 +266,8 @@ func (c *EtcdClient) Close() error {
 // Ping 检查 etcd 连接状态
 func (c *EtcdClient) Ping(ctx context.Context) error {
 	return c.executeWithRetry(ctx, func() error {
-		_, err := c.client.Status(ctx, c.client.Endpoints()[0])
-		if err != nil {
+		// client.Sync() 会与集群的一个健康节点同步 revision，是更可靠的健康检查
+		if err := c.client.Sync(ctx); err != nil {
 			return NewError(ErrCodeConnection, "etcd ping failed", err)
 		}
 		return nil
@@ -313,10 +329,13 @@ func (c *EtcdClient) executeWithRetry(ctx context.Context, operation func() erro
 
 // waitForRetry 等待重试延迟
 func (c *EtcdClient) waitForRetry(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
 	select {
 	case <-ctx.Done():
 		return NewError(ErrCodeTimeout, "context cancelled during retry", ctx.Err())
-	case <-time.After(delay):
+	case <-timer.C:
 		return nil
 	}
 }
@@ -437,12 +456,7 @@ func (c *EtcdClient) Revoke(ctx context.Context, id clientv3.LeaseID) (*clientv3
 
 // isLeaseNotFoundError 检查是否为租约未找到错误
 func (c *EtcdClient) isLeaseNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-	errStr := err.Error()
-	return errStr == "etcdserver: requested lease not found" ||
-		errStr == "rpc error: code = NotFound desc = etcdserver: requested lease not found"
+	return errors.Is(err, rpctypes.ErrLeaseNotFound)
 }
 
 // Txn 创建事务（不需要重试机制）

@@ -10,23 +10,34 @@ const (
 	EventTypeDelete EventType = "DELETE"
 )
 
-// ConfigEvent 配置变化事件
-type ConfigEvent struct {
+// ConfigEvent represents a configuration change event.
+// It is generic to support typed values.
+type ConfigEvent[T any] struct {
 	Type  EventType
 	Key   string
-	Value interface{}
+	Value T
 }
 
-// ConfigCenter 配置中心接口
+// Watcher is a generic interface for watching configuration changes.
+type Watcher[T any] interface {
+	// Chan returns a channel that receives configuration change events.
+	Chan() <-chan ConfigEvent[T]
+	// Close stops the watcher.
+	Close()
+}
+
+// ConfigCenter is the interface for a key-value configuration store.
 type ConfigCenter interface {
-	// Get 获取配置值
-	Get(ctx context.Context, key string) (interface{}, error)
-	// Set 设置配置值（支持任意可序列化对象）
+	// Get retrieves a configuration value and unmarshals it into the provided type.
+	Get(ctx context.Context, key string, v interface{}) error
+	// Set serializes and stores a configuration value.
 	Set(ctx context.Context, key string, value interface{}) error
-	// Delete 删除配置
+	// Delete removes a configuration key.
 	Delete(ctx context.Context, key string) error
-	// Watch 监听配置变化
-	Watch(ctx context.Context, key string) (<-chan ConfigEvent, error)
-	// List 列出所有配置键
+	// Watch watches for changes on a single key and attempts to unmarshal them into the given type.
+	Watch(ctx context.Context, key string, v interface{}) (Watcher[any], error)
+	// WatchPrefix watches for changes on all keys under a given prefix.
+	WatchPrefix(ctx context.Context, prefix string, v interface{}) (Watcher[any], error)
+	// List lists all keys under a given prefix.
 	List(ctx context.Context, prefix string) ([]string, error)
 }
