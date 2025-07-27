@@ -103,8 +103,8 @@ func NewLogger(cfg interface{}, opts ...Option) (Logger, error) {
 		zap.AddStacktrace(zapcore.ErrorLevel),
 	}
 	if config.AddSource {
-		// 让我们直接测试一个固定的 skip 值
-		buildOptions = append(buildOptions, zap.AddCaller(), zap.AddCallerSkip(2))
+		// 只添加 AddCaller，不设置固定的 CallerSkip
+		buildOptions = append(buildOptions, zap.AddCaller())
 	}
 
 	baseLogger, err := zapConfig.Build(buildOptions...)
@@ -230,8 +230,8 @@ func buildLoggerWithRotation(config *config, hook Hook) (Logger, error) {
 	}
 
 	if config.AddSource {
-		// 让我们直接测试一个固定的 skip 值
-		opts = append(opts, zap.AddCaller(), zap.AddCallerSkip(2))
+		// 只添加 AddCaller，不设置固定的 CallerSkip
+		opts = append(opts, zap.AddCaller())
 	}
 
 	// 创建 logger
