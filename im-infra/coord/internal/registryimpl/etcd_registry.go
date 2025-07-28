@@ -3,6 +3,8 @@ package registryimpl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"path"
 	"strings"
 	"sync"
@@ -13,6 +15,8 @@ import (
 	"github.com/ceyewan/gochat/im-infra/coord/registry"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // EtcdServiceRegistry implements the registry.ServiceRegistry interface using etcd.
@@ -260,4 +264,32 @@ func validateServiceInfo(service registry.ServiceInfo) error {
 		return client.NewError(client.ErrCodeValidation, "service port must be between 1 and 65535", nil)
 	}
 	return nil
+}
+
+// GetConnection 获取到指定服务的 gRPC 连接，支持负载均衡
+func (r *EtcdServiceRegistry) GetConnection(ctx context.Context, serviceName string) (*grpc.ClientConn, error) {
+	// 发现服务实例
+	services, err := r.Discover(ctx, serviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(services) == 0 {
+		return nil, client.NewError(client.ErrCodeNotFound, "no available service instances found", nil)
+	}
+
+	// 简单的随机负载均衡
+	service := services[rand.Intn(len(services))]
+	target := fmt.Sprintf("%s:%d", service.Address, service.Port)
+
+	// 创建 gRPC 连接
+	conn, err := grpc.DialContext(ctx, target,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		return nil, client.NewError(client.ErrCodeConnection, "failed to connect to service", err)
+	}
+
+	return conn, nil
 }

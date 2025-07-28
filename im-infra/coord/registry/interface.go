@@ -3,6 +3,8 @@ package registry
 import (
 	"context"
 	"time"
+
+	"google.golang.org/grpc"
 )
 
 // EventType 事件类型
@@ -38,4 +40,6 @@ type ServiceRegistry interface {
 	Discover(ctx context.Context, serviceName string) ([]ServiceInfo, error)
 	// Watch 监听服务变化
 	Watch(ctx context.Context, serviceName string) (<-chan ServiceEvent, error)
+	// GetConnection 获取到指定服务的 gRPC 连接，支持负载均衡
+	GetConnection(ctx context.Context, serviceName string) (*grpc.ClientConn, error)
 }
