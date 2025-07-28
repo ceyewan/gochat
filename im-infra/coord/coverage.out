@@ -1,0 +1,17 @@
+mode: atomic
+github.com/ceyewan/gochat/im-infra/coord/config.go:39.40,50.2 1 30
+github.com/ceyewan/gochat/im-infra/coord/coord.go:40.55,43.20 2 32
+github.com/ceyewan/gochat/im-infra/coord/coord.go:43.20,45.3 1 0
+github.com/ceyewan/gochat/im-infra/coord/coord.go:45.8,47.3 1 32
+github.com/ceyewan/gochat/im-infra/coord/coord.go:49.2,63.16 5 32
+github.com/ceyewan/gochat/im-infra/coord/coord.go:63.16,66.3 2 1
+github.com/ceyewan/gochat/im-infra/coord/coord.go:69.2,84.19 6 31
+github.com/ceyewan/gochat/im-infra/coord/coord.go:88.51,92.2 3 13
+github.com/ceyewan/gochat/im-infra/coord/coord.go:95.59,99.2 3 13
+github.com/ceyewan/gochat/im-infra/coord/coord.go:102.52,106.2 3 14
+github.com/ceyewan/gochat/im-infra/coord/coord.go:109.37,113.14 3 32
+github.com/ceyewan/gochat/im-infra/coord/coord.go:113.14,115.3 1 1
+github.com/ceyewan/gochat/im-infra/coord/coord.go:117.2,120.21 2 31
+github.com/ceyewan/gochat/im-infra/coord/coord.go:120.21,121.42 1 31
+github.com/ceyewan/gochat/im-infra/coord/coord.go:121.42,124.4 2 0
+github.com/ceyewan/gochat/im-infra/coord/coord.go:127.2,129.12 3 31

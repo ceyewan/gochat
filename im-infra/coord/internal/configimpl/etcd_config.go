@@ -103,6 +103,9 @@ func (c *EtcdConfigCenter) Watch(ctx context.Context, key string, v interface{})
 
 // WatchPrefix watches for changes on all keys under a given prefix.
 func (c *EtcdConfigCenter) WatchPrefix(ctx context.Context, prefix string, v interface{}) (config.Watcher[any], error) {
+	if prefix == "" {
+		return nil, client.NewError(client.ErrCodeValidation, "config prefix cannot be empty", nil)
+	}
 	configPrefix := path.Join(c.prefix, prefix)
 	return c.watch(ctx, configPrefix, v, true)
 }
@@ -140,7 +143,7 @@ func (c *EtcdConfigCenter) watch(ctx context.Context, keyOrPrefix string, v inte
 		opts = append(opts, clientv3.WithPrefix())
 	}
 
-	watchCtx, cancel := context.WithCancel(context.Background())
+	watchCtx, cancel := context.WithCancel(ctx)
 	etcdWatchCh := c.client.Watch(watchCtx, keyOrPrefix, opts...)
 	eventCh := make(chan config.ConfigEvent[any], 10)
 
@@ -180,13 +183,7 @@ func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event, valueType reflect
 	switch event.Type {
 	case clientv3.EventTypePut:
 		eventType = config.EventTypePut
-		// Create a new instance of the target type to unmarshal into.
-		newValue := reflect.New(valueType).Interface()
-		if err := unmarshalValue(event.Kv.Value, newValue); err != nil {
-			c.logger.Warn("Failed to unmarshal event value", clog.String("key", relativeKey), clog.Err(err))
-			return nil
-		}
-		value = reflect.ValueOf(newValue).Elem().Interface()
+		value = c.parseEventValue(event.Kv.Value, valueType, relativeKey)
 	case clientv3.EventTypeDelete:
 		eventType = config.EventTypeDelete
 		// Value is nil for delete events.
@@ -241,4 +238,39 @@ func unmarshalValue(data []byte, v interface{}) error {
 
 	// If it's not a *string and JSON failed, it's an error.
 	return client.NewError(client.ErrCodeValidation, "value is not valid JSON for the target type", nil)
+}
+
+// parseEventValue 智能解析事件值，支持多种类型处理策略
+func (c *EtcdConfigCenter) parseEventValue(data []byte, valueType reflect.Type, key string) interface{} {
+	// 如果目标类型是 interface{}，尝试自动推断类型
+	if valueType.Kind() == reflect.Interface && valueType.NumMethod() == 0 {
+		return c.parseAsInterface(data, key)
+	}
+
+	// 尝试解析为目标类型
+	newValue := reflect.New(valueType).Interface()
+	if err := unmarshalValue(data, newValue); err != nil {
+		// 类型转换失败时，记录警告但不丢弃事件
+		c.logger.Warn("Failed to unmarshal event value, returning raw string",
+			clog.String("key", key),
+			clog.String("target_type", valueType.String()),
+			clog.Err(err))
+
+		// 返回原始字符串值作为降级处理
+		return string(data)
+	}
+
+	return reflect.ValueOf(newValue).Elem().Interface()
+}
+
+// parseAsInterface 当目标类型是 interface{} 时，自动推断最合适的类型
+func (c *EtcdConfigCenter) parseAsInterface(data []byte, key string) interface{} {
+	// 首先尝试解析为 JSON
+	var jsonValue interface{}
+	if err := json.Unmarshal(data, &jsonValue); err == nil {
+		return jsonValue
+	}
+
+	// JSON 解析失败，返回字符串
+	return string(data)
 }

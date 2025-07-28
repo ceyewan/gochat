@@ -116,7 +116,9 @@ func testWatch(ctx context.Context, cc config.ConfigCenter) {
 	go func() {
 		defer wg.Done()
 		// 监听 "notifications/" 前缀下的所有变化
-		watcher, err := cc.WatchPrefix(ctx, "notifications", &AppConfig{})
+		// 使用 interface{} 来处理不同类型的配置值
+		var watchValue interface{}
+		watcher, err := cc.WatchPrefix(ctx, "notifications", &watchValue)
 		if err != nil {
 			clog.Error("Failed to start watcher", clog.Err(err))
 			return
