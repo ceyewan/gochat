@@ -1,7 +1,6 @@
 package coord
 
 import (
-	"context"
 	"sync"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
@@ -38,9 +37,14 @@ type coordinator struct {
 }
 
 // New 创建并返回一个新的协调器实例
-func New(ctx context.Context) (Provider, error) {
-	// 1. 使用默认配置
-	cfg := DefaultConfig()
+func New(cfgs ...CoordinatorConfig) (Provider, error) {
+	var cfg CoordinatorConfig
+	// 1. 如果没有提供配置，使用默认配置
+	if len(cfgs) == 0 {
+		cfg = DefaultConfig()
+	} else {
+		cfg = cfgs[0]
+	}
 
 	logger := clog.Module("coord")
 	logger.Info("creating new coordinator",

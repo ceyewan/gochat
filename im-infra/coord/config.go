@@ -35,7 +35,7 @@ type RetryConfig struct {
 	Multiplier float64 `json:"multiplier"`
 }
 
-// DefaultConfig returns a default configuration for the coordinator.
+// DefaultConfig 返回默认配置
 func DefaultConfig() CoordinatorConfig {
 	return CoordinatorConfig{
 		Endpoints: []string{"localhost:23791", "localhost:23792", "localhost:23793"},
