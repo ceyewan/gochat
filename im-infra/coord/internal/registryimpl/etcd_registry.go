@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"path"
 	"strings"
 	"sync"
@@ -17,6 +16,7 @@ import (
 	"go.etcd.io/etcd/client/v3/concurrency"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/resolver"
 )
 
 // EtcdServiceRegistry implements the registry.ServiceRegistry interface using etcd.
@@ -28,6 +28,10 @@ type EtcdServiceRegistry struct {
 	// Keep track of active sessions for services registered by this instance.
 	sessions   map[string]*concurrency.Session
 	sessionsMu sync.Mutex
+
+	// gRPC resolver builder
+	resolverBuilder *EtcdResolverBuilder
+	resolverOnce    sync.Once
 }
 
 // NewEtcdServiceRegistry creates a new etcd-based service registry.
@@ -38,12 +42,24 @@ func NewEtcdServiceRegistry(c *client.EtcdClient, prefix string, logger clog.Log
 	if logger == nil {
 		logger = clog.Module("coordination.registry")
 	}
-	return &EtcdServiceRegistry{
+
+	registry := &EtcdServiceRegistry{
 		client:   c,
 		prefix:   prefix,
 		logger:   logger,
 		sessions: make(map[string]*concurrency.Session),
 	}
+
+	// 创建 resolver builder
+	registry.resolverBuilder = NewEtcdResolverBuilder(c, prefix, logger)
+
+	// 注册 gRPC resolver（只注册一次）
+	registry.resolverOnce.Do(func() {
+		resolver.Register(registry.resolverBuilder)
+		logger.Info("gRPC etcd resolver registered", clog.String("scheme", EtcdScheme))
+	})
+
+	return registry
 }
 
 // Register a service with a given TTL. The service will be kept alive until the context is canceled or Unregister is called.
@@ -266,30 +282,28 @@ func validateServiceInfo(service registry.ServiceInfo) error {
 	return nil
 }
 
-// GetConnection 获取到指定服务的 gRPC 连接，支持负载均衡
+// GetConnection 获取到指定服务的 gRPC 连接，支持动态服务发现和负载均衡
 func (r *EtcdServiceRegistry) GetConnection(ctx context.Context, serviceName string) (*grpc.ClientConn, error) {
-	// 发现服务实例
-	services, err := r.Discover(ctx, serviceName)
-	if err != nil {
-		return nil, err
+	if serviceName == "" {
+		return nil, client.NewError(client.ErrCodeValidation, "service name cannot be empty", nil)
 	}
 
-	if len(services) == 0 {
-		return nil, client.NewError(client.ErrCodeNotFound, "no available service instances found", nil)
-	}
+	// 使用 etcd resolver 创建连接
+	// target 格式: etcd:///<service-name>
+	target := fmt.Sprintf("%s:///%s", EtcdScheme, serviceName)
 
-	// 简单的随机负载均衡
-	service := services[rand.Intn(len(services))]
-	target := fmt.Sprintf("%s:%d", service.Address, service.Port)
-
-	// 创建 gRPC 连接
-	conn, err := grpc.DialContext(ctx, target,
+	// 创建 gRPC 连接，使用 etcd resolver 进行动态服务发现
+	conn, err := grpc.NewClient(target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用轮询负载均衡
 	)
 	if err != nil {
 		return nil, client.NewError(client.ErrCodeConnection, "failed to connect to service", err)
 	}
+
+	r.logger.Info("gRPC connection established with dynamic service discovery",
+		clog.String("service_name", serviceName),
+		clog.String("target", target))
 
 	return conn, nil
 }

@@ -7,7 +7,8 @@
 ## 核心特性
 
 - 🚀 **基于 etcd**：充分利用 etcd 的强一致性和高可用性。
-- 🔧 **服务注册发现**：支持服务注册、发现、监听和 gRPC 连接管理（内置负载均衡）。
+- 🔧 **gRPC 动态服务发现**：实现标准 gRPC resolver 插件，支持实时服务发现和动态负载均衡。
+- ⚡ **高性能连接管理**：连接复用 + gRPC 原生负载均衡，毫秒级故障转移。
 - 🔒 **分布式锁**：基于 etcd 的互斥锁，支持 TTL、自动续约和上下文取消。
 - ⚙️ **配置中心**：强类型配置管理，支持实时监听和 Key-Value 操作。
 - 🎯 **高可靠性**：内置可配置的连接重试和指数退避策略。
@@ -114,7 +115,7 @@ type Lock interface {
 
 ### ServiceRegistry
 
-服务注册发现接口：
+服务注册发现接口，支持 gRPC 动态服务发现：
 
 ```go
 type ServiceRegistry interface {
@@ -130,7 +131,8 @@ type ServiceRegistry interface {
     // Watch 监听服务变化
     Watch(ctx context.Context, serviceName string) (<-chan ServiceEvent, error)
 
-    // GetConnection 获取到指定服务的 gRPC 连接，内置负载均衡
+    // GetConnection 获取到指定服务的 gRPC 连接，使用动态服务发现和负载均衡
+    // 🚀 新特性：基于 gRPC resolver 插件，支持实时服务发现和故障转移
     GetConnection(ctx context.Context, serviceName string) (*grpc.ClientConn, error)
 }
 ```
@@ -312,7 +314,7 @@ if err != nil {
 }
 fmt.Printf("Found services: %+v\n", services)
 
-// 获取 gRPC 连接
+// 🚀 获取 gRPC 连接（使用动态服务发现）
 conn, err := coordinator.Registry().GetConnection(ctx, "chat-service")
 if err != nil {
     panic(err)
@@ -353,9 +355,48 @@ if err != nil {
 fmt.Printf("Keys under 'app/': %v\n", keys)
 ```
 
+## gRPC 动态服务发现
+
+coord 模块实现了标准的 gRPC resolver 插件机制，提供：
+
+- **实时服务发现**：自动感知服务变化
+- **智能负载均衡**：支持 round_robin、pick_first 等策略
+- **自动故障转移**：毫秒级切换到可用实例
+- **高性能连接**：连接复用，减少开销
+
+### 基本用法
+
+```go
+// 创建协调器（自动注册 gRPC resolver）
+coordinator, err := coord.New()
+
+// 注册服务
+service := registry.ServiceInfo{
+    ID: "user-service-1", Name: "user-service",
+    Address: "127.0.0.1", Port: 8080,
+}
+coordinator.Registry().Register(ctx, service, 30*time.Second)
+
+// 创建 gRPC 连接（使用动态服务发现）
+conn, err := coordinator.Registry().GetConnection(ctx, "user-service")
+client := yourpb.NewYourServiceClient(conn)
+```
+
+### 高级配置
+
+```go
+// 自定义负载均衡策略
+conn, err := grpc.DialContext(ctx, "etcd:///my-service",
+    grpc.WithDefaultServiceConfig(`{
+        "loadBalancingPolicy": "round_robin"
+    }`),
+)
+```
+
 ## 最佳实践
 
-1.  **资源管理**: 总是使用 `defer coordinator.Close()` 来确保连接被关闭。
-2.  **上下文管理**: 为所有阻塞操作（如 `Acquire`）提供带有超时的 `context`，以避免无限期等待。
-3.  **监听器管理**: 使用 `defer watcher.Close()` 来确保监听器在不再需要时被关闭，防止资源泄漏。
-4.  **错误处理**: 对 `TryAcquire` 等非阻塞操作返回的错误进行检查，以处理锁已被占用的情况。
+1. **资源管理**: 总是使用 `defer coordinator.Close()` 确保连接关闭
+2. **上下文管理**: 为阻塞操作提供带超时的 `context`
+3. **gRPC 连接复用**: 创建一次连接后尽量复用
+4. **监控服务健康**: 使用 `Watch` 方法监听服务变化
+5. **错误处理**: 检查非阻塞操作的返回错误
