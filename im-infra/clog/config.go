@@ -17,6 +17,11 @@ type Config struct {
 	// EnableColor 是否启用颜色（仅 console 格式）
 	EnableColor bool `json:"enableColor" yaml:"enableColor"`
 
+	// RootPath 项目根目录，用于控制文件路径显示
+	// 如果设置，文件路径将只显示 rootPath 后的部分
+	// 如果 rootPath 不在路径中，则显示绝对路径
+	RootPath string `json:"rootPath,omitempty" yaml:"rootPath,omitempty"`
+
 	// Rotation 日志轮转配置（仅文件输出）
 	Rotation *RotationConfig `json:"rotation,omitempty" yaml:"rotation,omitempty"`
 }
@@ -37,5 +42,6 @@ func DefaultConfig() Config {
 		Output:      "stdout",
 		AddSource:   true,
 		EnableColor: true,
+		RootPath:    "gochat",
 	}
 }

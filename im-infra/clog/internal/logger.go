@@ -62,6 +62,7 @@ type config struct {
 	Output      string
 	AddSource   bool
 	EnableColor bool
+	RootPath    string
 	Rotation    *rotationConfig
 }
 
@@ -82,7 +83,7 @@ func NewLogger(cfg interface{}, opts ...Option) (Logger, error) {
 		Encoding:         config.Format,
 		OutputPaths:      []string{config.Output},
 		ErrorOutputPaths: []string{"stderr"},
-		EncoderConfig:    buildEncoderConfig(config.Format, config.EnableColor),
+		EncoderConfig:    buildEncoderConfig(config.Format, config.EnableColor, config.RootPath, config.AddSource),
 	}
 
 	// 处理文件输出
@@ -159,6 +160,7 @@ func parseConfig(cfg interface{}) *config {
 		Output:      getStringField(cfg, "Output", "stdout"),
 		AddSource:   getBoolField(cfg, "AddSource", true),
 		EnableColor: getBoolField(cfg, "EnableColor", false),
+		RootPath:    getStringField(cfg, "RootPath", ""),
 	}
 
 	// 处理轮转配置
@@ -182,6 +184,7 @@ func getDefaultConfig() *config {
 		Output:      "stdout",
 		AddSource:   true,
 		EnableColor: false,
+		RootPath:    "",
 	}
 }
 
@@ -204,7 +207,7 @@ func parseLevel(level string) zapcore.Level {
 // buildLoggerWithRotation 构建带轮转的日志器
 func buildLoggerWithRotation(config *config, hook Hook) (Logger, error) {
 	// 创建编码器
-	encoderConfig := buildEncoderConfig(config.Format, config.EnableColor)
+	encoderConfig := buildEncoderConfig(config.Format, config.EnableColor, config.RootPath, config.AddSource)
 	encoder := createEncoder(config.Format, encoderConfig)
 
 	// 创建轮转写入器
