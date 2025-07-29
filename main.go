@@ -55,9 +55,18 @@ func main() {
 	// ==================== 阶段二：功能完备 ====================
 	fmt.Println("\n⚡ 阶段二：功能完备 (Full-Power)")
 
-	// 4. 设置配置中心
+	// 4. 设置配置中心（演示新旧两种方式）
 	fmt.Println("4. 设置配置中心...")
-	clog.SetupConfigCenterFromCoord(coordinator.Config(), "dev", "im-infra", "clog")
+
+	// 新方式：依赖注入（推荐）
+	fmt.Println("   使用新的依赖注入方式...")
+	clogManager := clog.NewConfigManager(coordinator.Config(), "dev", "im-infra", "clog")
+	clogManager.Start()
+	defer clogManager.Stop()
+
+	// 旧方式：全局状态（向后兼容）
+	fmt.Println("   使用向后兼容的全局方式...")
+	clog.SetupConfigCenterFromCoord(coordinator.Config(), "dev", "im-infra", "clog-global")
 	clog.Info("配置中心设置完成")
 
 	// 5. clog 配置重载
@@ -71,6 +80,13 @@ func main() {
 	} else {
 		clog.Info("clog 配置重载成功", clog.String("mode", "full-power"))
 	}
+
+	// 6. 演示新的配置管理工具
+	fmt.Println("6. 配置管理工具演示...")
+	fmt.Println("   可以使用新的 config-cli 工具进行配置管理:")
+	fmt.Println("   - 查看配置: config-cli get /config/dev/im-infra/clog")
+	fmt.Println("   - 更新配置: config-cli set /config/dev/im-infra/clog '{\"level\":\"debug\"}'")
+	fmt.Println("   - 监听变化: config-cli watch /config/dev/im-infra/clog")
 
 	// 6. 启动其他组件
 	fmt.Println("6. 启动其他组件...")

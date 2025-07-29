@@ -39,4 +39,15 @@ type ConfigCenter interface {
 	WatchPrefix(ctx context.Context, prefix string, v interface{}) (Watcher[any], error)
 	// List 列出指定前缀下的所有键。
 	List(ctx context.Context, prefix string) ([]string, error)
+
+	// ===== CAS (Compare-And-Swap) 操作支持 =====
+
+	// GetWithVersion 获取配置值和版本信息
+	// 返回值、版本号和错误。版本号用于后续的 CompareAndSet 操作
+	GetWithVersion(ctx context.Context, key string, v interface{}) (version int64, err error)
+
+	// CompareAndSet 原子地比较并设置配置值
+	// 只有当远程配置的版本号与期望版本号匹配时，才会更新配置
+	// 这确保了配置更新的原子性，避免并发修改导致的数据丢失
+	CompareAndSet(ctx context.Context, key string, value interface{}, expectedVersion int64) error
 }

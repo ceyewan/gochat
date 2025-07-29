@@ -59,6 +59,70 @@ func (c *EtcdConfigCenter) Get(ctx context.Context, key string, v interface{}) e
 	return unmarshalValue(resp.Kvs[0].Value, v)
 }
 
+// GetWithVersion 获取配置值和版本信息
+func (c *EtcdConfigCenter) GetWithVersion(ctx context.Context, key string, v interface{}) (int64, error) {
+	if key == "" {
+		return 0, client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
+	}
+	// 检查 v 是否为非 nil 指针
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return 0, client.NewError(client.ErrCodeValidation, "target value must be a non-nil pointer", nil)
+	}
+
+	configKey := path.Join(c.prefix, key)
+	resp, err := c.client.Get(ctx, configKey)
+	if err != nil {
+		return 0, err // 客户端已包装错误
+	}
+
+	if len(resp.Kvs) == 0 {
+		return 0, client.NewError(client.ErrCodeNotFound, "config key not found", nil)
+	}
+
+	kv := resp.Kvs[0]
+	err = unmarshalValue(kv.Value, v)
+	if err != nil {
+		return 0, err
+	}
+
+	// 返回 etcd 的 ModRevision 作为版本号
+	return kv.ModRevision, nil
+}
+
+// CompareAndSet 原子地比较并设置配置值
+func (c *EtcdConfigCenter) CompareAndSet(ctx context.Context, key string, value interface{}, expectedVersion int64) error {
+	if key == "" {
+		return client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
+	}
+
+	valueBytes, err := marshalValue(value)
+	if err != nil {
+		return client.NewError(client.ErrCodeValidation, "failed to serialize config value", err)
+	}
+
+	configKey := path.Join(c.prefix, key)
+
+	// 使用 etcd 的事务来实现 CAS
+	// 条件：ModRevision 等于期望版本
+	// 成功：更新值
+	// 失败：不执行任何操作
+	txnResp, err := c.client.Txn(ctx).
+		If(clientv3.Compare(clientv3.ModRevision(configKey), "=", expectedVersion)).
+		Then(clientv3.OpPut(configKey, string(valueBytes))).
+		Commit()
+
+	if err != nil {
+		return err // 客户端已包装错误
+	}
+
+	if !txnResp.Succeeded {
+		return client.NewError(client.ErrCodeConflict, "config version mismatch, update rejected", nil)
+	}
+
+	return nil
+}
+
 // Set 序列化并存储配置值
 func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{}) error {
 	if key == "" {

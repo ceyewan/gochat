@@ -35,6 +35,7 @@ type ConfigUpdater[T any] interface {
 // 3. 热更新：支持配置热更新和监听
 // 4. 可扩展：支持自定义验证器和更新器
 // 5. 无循环依赖：通过接口抽象避免依赖具体实现
+// 6. 明确生命周期：通过 Start/Stop 方法管理生命周期
 type Manager[T any] struct {
 	// 配置中心
 	configCenter ConfigCenter
@@ -62,6 +63,10 @@ type Manager[T any] struct {
 	mu       sync.RWMutex
 	stopCh   chan struct{}
 	watching bool
+
+	// 生命周期控制
+	startOnce sync.Once
+	stopOnce  sync.Once
 }
 
 // ManagerOption 配置管理器选项
@@ -89,6 +94,7 @@ func WithLogger[T any](logger Logger) ManagerOption[T] {
 }
 
 // NewManager 创建配置管理器
+// 注意：创建后需要调用 Start() 方法来启动配置监听
 func NewManager[T any](
 	configCenter ConfigCenter,
 	env, service, component string,
@@ -112,12 +118,7 @@ func NewManager[T any](
 	// 设置默认配置
 	m.currentConfig.Store(&defaultConfig)
 
-	// 如果有配置中心，尝试加载配置
-	if configCenter != nil {
-		m.loadConfigFromCenter()
-		m.startWatching()
-	}
-
+	// 不再自动启动，需要显式调用 Start() 方法
 	return m
 }
 
@@ -131,6 +132,31 @@ func (m *Manager[T]) GetCurrentConfig() *T {
 	return &defaultCopy
 }
 
+// Start 启动配置管理器和监听器
+// 这个方法是幂等的，可以安全地多次调用
+func (m *Manager[T]) Start() {
+	m.startOnce.Do(func() {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+
+		// 启动时加载一次配置
+		if m.configCenter != nil {
+			m.loadConfigFromCenter()
+			m.startWatching()
+		}
+	})
+}
+
+// Stop 停止配置管理器和监听器
+// 这个方法是幂等的，可以安全地多次调用
+func (m *Manager[T]) Stop() {
+	m.stopOnce.Do(func() {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		m.stopWatching()
+	})
+}
+
 // ReloadConfig 重新加载配置
 func (m *Manager[T]) ReloadConfig() {
 	m.mu.RLock()
@@ -141,11 +167,10 @@ func (m *Manager[T]) ReloadConfig() {
 	}
 }
 
-// Close 关闭配置管理器
+// Close 关闭配置管理器（保持向后兼容）
+// 推荐使用 Stop() 方法
 func (m *Manager[T]) Close() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.stopWatching()
+	m.Stop()
 }
 
 // loadConfigFromCenter 从配置中心加载配置
@@ -173,22 +198,10 @@ func (m *Manager[T]) loadConfigFromCenter() {
 		return
 	}
 
-	// 验证配置
-	if m.validator != nil {
-		if err := m.validator.Validate(&config); err != nil {
-			if m.logger != nil {
-				m.logger.Warn("invalid config from center, using current config",
-					"error", err,
-					"key", key)
-			}
-			return
-		}
-	}
-
-	// 安全更新配置
-	if err := m.safeUpdateConfig(&config); err != nil {
+	// 使用原子的验证和更新方法
+	if err := m.safeUpdateAndApply(&config); err != nil {
 		if m.logger != nil {
-			m.logger.Error("failed to update config safely",
+			m.logger.Error("failed to apply config from center",
 				"error", err,
 				"key", key)
 		}
@@ -204,21 +217,46 @@ func (m *Manager[T]) loadConfigFromCenter() {
 	}
 }
 
-// safeUpdateConfig 安全地更新配置
-func (m *Manager[T]) safeUpdateConfig(newConfig *T) error {
-	// 获取当前配置作为备份
-	oldConfig := m.currentConfig.Load().(*T)
+// safeUpdateAndApply 原子地验证、更新和应用配置
+// 这个方法确保验证和更新是原子操作，避免系统状态不一致
+func (m *Manager[T]) safeUpdateAndApply(newConfig *T) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	// 如果有更新器，先调用更新器
-	if m.updater != nil {
-		if err := m.updater.OnConfigUpdate(oldConfig, newConfig); err != nil {
-			return fmt.Errorf("config updater failed: %w", err)
+	// 1. 验证配置
+	if m.validator != nil {
+		if err := m.validator.Validate(newConfig); err != nil {
+			if m.logger != nil {
+				m.logger.Warn("invalid config received, update rejected", "error", err)
+			}
+			return fmt.Errorf("validation failed: %w", err)
 		}
 	}
 
-	// 更新配置
+	// 2. 调用更新器（两阶段提交）
+	oldConfig := m.currentConfig.Load().(*T)
+	if m.updater != nil {
+		if err := m.updater.OnConfigUpdate(oldConfig, newConfig); err != nil {
+			if m.logger != nil {
+				m.logger.Error("config updater failed, update rejected", "error", err)
+			}
+			return fmt.Errorf("updater failed: %w", err)
+		}
+	}
+
+	// 3. 原子地更新配置指针
 	m.currentConfig.Store(newConfig)
+
+	if m.logger != nil {
+		m.logger.Info("config updated and applied successfully", "key", m.buildConfigKey())
+	}
 	return nil
+}
+
+// safeUpdateConfig 安全地更新配置（保持向后兼容）
+// 推荐使用 safeUpdateAndApply 方法
+func (m *Manager[T]) safeUpdateConfig(newConfig *T) error {
+	return m.safeUpdateAndApply(newConfig)
 }
 
 // buildConfigKey 构建配置键
@@ -227,6 +265,7 @@ func (m *Manager[T]) buildConfigKey() string {
 }
 
 // startWatching 启动配置监听
+// 注意：此方法应该在 m.mu.Lock() 保护下调用
 func (m *Manager[T]) startWatching() {
 	if m.configCenter == nil || m.watching {
 		return
@@ -257,6 +296,7 @@ func (m *Manager[T]) startWatching() {
 }
 
 // stopWatching 停止配置监听
+// 注意：此方法应该在 m.mu.Lock() 保护下调用
 func (m *Manager[T]) stopWatching() {
 	if !m.watching {
 		return
@@ -269,11 +309,12 @@ func (m *Manager[T]) stopWatching() {
 		m.watcher = nil
 	}
 
-	// 通知停止
-	select {
-	case m.stopCh <- struct{}{}:
-	default:
-	}
+	// 关闭 channel，通知 watchLoop 退出
+	// 使用 close 而不是发送，确保 watchLoop 能立即收到信号
+	close(m.stopCh)
+
+	// 重新创建 stopCh 以便下次使用
+	m.stopCh = make(chan struct{})
 }
 
 // watchLoop 配置监听循环
@@ -302,10 +343,10 @@ func (m *Manager[T]) watchLoop() {
 			if event.Type == EventTypePut {
 				// 解析配置
 				if config, err := m.parseConfig(event.Value); err == nil {
-					// 安全更新配置
-					if err := m.safeUpdateConfig(config); err != nil {
+					// 使用原子的验证和更新方法
+					if err := m.safeUpdateAndApply(config); err != nil {
 						if m.logger != nil {
-							m.logger.Error("failed to update config from watcher",
+							m.logger.Error("failed to apply config from watcher",
 								"error", err,
 								"key", m.buildConfigKey())
 						}
@@ -356,17 +397,21 @@ func (m *Manager[T]) parseConfig(value any) (*T, error) {
 // ===== 便捷工厂函数 =====
 
 // SimpleManager 创建简单的配置管理器（无验证器和更新器）
+// 为了保持向后兼容性，这个函数会自动启动管理器
 func SimpleManager[T any](
 	configCenter ConfigCenter,
 	env, service, component string,
 	defaultConfig T,
 	logger Logger,
 ) *Manager[T] {
-	return NewManager(configCenter, env, service, component, defaultConfig,
+	manager := NewManager(configCenter, env, service, component, defaultConfig,
 		WithLogger[T](logger))
+	manager.Start()
+	return manager
 }
 
 // ValidatedManager 创建带验证器的配置管理器
+// 为了保持向后兼容性，这个函数会自动启动管理器
 func ValidatedManager[T any](
 	configCenter ConfigCenter,
 	env, service, component string,
@@ -374,12 +419,15 @@ func ValidatedManager[T any](
 	validator Validator[T],
 	logger Logger,
 ) *Manager[T] {
-	return NewManager(configCenter, env, service, component, defaultConfig,
+	manager := NewManager(configCenter, env, service, component, defaultConfig,
 		WithValidator[T](validator),
 		WithLogger[T](logger))
+	manager.Start()
+	return manager
 }
 
 // FullManager 创建功能完整的配置管理器
+// 为了保持向后兼容性，这个函数会自动启动管理器
 func FullManager[T any](
 	configCenter ConfigCenter,
 	env, service, component string,
@@ -388,8 +436,10 @@ func FullManager[T any](
 	updater ConfigUpdater[T],
 	logger Logger,
 ) *Manager[T] {
-	return NewManager(configCenter, env, service, component, defaultConfig,
+	manager := NewManager(configCenter, env, service, component, defaultConfig,
 		WithValidator[T](validator),
 		WithUpdater[T](updater),
 		WithLogger[T](logger))
+	manager.Start()
+	return manager
 }

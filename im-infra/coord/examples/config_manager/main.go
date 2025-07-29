@@ -64,23 +64,36 @@ func main() {
 	// 2. 获取配置中心
 	configCenter := coordInstance.Config()
 
-	// 3. 示例1：使用 clog 的配置管理（已重构为使用通用管理器）
-	log.Println("\n--- clog 配置管理示例 ---")
-	clog.SetupConfigCenterFromCoord(configCenter, "dev", "gochat", "clog")
+	// 3. 示例1：使用新的依赖注入方式创建 clog 配置管理器
+	log.Println("\n--- clog 配置管理示例（新的依赖注入方式） ---")
+
+	// 创建 clog 配置管理器
+	clogManager := clog.NewConfigManager(configCenter, "dev", "gochat", "clog")
+	clogManager.Start()      // 显式启动
+	defer clogManager.Stop() // 确保清理
 
 	// 使用 clog
 	logger := clog.Module("example")
-	logger.Info("clog 配置管理已设置")
+	logger.Info("clog 配置管理已设置（使用新的依赖注入方式）")
 
-	// 4. 示例2：使用 db 的配置管理（已重构为使用通用管理器）
-	log.Println("\n--- db 配置管理示例 ---")
-	db.SetupConfigCenterFromCoord(configCenter, "dev", "gochat", "db")
+	// 4. 示例2：使用新的依赖注入方式创建 db 配置管理器
+	log.Println("\n--- db 配置管理示例（新的依赖注入方式） ---")
+
+	// 创建 db 配置管理器
+	dbManager := db.NewConfigManager(configCenter, "dev", "gochat", "db")
+	dbManager.Start()      // 显式启动
+	defer dbManager.Stop() // 确保清理
 
 	// 使用 db
 	database := db.GetDB()
 	log.Printf("数据库连接已建立: %v", database != nil)
 
-	// 5. 示例3：自定义应用配置管理
+	// 5. 示例3：向后兼容的全局方式（仍然支持）
+	log.Println("\n--- 向后兼容的全局方式 ---")
+	clog.SetupConfigCenterFromCoord(configCenter, "dev", "gochat", "clog-global")
+	db.SetupConfigCenterFromCoord(configCenter, "dev", "gochat", "db-global")
+
+	// 6. 示例4：自定义应用配置管理（新的生命周期管理）
 	log.Println("\n--- 自定义应用配置管理示例 ---")
 
 	// 默认配置
@@ -91,19 +104,29 @@ func main() {
 		EnableDebug: false,
 	}
 
-	// 创建配置管理器
-	appConfigManager := config.FullManager(
+	// 创建配置管理器（使用新的 API）
+	appConfigManager := config.NewManager(
 		configCenter,
 		"dev", "gochat", "app",
 		defaultAppConfig,
-		&myAppConfigValidator{},
-		&myAppConfigUpdater{},
-		&simpleLogger{},
+		config.WithValidator[MyAppConfig](&myAppConfigValidator{}),
+		config.WithUpdater[MyAppConfig](&myAppConfigUpdater{}),
+		config.WithLogger[MyAppConfig](&simpleLogger{}),
 	)
+
+	// 显式启动配置管理器
+	appConfigManager.Start()
+	defer appConfigManager.Stop()
 
 	// 获取当前配置
 	currentConfig := appConfigManager.GetCurrentConfig()
 	log.Printf("当前应用配置: %+v", *currentConfig)
+
+	// 7. 示例5：演示配置热更新
+	log.Println("\n--- 配置热更新演示 ---")
+	log.Println("可以使用新的 config-cli 工具来更新配置:")
+	log.Printf("  config-cli set /config/dev/gochat/app '{\"port\":9090}'")
+	log.Println("配置管理器会自动检测并应用更新")
 
 	// 6. 示例4：简单配置管理（无验证器和更新器）
 	log.Println("\n--- 简单配置管理示例 ---")

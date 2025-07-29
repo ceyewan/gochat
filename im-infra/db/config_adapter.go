@@ -14,24 +14,24 @@ func (v *configValidator) Validate(cfg *Config) error {
 	return cfg.Validate()
 }
 
-// loggerAdapter 适配器，将 clog.Logger 适配为 config.Logger
-type loggerAdapter struct {
+// dbLoggerAdapter 专门用于适配 clog.Logger 的适配器
+type dbLoggerAdapter struct {
 	logger clog.Logger
 }
 
-func (a *loggerAdapter) Debug(msg string, fields ...any) {
+func (a *dbLoggerAdapter) Debug(msg string, fields ...any) {
 	a.logger.Debug(msg, convertFields(fields...)...)
 }
 
-func (a *loggerAdapter) Info(msg string, fields ...any) {
+func (a *dbLoggerAdapter) Info(msg string, fields ...any) {
 	a.logger.Info(msg, convertFields(fields...)...)
 }
 
-func (a *loggerAdapter) Warn(msg string, fields ...any) {
+func (a *dbLoggerAdapter) Warn(msg string, fields ...any) {
 	a.logger.Warn(msg, convertFields(fields...)...)
 }
 
-func (a *loggerAdapter) Error(msg string, fields ...any) {
+func (a *dbLoggerAdapter) Error(msg string, fields ...any) {
 	a.logger.Error(msg, convertFields(fields...)...)
 }
 
@@ -58,7 +58,7 @@ func newConfigManager(
 	defaultConfig Config,
 ) *config.Manager[Config] {
 	validator := &configValidator{}
-	logger := &loggerAdapter{logger: clog.Module("db.config")}
+	logger := &dbLoggerAdapter{logger: clog.Module("db.config")}
 
 	return config.ValidatedManager(
 		configCenter,
@@ -69,8 +69,32 @@ func newConfigManager(
 	)
 }
 
+// ===== 新的依赖注入 API =====
+
+// NewConfigManager 创建新的配置管理器实例（推荐使用）
+// 这个函数返回一个未启动的配置管理器，需要手动调用 Start() 方法
+func NewConfigManager(
+	configCenter config.ConfigCenter,
+	env, service, component string,
+) *config.Manager[Config] {
+	defaultConfig := internal.DefaultConfig()
+	return newConfigManager(configCenter, env, service, component, defaultConfig)
+}
+
+// NewConfigManagerWithDefaults 创建带自定义默认配置的配置管理器
+func NewConfigManagerWithDefaults(
+	configCenter config.ConfigCenter,
+	env, service, component string,
+	defaultConfig Config,
+) *config.Manager[Config] {
+	return newConfigManager(configCenter, env, service, component, defaultConfig)
+}
+
+// ===== 向后兼容的全局 API =====
+
 // SetupConfigCenter 设置配置中心 - 简化的API
 // 这是推荐的配置中心集成方式
+// 注意：这个函数使用全局状态，推荐使用 NewConfigManager 进行依赖注入
 func SetupConfigCenter(configCenter config.ConfigCenter, env, service, component string) {
 	// 替换全局配置管理器为通用实现
 	defaultConfig := internal.DefaultConfig()
@@ -79,6 +103,7 @@ func SetupConfigCenter(configCenter config.ConfigCenter, env, service, component
 
 // SetupConfigCenterFromCoord 设置配置中心
 // 这是一个便利函数，用于快速设置配置中心作为 db 的配置源
+// 注意：这个函数使用全局状态，推荐使用 NewConfigManager 进行依赖注入
 func SetupConfigCenterFromCoord(configCenter config.ConfigCenter, env, service, component string) {
 	SetupConfigCenter(configCenter, env, service, component)
 }
@@ -108,8 +133,9 @@ func getConfigFromManager() *Config {
 	return globalConfigManager.GetCurrentConfig()
 }
 
-// NewConfigManager 创建配置管理器
-func NewConfigManager(env, service, component string) *config.Manager[Config] {
+// NewConfigManagerLocal 创建本地配置管理器（无配置中心）
+// 这个函数用于向后兼容，推荐使用 NewConfigManager
+func NewConfigManagerLocal(env, service, component string) *config.Manager[Config] {
 	defaultConfig := internal.DefaultConfig()
 	return newConfigManager(nil, env, service, component, defaultConfig)
 }

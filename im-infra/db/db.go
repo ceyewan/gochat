@@ -242,7 +242,7 @@ func Module(name string) DB {
 	}
 
 	// 创建模块专用的配置管理器
-	moduleConfigManager := NewConfigManager(
+	moduleConfigManager := NewConfigManagerLocal(
 		"dev",      // 默认环境，实际应用中可以从全局配置获取
 		"im-infra", // 默认服务
 		"db-"+name, // 组件名

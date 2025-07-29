@@ -2,7 +2,13 @@
   "level": "warn",
   "format": "json",
   "output": "stdout",
-  "addSource": true,
+  "addSource": false,
   "enableColor": false,
-  "rootPath": "gochat"
+  "rootPath": "gochat",
+  "rotation": {
+    "maxSize": 100,
+    "maxBackups": 5,
+    "maxAge": 7,
+    "compress": true
+  }
 }

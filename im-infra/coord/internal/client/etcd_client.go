@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -409,6 +410,11 @@ func (c *EtcdClient) Watch(ctx context.Context, key string, cfg ...clientv3.OpOp
 	return c.client.Watch(ctx, key, cfg...)
 }
 
+// Txn 创建事务（用于 CAS 操作）
+func (c *EtcdClient) Txn(ctx context.Context) clientv3.Txn {
+	return c.client.Txn(ctx)
+}
+
 // ============================================================================
 // 租约操作封装
 // ============================================================================
@@ -457,9 +463,4 @@ func (c *EtcdClient) Revoke(ctx context.Context, id clientv3.LeaseID) (*clientv3
 // isLeaseNotFoundError 检查是否为租约未找到错误
 func (c *EtcdClient) isLeaseNotFoundError(err error) bool {
 	return errors.Is(err, rpctypes.ErrLeaseNotFound)
-}
-
-// Txn 创建事务（不需要重试机制）
-func (c *EtcdClient) Txn(ctx context.Context) clientv3.Txn {
-	return c.client.Txn(ctx)
 }
