@@ -16,6 +16,9 @@
 - 🎨 **配置灵活**：丰富的配置选项和预设配置
 - 🔧 **零额外依赖**：仅依赖 GORM 和 clog
 - 📊 **分库分表支持**：基于 gorm.io/sharding 的可选分库分表功能
+- 🌐 **配置中心集成**：基于 coord 的通用配置管理器，支持动态配置获取和热更新
+- 🔀 **模块化实例**：支持为不同模块创建独立的数据库实例，每个模块可以有不同的配置
+- 🛡️ **降级策略**：配置中心不可用时自动使用默认配置，确保高可用性
 
 ## 安装
 
@@ -65,76 +68,109 @@ defer database.Close()
 
 ## 快速开始
 
-### 基本用法
-
-#### 全局数据库方法（推荐）
+### 推荐用法：配置中心集成
 
 ```go
 package main
 
 import (
-    "context"
+    "github.com/ceyewan/gochat/im-infra/coord"
     "github.com/ceyewan/gochat/im-infra/db"
 )
 
-type User struct {
-    ID       uint   `gorm:"primaryKey"`
-    Username string `gorm:"uniqueIndex"`
-    Email    string
-}
-
 func main() {
-    ctx := context.Background()
-    
-    // 使用全局数据库实例
-    gormDB := db.GetDB()
-    
-    // 自动迁移
-    gormDB.AutoMigrate(&User{})
-    
-    // 创建用户
-    user := &User{Username: "alice", Email: "alice@example.com"}
-    gormDB.WithContext(ctx).Create(user)
-    
-    // 查询用户
-    var users []User
-    gormDB.WithContext(ctx).Find(&users)
+    // 1. 设置配置中心
+    coordInstance := coord.New(coord.Config{
+        Endpoints: []string{"localhost:2379"},
+    })
+    configCenter := coordInstance.ConfigCenter()
+    db.SetupConfigCenterFromCoord(configCenter, "dev", "gochat", "db")
+
+    // 2. 使用数据库（配置自动从配置中心获取）
+    database := db.GetDB()
+
+    // 3. 正常使用
+    // ... 数据库操作
 }
 ```
 
-#### 自定义数据库实例
+### 基本用法（无配置中心）
 
 ```go
 package main
 
 import (
-    "context"
     "github.com/ceyewan/gochat/im-infra/db"
 )
 
 func main() {
-    // 创建自定义配置
-    cfg := db.Config{
-        DSN:             "root:mysql@tcp(localhost:3306)/myapp?charset=utf8mb4&parseTime=True&loc=Local",
-        Driver:          "mysql",
-        MaxOpenConns:    20,
-        MaxIdleConns:    10,
-        LogLevel:        "info",
-        TablePrefix:     "app_",
-    }
-    
-    // 创建数据库实例
-    database, err := db.New(cfg)
+    // 直接使用默认配置
+    database := db.GetDB()
+
+    // 或者使用自定义配置
+    cfg := db.MySQLConfig("root:password@tcp(localhost:3306)/myapp?charset=utf8mb4&parseTime=True&loc=Local")
+    customDB, err := db.New(cfg)
     if err != nil {
         panic(err)
     }
-    defer database.Close()
-    
-    // 使用数据库实例
-    gormDB := database.GetDB()
-    // ... 使用 gormDB 进行数据库操作
+    defer customDB.Close()
 }
 ```
+
+### 模块化实例
+
+```go
+// 为不同模块创建独立的数据库实例
+userDB := db.Module("user")   // 配置路径: /config/dev/gochat/db-user
+orderDB := db.Module("order") // 配置路径: /config/dev/gochat/db-order
+
+// 每个模块可以有不同的数据库配置
+userGormDB := userDB.GetDB()
+orderGormDB := orderDB.GetDB()
+```
+
+#### 配置中心集成（新功能）
+
+支持从 coord 配置中心动态获取配置，提供更灵活的配置管理：
+
+```go
+package main
+
+import (
+    "github.com/ceyewan/gochat/im-infra/coord"
+    "github.com/ceyewan/gochat/im-infra/db"
+)
+
+func main() {
+    // 1. 初始化 coord 实例
+    coordInstance := coord.New(coord.Config{
+        Endpoints: []string{"localhost:2379"},
+        Timeout:   5 * time.Second,
+    })
+
+    // 2. 设置配置中心
+    configCenter := coordInstance.ConfigCenter()
+    db.SetupConfigCenterFromCoord(configCenter, "dev", "gochat", "db")
+
+    // 3. 使用数据库（会自动从配置中心获取配置）
+    database := db.GetDB()
+
+    // 4. 使用模块化实例（每个模块可以有不同的配置）
+    userDB := db.Module("user")   // 配置路径: /config/dev/gochat/db-user
+    orderDB := db.Module("order") // 配置路径: /config/dev/gochat/db-order
+
+    // 5. 运行时重新加载配置
+    db.ReloadConfig()
+}
+```
+
+**配置中心特性：**
+- 🔧 **通用管理器**：基于 coord 的通用配置管理器，类型安全且功能完整
+- 🔄 **动态配置**：从配置中心实时获取配置
+- 🛡️ **降级策略**：配置中心不可用时自动使用默认配置
+- 🏗️ **模块化**：支持为不同模块创建独立的数据库实例
+- 🔁 **热重载**：支持运行时重新加载配置
+- 📍 **路径规则**：`/config/{env}/{service}/{component}[-{module}]`
 
 #### 数据库管理功能
 

@@ -107,7 +107,7 @@ func New(config ...Config) (Logger, error) {
 		cfg = config[0]
 	} else {
 		// 从配置管理器获取当前配置（支持配置中心和降级）
-		cfg = *getConfigFromManager()
+		cfg = *GetCurrentConfig()
 	}
 
 	logger, err := internal.NewLogger(cfg, internal.WithHook(traceIDHook))
@@ -162,7 +162,7 @@ func Init(config ...Config) error {
 		cfg = config[0]
 	} else {
 		// 从配置管理器获取当前配置（支持配置中心和降级）
-		cfg = *getConfigFromManager()
+		cfg = *GetCurrentConfig()
 	}
 
 	logger, err := New(cfg)

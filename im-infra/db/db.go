@@ -31,18 +31,28 @@ var (
 	defaultDBOnce sync.Once
 	// 模块日志器
 	logger = clog.Module("db")
+	// 模块实例缓存
+	moduleInstances = make(map[string]DB)
+	// 模块实例锁
+	moduleInstancesMu sync.RWMutex
 )
 
 // getDefaultDB 获取全局默认数据库实例，使用懒加载和单例模式
+// 现在支持从配置中心动态获取配置
 func getDefaultDB() DB {
 	defaultDBOnce.Do(func() {
-		cfg := DefaultConfig()
+		// 从配置管理器获取配置，如果配置中心不可用则使用默认配置
+		cfg := *getConfigFromManager()
 		var err error
 		defaultDB, err = internal.NewDB(cfg)
 		if err != nil {
 			logger.Error("创建默认数据库实例失败", clog.Err(err))
 			panic(err)
 		}
+		logger.Info("默认数据库实例创建成功",
+			clog.String("driver", cfg.Driver),
+			clog.Int("maxOpenConns", cfg.MaxOpenConns),
+			clog.Int("maxIdleConns", cfg.MaxIdleConns))
 	})
 	return defaultDB
 }
@@ -198,4 +208,64 @@ func AutoMigrate(dst ...interface{}) error {
 // 注意：这个方法要求目标数据库已经存在才能工作
 func CreateDatabaseIfNotExists(dbName string) error {
 	return getDefaultDB().CreateDatabaseIfNotExists(dbName)
+}
+
+// ===== 配置中心集成 API =====
+
+// Module 创建模块化的数据库实例
+// 支持为不同模块创建独立的数据库实例，每个实例可以有不同的配置
+//
+// 示例：
+//
+//	// 为用户服务创建专用数据库实例
+//	userDB := db.Module("user")
+//
+//	// 为订单服务创建专用数据库实例
+//	orderDB := db.Module("order")
+//
+//	// 每个模块实例都会尝试从配置中心获取对应的配置
+//	// 配置路径格式：/config/{env}/{service}/{component}-{module}
+func Module(name string) DB {
+	moduleInstancesMu.RLock()
+	if instance, exists := moduleInstances[name]; exists {
+		moduleInstancesMu.RUnlock()
+		return instance
+	}
+	moduleInstancesMu.RUnlock()
+
+	moduleInstancesMu.Lock()
+	defer moduleInstancesMu.Unlock()
+
+	// 双重检查
+	if instance, exists := moduleInstances[name]; exists {
+		return instance
+	}
+
+	// 创建模块专用的配置管理器
+	moduleConfigManager := NewConfigManager(
+		"dev",      // 默认环境，实际应用中可以从全局配置获取
+		"im-infra", // 默认服务
+		"db-"+name, // 组件名
+	)
+
+	// 获取模块配置
+	cfg := *moduleConfigManager.GetCurrentConfig()
+
+	// 创建模块实例
+	instance, err := internal.NewDB(cfg)
+	if err != nil {
+		logger.Error("创建模块数据库实例失败",
+			clog.String("module", name),
+			clog.Err(err))
+		// 降级到默认实例
+		return getDefaultDB()
+	}
+
+	logger.Info("模块数据库实例创建成功",
+		clog.String("module", name),
+		clog.String("driver", cfg.Driver),
+		clog.Int("maxOpenConns", cfg.MaxOpenConns))
+
+	moduleInstances[name] = instance
+	return instance
 }

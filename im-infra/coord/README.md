@@ -40,6 +40,7 @@ Coord 模块是 gochat 项目的分布式协调基础设施库，基于 etcd 提
 - 强类型配置的 Get/Set/Delete/List 操作。
 - 支持对单个 Key 或指定前缀（Prefix）进行实时变更监听。
 - 泛型支持，提供类型安全的事件通知。
+- **通用配置管理器**：为所有模块提供统一的配置管理能力，支持验证、更新回调和热重载。
 
 ## 快速开始
 
@@ -215,15 +216,52 @@ type ConfigCenter interface {
 }
 ```
 
+### 通用配置管理器
+
+coord 提供了通用的配置管理器，为所有基础设施模块提供统一的配置管理能力：
+
+```go
+// 创建配置管理器
+manager := config.SimpleManager(
+    configCenter,
+    "dev", "gochat", "component",
+    defaultConfig,
+    logger,
+)
+
+// 获取当前配置
+currentConfig := manager.GetCurrentConfig()
+
+// 重新加载配置
+manager.ReloadConfig()
+```
+
+**特性：**
+- 🔧 **类型安全**：基于泛型的类型安全配置管理
+- 🛡️ **降级策略**：配置中心不可用时自动使用默认配置
+- 🔄 **热更新**：支持配置热更新和实时监听
+- ✅ **配置验证**：支持自定义配置验证器
+- 🔄 **更新回调**：支持配置更新时的自定义逻辑
+
+**已集成模块：**
+- `clog`：日志模块配置管理
+- `db`：数据库模块配置管理
+
+详细使用方法请参考：[通用配置管理器文档](config/README.md)
+
 ## 项目结构
 
 ```
 coord/
 ├── internal/           # 内部实现
-├── config/            # 配置中心接口
+├── config/            # 配置中心接口和通用配置管理器
+│   ├── interface.go   # 配置中心接口定义
+│   ├── manager.go     # 通用配置管理器
+│   └── README.md      # 配置管理器文档
 ├── lock/              # 分布式锁接口
 ├── registry/          # 服务注册发现接口
 ├── examples/          # 使用示例
+│   └── config_manager/ # 通用配置管理器示例
 ├── coord.go           # 主协调器
 ├── config.go          # 配置定义
 ├── coord_comprehensive_test.go  # 综合测试

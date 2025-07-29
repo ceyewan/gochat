@@ -227,18 +227,6 @@ cfg := db.MySQLConfig("user:pass@tcp(localhost:3306)/db").
 database, err := db.New(cfg)
 ```
 
-### 模块化使用
-
-```go
-// 创建模块数据库实例
-userDB := db.Module("user")
-productDB := db.Module("product")
-
-// 使用模块实例
-gormDB := userDB.GetDB()
-err := gormDB.Create(&user).Error
-```
-
 ### 事务操作
 
 ```go

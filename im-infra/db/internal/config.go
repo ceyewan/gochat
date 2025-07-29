@@ -6,36 +6,7 @@ import (
 )
 
 // Config 是 db 的主配置结构体。
-// 用于声明式地定义数据库连接和行为参数。
-//
-// 示例：
-//
-//	// MySQL 生产环境配置
-//	cfg := Config{
-//		DSN:             "root:password@tcp(localhost:3306)/myapp?charset=utf8mb4&parseTime=True&loc=Local",
-//		Driver:          "mysql",
-//		MaxOpenConns:    50,
-//		MaxIdleConns:    25,
-//		ConnMaxLifetime: time.Hour,
-//		ConnMaxIdleTime: 30 * time.Minute,
-//		LogLevel:        "warn",
-//		SlowThreshold:   200 * time.Millisecond,
-//		TablePrefix:     "app_",
-//	}
-//
-//	// PostgreSQL 配置
-//	cfg := Config{
-//		DSN:    "host=localhost user=postgres password=password dbname=myapp sslmode=disable",
-//		Driver: "postgres",
-//	}
-//
-//	// SQLite 配置
-//	cfg := Config{
-//		DSN:          "./database.db",
-//		Driver:       "sqlite",
-//		MaxOpenConns: 1, // SQLite 建议使用单连接
-//		MaxIdleConns: 1,
-//	}
+// 通常从配置中心获取，也可以手动构建。
 type Config struct {
 	// DSN 数据库连接字符串
 	// MySQL 示例: "user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
@@ -97,30 +68,6 @@ type Config struct {
 }
 
 // ShardingConfig 分库分表配置
-//
-// 示例：
-//
-//	// 基于用户ID的分片配置
-//	shardingConfig := &ShardingConfig{
-//		ShardingKey:       "user_id",
-//		NumberOfShards:    16,
-//		ShardingAlgorithm: "hash",
-//		Tables: map[string]*TableShardingConfig{
-//			"orders": {
-//				// 使用全局配置
-//			},
-//			"payments": {
-//				// 自定义该表的分片配置
-//				NumberOfShards: 8,
-//			},
-//		},
-//	}
-//
-//	cfg := Config{
-//		DSN:      "root:mysql@tcp(localhost:3306)/myapp?charset=utf8mb4&parseTime=True&loc=Local",
-//		Driver:   "mysql",
-//		Sharding: shardingConfig,
-//	}
 type ShardingConfig struct {
 	// ShardingKey 分片键字段名
 	ShardingKey string `json:"shardingKey" yaml:"shardingKey"`
