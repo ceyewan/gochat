@@ -2,7 +2,7 @@ package config
 
 import "context"
 
-// EventType 事件类型
+// EventType 表示事件类型。
 type EventType string
 
 const (
@@ -10,34 +10,33 @@ const (
 	EventTypeDelete EventType = "DELETE"
 )
 
-// ConfigEvent represents a configuration change event.
-// It is generic to support typed values.
+// ConfigEvent 表示配置变更事件，泛型以支持类型化的值。
 type ConfigEvent[T any] struct {
-	Type  EventType
-	Key   string
-	Value T
+	Type  EventType // 事件类型
+	Key   string    // 配置键
+	Value T         // 配置值
 }
 
-// Watcher is a generic interface for watching configuration changes.
+// Watcher 是用于监听配置变更的泛型接口。
 type Watcher[T any] interface {
-	// Chan returns a channel that receives configuration change events.
+	// Chan 返回一个接收配置变更事件的通道。
 	Chan() <-chan ConfigEvent[T]
-	// Close stops the watcher.
+	// Close 停止监听器。
 	Close()
 }
 
-// ConfigCenter is the interface for a key-value configuration store.
+// ConfigCenter 是键值配置存储的接口。
 type ConfigCenter interface {
-	// Get retrieves a configuration value and unmarshals it into the provided type.
+	// Get 获取配置值并反序列化到提供的类型中。
 	Get(ctx context.Context, key string, v interface{}) error
-	// Set serializes and stores a configuration value.
+	// Set 序列化并存储配置值。
 	Set(ctx context.Context, key string, value interface{}) error
-	// Delete removes a configuration key.
+	// Delete 删除配置键。
 	Delete(ctx context.Context, key string) error
-	// Watch watches for changes on a single key and attempts to unmarshal them into the given type.
+	// Watch 监听单个键的变更，并尝试反序列化为给定类型。
 	Watch(ctx context.Context, key string, v interface{}) (Watcher[any], error)
-	// WatchPrefix watches for changes on all keys under a given prefix.
+	// WatchPrefix 监听指定前缀下所有键的变更。
 	WatchPrefix(ctx context.Context, prefix string, v interface{}) (Watcher[any], error)
-	// List lists all keys under a given prefix.
+	// List 列出指定前缀下的所有键。
 	List(ctx context.Context, prefix string) ([]string, error)
 }

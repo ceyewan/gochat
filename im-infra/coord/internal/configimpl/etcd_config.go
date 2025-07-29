@@ -13,14 +13,14 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-// EtcdConfigCenter implements the config.ConfigCenter interface using etcd.
+// EtcdConfigCenter 使用 etcd 实现 config.ConfigCenter 接口
 type EtcdConfigCenter struct {
-	client *client.EtcdClient
-	prefix string
-	logger clog.Logger
+	client *client.EtcdClient // etcd 客户端
+	prefix string             // 配置前缀
+	logger clog.Logger        // 日志记录器
 }
 
-// NewEtcdConfigCenter creates a new etcd-based config center.
+// NewEtcdConfigCenter 创建一个基于 etcd 的配置中心
 func NewEtcdConfigCenter(c *client.EtcdClient, prefix string, logger clog.Logger) *EtcdConfigCenter {
 	if prefix == "" {
 		prefix = "/config"
@@ -35,12 +35,12 @@ func NewEtcdConfigCenter(c *client.EtcdClient, prefix string, logger clog.Logger
 	}
 }
 
-// Get retrieves a configuration value and unmarshals it into the provided type `v`.
+// Get 获取配置值并反序列化到提供的类型 v
 func (c *EtcdConfigCenter) Get(ctx context.Context, key string, v interface{}) error {
 	if key == "" {
 		return client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
 	}
-	// Ensure `v` is a non-nil pointer.
+	// 检查 v 是否为非 nil 指针
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return client.NewError(client.ErrCodeValidation, "target value must be a non-nil pointer", nil)
@@ -49,7 +49,7 @@ func (c *EtcdConfigCenter) Get(ctx context.Context, key string, v interface{}) e
 	configKey := path.Join(c.prefix, key)
 	resp, err := c.client.Get(ctx, configKey)
 	if err != nil {
-		return err // The client already wraps this error.
+		return err // 客户端已包装错误
 	}
 
 	if len(resp.Kvs) == 0 {
@@ -59,7 +59,7 @@ func (c *EtcdConfigCenter) Get(ctx context.Context, key string, v interface{}) e
 	return unmarshalValue(resp.Kvs[0].Value, v)
 }
 
-// Set serializes and stores a configuration value.
+// Set 序列化并存储配置值
 func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{}) error {
 	if key == "" {
 		return client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
@@ -72,10 +72,10 @@ func (c *EtcdConfigCenter) Set(ctx context.Context, key string, value interface{
 
 	configKey := path.Join(c.prefix, key)
 	_, err = c.client.Put(ctx, configKey, string(valueBytes))
-	return err // The client already wraps this error.
+	return err // 客户端已包装错误
 }
 
-// Delete removes a configuration key.
+// Delete 删除配置键
 func (c *EtcdConfigCenter) Delete(ctx context.Context, key string) error {
 	if key == "" {
 		return client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
@@ -92,7 +92,7 @@ func (c *EtcdConfigCenter) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// Watch watches for changes on a single key.
+// Watch 监听单个配置键的变更
 func (c *EtcdConfigCenter) Watch(ctx context.Context, key string, v interface{}) (config.Watcher[any], error) {
 	if key == "" {
 		return nil, client.NewError(client.ErrCodeValidation, "config key cannot be empty", nil)
@@ -101,7 +101,7 @@ func (c *EtcdConfigCenter) Watch(ctx context.Context, key string, v interface{})
 	return c.watch(ctx, configKey, v, false)
 }
 
-// WatchPrefix watches for changes on all keys under a given prefix.
+// WatchPrefix 监听指定前缀下所有配置键的变更
 func (c *EtcdConfigCenter) WatchPrefix(ctx context.Context, prefix string, v interface{}) (config.Watcher[any], error) {
 	if prefix == "" {
 		return nil, client.NewError(client.ErrCodeValidation, "config prefix cannot be empty", nil)
@@ -110,7 +110,7 @@ func (c *EtcdConfigCenter) WatchPrefix(ctx context.Context, prefix string, v int
 	return c.watch(ctx, configPrefix, v, true)
 }
 
-// List lists all keys under a given prefix.
+// List 列出指定前缀下的所有配置键
 func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, error) {
 	searchPrefix := path.Join(c.prefix, prefix)
 	if !strings.HasSuffix(searchPrefix, "/") {
@@ -129,9 +129,9 @@ func (c *EtcdConfigCenter) List(ctx context.Context, prefix string) ([]string, e
 	return keys, nil
 }
 
-// watch is the internal implementation for watching keys or prefixes.
+// watch 内部实现，监听单个键或前缀
 func (c *EtcdConfigCenter) watch(ctx context.Context, keyOrPrefix string, v interface{}, isPrefix bool) (config.Watcher[any], error) {
-	// Ensure `v` is a non-nil pointer to get its type.
+	// 检查 v 是否为非 nil 指针以获取类型
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return nil, client.NewError(client.ErrCodeValidation, "target value type must be a non-nil pointer", nil)
@@ -175,6 +175,7 @@ func (c *EtcdConfigCenter) watch(ctx context.Context, keyOrPrefix string, v inte
 	return w, nil
 }
 
+// convertEvent 将 etcd 事件转换为配置事件
 func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event, valueType reflect.Type) *config.ConfigEvent[any] {
 	relativeKey := strings.TrimPrefix(string(event.Kv.Key), c.prefix+"/")
 	var eventType config.EventType
@@ -186,7 +187,7 @@ func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event, valueType reflect
 		value = c.parseEventValue(event.Kv.Value, valueType, relativeKey)
 	case clientv3.EventTypeDelete:
 		eventType = config.EventTypeDelete
-		// Value is nil for delete events.
+		// 删除事件不包含值
 	default:
 		return nil
 	}
@@ -198,21 +199,23 @@ func (c *EtcdConfigCenter) convertEvent(event *clientv3.Event, valueType reflect
 	}
 }
 
-// etcdWatcher implements the config.Watcher interface.
+// etcdWatcher 实现 config.Watcher 接口
 type etcdWatcher struct {
-	ch     chan config.ConfigEvent[any]
-	cancel context.CancelFunc
+	ch     chan config.ConfigEvent[any] // 事件通道
+	cancel context.CancelFunc           // 取消函数
 }
 
+// Chan 返回事件通道
 func (w *etcdWatcher) Chan() <-chan config.ConfigEvent[any] {
 	return w.ch
 }
 
+// Close 停止监听
 func (w *etcdWatcher) Close() {
 	w.cancel()
 }
 
-// marshalValue serializes a value. It prioritizes string and []byte, falling back to JSON.
+// marshalValue 序列化值，优先处理 string 和 []byte，否则使用 JSON
 func marshalValue(value interface{}) ([]byte, error) {
 	switch v := value.(type) {
 	case string:
@@ -224,19 +227,19 @@ func marshalValue(value interface{}) ([]byte, error) {
 	}
 }
 
-// unmarshalValue deserializes a value. It attempts JSON first, then falls back to a direct string conversion if the target is a string.
+// unmarshalValue 反序列化值，优先尝试 JSON，失败则尝试字符串
 func unmarshalValue(data []byte, v interface{}) error {
 	if err := json.Unmarshal(data, v); err == nil {
 		return nil
 	}
 
-	// If JSON unmarshal fails, check if the target is a *string.
+	// 如果目标是 *string，则直接赋值
 	if strPtr, ok := v.(*string); ok {
 		*strPtr = string(data)
 		return nil
 	}
 
-	// If it's not a *string and JSON failed, it's an error.
+	// 非 *string 且 JSON 失败，返回错误
 	return client.NewError(client.ErrCodeValidation, "value is not valid JSON for the target type", nil)
 }
 
@@ -244,7 +247,7 @@ func unmarshalValue(data []byte, v interface{}) error {
 func (c *EtcdConfigCenter) parseEventValue(data []byte, valueType reflect.Type, key string) interface{} {
 	// 如果目标类型是 interface{}，尝试自动推断类型
 	if valueType.Kind() == reflect.Interface && valueType.NumMethod() == 0 {
-		return c.parseAsInterface(data, key)
+		return c.parseAsInterface(data)
 	}
 
 	// 尝试解析为目标类型
@@ -264,7 +267,7 @@ func (c *EtcdConfigCenter) parseEventValue(data []byte, valueType reflect.Type, 
 }
 
 // parseAsInterface 当目标类型是 interface{} 时，自动推断最合适的类型
-func (c *EtcdConfigCenter) parseAsInterface(data []byte, key string) interface{} {
+func (c *EtcdConfigCenter) parseAsInterface(data []byte) interface{} {
 	// 首先尝试解析为 JSON
 	var jsonValue interface{}
 	if err := json.Unmarshal(data, &jsonValue); err == nil {
