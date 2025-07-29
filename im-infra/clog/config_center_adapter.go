@@ -73,6 +73,7 @@ func (a *ConfigCenterAdapter) Watch(ctx context.Context, env, service, component
 		watcher: watcher,
 		logger:  a.logger,
 		key:     key,
+		stopCh:  make(chan struct{}),
 	}, nil
 }
 
@@ -85,6 +86,7 @@ type configCenterWatcher struct {
 	once    sync.Once
 	closed  bool
 	mu      sync.RWMutex
+	stopCh  chan struct{} // 添加停止信号通道
 }
 
 // Chan 实现 ConfigWatcher 接口
@@ -106,6 +108,10 @@ func (w *configCenterWatcher) Close() {
 	}
 
 	w.closed = true
+
+	// 发送停止信号
+	close(w.stopCh)
+
 	if w.watcher != nil {
 		w.watcher.Close()
 	}
@@ -125,34 +131,38 @@ func (w *configCenterWatcher) watchLoop() {
 	}()
 
 	for {
-		w.mu.RLock()
-		closed := w.closed
-		w.mu.RUnlock()
-
-		if closed {
+		select {
+		case <-w.stopCh:
+			w.logger.Debug("config watcher stopped", String("key", w.key))
 			return
-		}
+		case event, ok := <-w.watcher.Chan():
+			if !ok {
+				w.logger.Debug("config watcher channel closed", String("key", w.key))
+				return
+			}
 
-		event := <-w.watcher.Chan()
-		if event.Type == config.EventTypePut {
-			// 尝试将事件值转换为 Config
-			if configData, err := w.parseConfig(event.Value); err == nil {
-				w.logger.Info("config changed",
-					String("key", w.key),
-					String("level", configData.Level),
-					String("format", configData.Format))
+			if event.Type == config.EventTypePut {
+				// 尝试将事件值转换为 Config
+				if configData, err := w.parseConfig(event.Value); err == nil {
+					w.logger.Info("config changed",
+						String("key", w.key),
+						String("level", configData.Level),
+						String("format", configData.Format))
 
-				select {
-				case w.ch <- configData:
-				default:
-					// 如果通道满了，丢弃旧的配置更新
-					w.logger.Warn("config channel full, dropping old update", String("key", w.key))
+					select {
+					case w.ch <- configData:
+					case <-w.stopCh:
+						return
+					default:
+						// 如果通道满了，丢弃旧的配置更新
+						w.logger.Warn("config channel full, dropping old update", String("key", w.key))
+					}
+				} else {
+					w.logger.Error("failed to parse config from event",
+						Err(err),
+						String("key", w.key),
+						Any("value", event.Value))
 				}
-			} else {
-				w.logger.Error("failed to parse config from event",
-					Err(err),
-					String("key", w.key),
-					Any("value", event.Value))
 			}
 		}
 	}

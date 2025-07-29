@@ -2,6 +2,8 @@ package clog
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -214,13 +216,21 @@ func (cm *ConfigManager) watchLoop() {
 
 	for {
 		select {
-		case config := <-cm.watcher.Chan():
-			if config != nil {
-				// 更新配置
-				cm.currentConfig.Store(config)
+		case config, ok := <-cm.watcher.Chan():
+			if !ok {
+				// Channel 已关闭，退出循环
+				logger := Module("clog.config")
+				logger.Debug("config watcher channel closed")
+				return
+			}
 
-				// 触发全局 logger 重新初始化
-				cm.triggerGlobalLoggerUpdate(config)
+			if config != nil {
+				// 验证并安全更新配置
+				if err := cm.safeUpdateConfig(config); err != nil {
+					logger := Module("clog.config")
+					logger.Error("failed to update config safely", Err(err))
+					continue
+				}
 
 				logger := Module("clog.config")
 				logger.Info("config updated from watcher",
@@ -233,13 +243,74 @@ func (cm *ConfigManager) watchLoop() {
 	}
 }
 
-// triggerGlobalLoggerUpdate 触发全局 logger 更新
-func (cm *ConfigManager) triggerGlobalLoggerUpdate(config *Config) {
-	// 重新初始化全局 logger
-	err := Init(*config)
+// safeUpdateConfig 安全地更新配置，包含验证和回滚机制
+func (cm *ConfigManager) safeUpdateConfig(newConfig *Config) error {
+	// 1. 验证新配置
+	if err := cm.validateConfig(newConfig); err != nil {
+		return fmt.Errorf("config validation failed: %w", err)
+	}
+
+	// 2. 保存当前配置作为备份
+	oldConfig := cm.currentConfig.Load().(*Config)
+
+	// 3. 尝试创建新的 logger 来验证配置是否可用
+	testLogger, err := New(*newConfig)
 	if err != nil {
+		return fmt.Errorf("failed to create test logger with new config: %w", err)
+	}
+
+	// 测试 logger 可以正常工作
+	testLogger.Debug("config validation test")
+
+	// 4. 更新配置
+	cm.currentConfig.Store(newConfig)
+
+	// 5. 尝试更新全局 logger
+	if err := Init(*newConfig); err != nil {
+		// 回滚配置
+		cm.currentConfig.Store(oldConfig)
+		return fmt.Errorf("failed to update global logger, rolled back: %w", err)
+	}
+
+	return nil
+}
+
+// validateConfig 验证配置的有效性
+func (cm *ConfigManager) validateConfig(config *Config) error {
+	if config == nil {
+		return fmt.Errorf("config cannot be nil")
+	}
+
+	// 验证日志级别
+	validLevels := map[string]bool{
+		"debug": true, "info": true, "warn": true, "error": true,
+	}
+	if !validLevels[strings.ToLower(config.Level)] {
+		return fmt.Errorf("invalid log level: %s", config.Level)
+	}
+
+	// 验证格式
+	validFormats := map[string]bool{
+		"json": true, "console": true,
+	}
+	if !validFormats[config.Format] {
+		return fmt.Errorf("invalid log format: %s", config.Format)
+	}
+
+	// 验证输出
+	if config.Output == "" {
+		return fmt.Errorf("output cannot be empty")
+	}
+
+	return nil
+}
+
+// triggerGlobalLoggerUpdate 触发全局 logger 更新（已废弃，使用 safeUpdateConfig 替代）
+func (cm *ConfigManager) triggerGlobalLoggerUpdate(config *Config) {
+	// 使用新的安全更新方法
+	if err := cm.safeUpdateConfig(config); err != nil {
 		logger := Module("clog.config")
-		logger.Error("failed to update global logger", Err(err))
+		logger.Error("failed to update global logger safely", Err(err))
 	}
 }
 

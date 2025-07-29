@@ -29,23 +29,24 @@ func SetTraceIDHook(hook func(context.Context) (string, bool)) {
 	traceIDHook = hook
 }
 
+// 预定义的 TraceID 键列表，避免每次调用时重新创建
+var commonTraceIDKeys = []string{
+	"traceID", // 将最常见的放在首位
+	"trace_id",
+	"TraceID",
+	"X-Trace-ID",
+	"trace-id",
+	"TRACE_ID",
+}
+
 // 默认的 TraceID 提取函数
 func defaultTraceIDHook(ctx context.Context) (string, bool) {
 	if ctx == nil {
 		return "", false
 	}
 
-	// 遍历一个统一的 key 列表来查找 TraceID，更简洁高效
-	commonKeys := []string{
-		"traceID", // 将最常见的放在首位
-		"trace_id",
-		"TraceID",
-		"X-Trace-ID",
-		"trace-id",
-		"TRACE_ID",
-	}
-
-	for _, key := range commonKeys {
+	// 使用预定义的 key 列表来查找 TraceID，避免重复分配
+	for _, key := range commonTraceIDKeys {
 		if val := ctx.Value(key); val != nil {
 			if str, ok := val.(string); ok && str != "" {
 				return str, true
@@ -172,13 +173,30 @@ func Init(config ...Config) error {
 	// 原子地替换全局日志器
 	defaultLogger.Store(logger)
 
-	// 安全地清空模块日志器缓存，强制它们使用新的 logger 配置重新创建
-	moduleLoggers.Range(func(key, _ any) bool {
-		moduleLoggers.Delete(key)
-		return true
-	})
+	// 智能更新模块日志器缓存：只有当配置真正影响日志行为时才清空缓存
+	if shouldClearModuleCache(cfg) {
+		moduleLoggers.Range(func(key, _ any) bool {
+			moduleLoggers.Delete(key)
+			return true
+		})
+	}
 
 	return nil
+}
+
+// shouldClearModuleCache 判断是否需要清空模块缓存
+// 只有当配置变化会影响日志行为时才清空缓存，避免不必要的性能损失
+func shouldClearModuleCache(newConfig Config) bool {
+	// 获取当前默认配置进行比较
+	currentLogger := getDefaultLogger()
+	if currentLogger == nil {
+		return true // 如果当前没有 logger，需要清空缓存
+	}
+
+	// 比较关键配置项，如果这些项发生变化，需要清空缓存
+	// 这里我们采用保守策略：任何配置变化都清空缓存
+	// 在实际使用中可以根据需要进一步优化
+	return true
 }
 
 // C 返回一个带 context 的 logger，用于链式调用

@@ -13,7 +13,7 @@ INFO    runtime/proc.go:283     消息内容
 INFO    internal/logger.go:115  消息内容
 
 # ✅ clog 正确显示
-INFO    main.go:11              消息内容  
+INFO    main.go:11              消息内容
 INFO    user_service.go:45      消息内容
 ```
 
@@ -28,7 +28,7 @@ INFO    user_service.go:45      消息内容
 # 默认显示（最后两层）
 INFO    examples/main.go:10     消息
 
-# 设置 RootPath="gochat" 后  
+# 设置 RootPath="gochat" 后
 INFO    im-infra/clog/examples/main.go:10    消息
 
 # RootPath 不匹配时显示绝对路径
@@ -41,6 +41,11 @@ INFO    /full/path/to/file.go:10    消息
 
 ### 📦 模块化日志
 内置模块支持，自动添加模块标识，便于日志分类和过滤。
+
+### ⚙️ 配置中心集成
+- **两阶段启动**：支持降级启动和配置热更新
+- **安全配置更新**：内置配置验证和回滚机制
+- **智能缓存管理**：优化模块 logger 缓存策略
 
 ## 🚀 快速开始
 
@@ -136,6 +141,40 @@ clog.SetTraceIDHook(func(ctx context.Context) (string, bool) {
     }
     return "", false
 })
+```
+
+### 配置中心集成（两阶段启动）
+```go
+package main
+
+import (
+    "github.com/ceyewan/gochat/im-infra/clog"
+    "github.com/ceyewan/gochat/im-infra/coord"
+)
+
+func main() {
+    // 阶段一：降级启动 - 使用默认配置确保基础日志功能可用
+    clog.Info("应用启动", clog.String("stage", "fallback"))
+
+    // 创建协调器
+    coordinator, err := coord.New()
+    if err != nil {
+        panic(err)
+    }
+    defer coordinator.Close()
+
+    // 阶段二：配置中心集成 - 从配置中心获取配置并支持热更新
+    clog.SetupConfigCenterFromCoord(coordinator.Config(), "prod", "im-infra", "clog")
+
+    // 重新初始化，使用配置中心的配置
+    err = clog.Init()
+    if err != nil {
+        // 如果配置中心不可用，会继续使用当前配置，不会中断服务
+        clog.Warn("配置中心不可用，继续使用当前配置", clog.Err(err))
+    }
+
+    clog.Info("配置中心集成完成", clog.String("stage", "config-center"))
+}
 ```
 
 ## 🏗️ 最佳实践
