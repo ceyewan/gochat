@@ -95,13 +95,18 @@ func getDefaultLogger() internal.Logger {
 
 // New 根据传入的配置创建一个新的、独立的 Logger 实例。
 // 这个函数是创建 logger 的主要入口，推荐在需要日志记录的组件中通过依赖注入使用它返回的 logger。
-// 如果没有提供配置，将使用 DefaultConfig。
+// 如果没有提供配置，将优先从配置管理器获取，如果配置管理器不可用则使用 DefaultConfig。
+//
+// 两阶段初始化支持：
+// - 阶段一（降级启动）：使用默认配置或传入配置
+// - 阶段二（功能完备）：从配置中心获取配置
 func New(config ...Config) (Logger, error) {
 	var cfg Config
 	if len(config) > 0 {
 		cfg = config[0]
 	} else {
-		cfg = DefaultConfig()
+		// 从配置管理器获取当前配置（支持配置中心和降级）
+		cfg = *getConfigFromManager()
 	}
 
 	logger, err := internal.NewLogger(cfg, internal.WithHook(traceIDHook))
@@ -144,9 +149,22 @@ func Error(msg string, fields ...Field) {
 // Init 初始化或重新配置全局日志器。
 // 这个函数主要用于应用程序启动时设置全局日志，或在运行时进行热重载。
 // 它通过调用 New() 来创建新的 logger，然后安全地更新全局实例。
+//
+// 两阶段初始化支持：
+// - 阶段一（降级启动）：Init() 使用默认配置，确保基础日志功能可用
+// - 阶段二（功能完备）：Init() 从配置中心重新加载配置
+//
 // 对于可测试和可维护的代码，推荐使用 New() 创建 logger 并通过依赖注入传递，而不是依赖此全局函数。
-func Init(config Config) error {
-	logger, err := New(config)
+func Init(config ...Config) error {
+	var cfg Config
+	if len(config) > 0 {
+		cfg = config[0]
+	} else {
+		// 从配置管理器获取当前配置（支持配置中心和降级）
+		cfg = *getConfigFromManager()
+	}
+
+	logger, err := New(cfg)
 	if err != nil {
 		return err
 	}

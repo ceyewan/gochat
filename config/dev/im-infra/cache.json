@@ -1,0 +1,22 @@
+{
+  "addr": "localhost:6379",
+  "password": "",
+  "db": 0,
+  "poolSize": 10,
+  "minIdleConns": 5,
+  "maxIdleConns": 10,
+  "connMaxIdleTime": "10m",
+  "connMaxLifetime": "30m",
+  "dialTimeout": "5s",
+  "readTimeout": "3s",
+  "writeTimeout": "3s",
+  "poolTimeout": "4s",
+  "maxRetries": 3,
+  "minRetryBackoff": "8ms",
+  "maxRetryBackoff": "512ms",
+  "enableTracing": true,
+  "enableMetrics": true,
+  "keyPrefix": "dev",
+  "serializer": "json",
+  "compression": false
+}

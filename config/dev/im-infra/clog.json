@@ -1,0 +1,14 @@
+{
+  "level": "debug",
+  "format": "console",
+  "output": "stdout",
+  "addSource": true,
+  "enableColor": true,
+  "rootPath": "gochat",
+  "rotation": {
+    "maxSize": 100,
+    "maxBackups": 10,
+    "maxAge": 30,
+    "compress": true
+  }
+}

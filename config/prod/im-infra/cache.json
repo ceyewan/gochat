@@ -1,0 +1,22 @@
+{
+  "addr": "redis-cluster:6379",
+  "password": "prod_redis_password",
+  "db": 0,
+  "poolSize": 50,
+  "minIdleConns": 10,
+  "maxIdleConns": 20,
+  "connMaxIdleTime": "30m",
+  "connMaxLifetime": "1h",
+  "dialTimeout": "5s",
+  "readTimeout": "3s",
+  "writeTimeout": "3s",
+  "poolTimeout": "4s",
+  "maxRetries": 5,
+  "minRetryBackoff": "8ms",
+  "maxRetryBackoff": "1s",
+  "enableTracing": true,
+  "enableMetrics": true,
+  "keyPrefix": "prod",
+  "serializer": "json",
+  "compression": true
+}

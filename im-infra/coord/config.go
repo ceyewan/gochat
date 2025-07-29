@@ -38,7 +38,7 @@ type RetryConfig struct {
 // DefaultConfig 返回默认配置
 func DefaultConfig() CoordinatorConfig {
 	return CoordinatorConfig{
-		Endpoints: []string{"localhost:2379"},
+		Endpoints: []string{"localhost:23791", "localhost:23792", "localhost:23793"},
 		Timeout:   5 * time.Second,
 		RetryConfig: &RetryConfig{
 			MaxAttempts:  3,

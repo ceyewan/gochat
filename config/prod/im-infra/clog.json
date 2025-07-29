@@ -1,0 +1,14 @@
+{
+  "level": "info",
+  "format": "json",
+  "output": "/var/log/gochat/app.log",
+  "addSource": false,
+  "enableColor": false,
+  "rootPath": "gochat",
+  "rotation": {
+    "maxSize": 100,
+    "maxBackups": 30,
+    "maxAge": 90,
+    "compress": true
+  }
+}

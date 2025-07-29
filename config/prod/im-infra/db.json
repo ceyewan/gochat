@@ -1,0 +1,13 @@
+{
+  "dsn": "gochat_user:prod_db_password@tcp(mysql-cluster:3306)/gochat_prod?charset=utf8mb4&parseTime=True&loc=Local",
+  "driver": "mysql",
+  "maxOpenConns": 100,
+  "maxIdleConns": 50,
+  "connMaxLifetime": "2h",
+  "connMaxIdleTime": "1h",
+  "logLevel": "warn",
+  "slowThreshold": "500ms",
+  "enableMetrics": true,
+  "enableTracing": true,
+  "tablePrefix": ""
+}

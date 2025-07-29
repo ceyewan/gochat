@@ -1,0 +1,8 @@
+{
+  "level": "warn",
+  "format": "json",
+  "output": "stdout",
+  "addSource": true,
+  "enableColor": false,
+  "rootPath": "gochat"
+}
