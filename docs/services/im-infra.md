@@ -1,4 +1,6 @@
-# im-infra 基础库开发风格指南 (v2.0)
+# im-infra 基础库设计与开发指南
+
+`im-infra` 是 GoChat 项目的基石，它提供了一套统一、标准化的基础库，被所有上层微服务（`im-gateway`, `im-logic`, `im-task`, `im-repo`）所依赖。其核心目标是统一技术栈、封装复杂性、提高开发效率和系统的可维护性。
 
 ## 1. 核心理念
 
@@ -266,3 +268,71 @@ graph TD
 -   **构造函数**:
     -   主构造函数应命名为 `New`。
     -   `New` 函数应返回接口类型，而非具体的结构体指针，以强制实现细节的封装。
+
+---
+
+## 6. 组件 API 参考
+
+本章节提供了 `im-infra` 中各个核心基础库的简要 API 参考，旨在帮助开发者快速了解每个库提供的核心功能。
+
+### 6.1 `cache` - 缓存服务
+
+-   `New(cfg Config, opts ...Option) (Cache, error)`: 创建一个新的缓存客户端实例。
+-   `Get(ctx context.Context, key string) (string, error)`: 获取一个键的值。
+-   `Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error`: 设置一个键值对，并指定过期时间。
+-   `Del(ctx context.Context, keys ...string) error`: 删除一个或多个键。
+
+### 6.2 `clog` - 上下文日志服务
+
+-   `Init(cfg Config)`: 根据配置初始化全局 Logger。
+-   `Debug(msg string, fields ...Field)`: 记录 Debug 级别的日志。
+-   `Info(msg string, fields ...Field)`: 记录 Info 级别的日志。
+-   `Warn(msg string, fields ...Field)`: 记录 Warn 级别的日志。
+-   `Error(msg string, fields ...Field)`: 记录 Error 级别的日志。
+-   `With(fields ...Field) Logger`: 返回一个携带了额外上下文信息的新 Logger 实例。
+-   `Err(err error) Field`: 创建一个包含错误信息的日志字段。
+
+### 6.3 `coord` - 分布式协调服务
+
+-   `New(ctx context.Context, serviceName string, opts ...Option) (Provider, error)`: 创建一个新的协调服务提供者。
+-   `Register(serviceInfo ServiceInfo) error`: 注册一个服务实例。
+-   `Deregister() error`: 注销当前服务实例。
+-   `Discover(serviceName string) ([]ServiceInfo, error)`: 发现一个服务的所有健康实例。
+-   `Watch(key string) <-chan Event`: 监听一个键的变化。
+
+### 6.4 `db` - 数据库访问层
+
+-   `New(cfg Config, opts ...Option) (*gorm.DB, error)`: 创建一个新的 GORM 数据库连接实例。
+-   `DB()`: 获取全局默认的 `*gorm.DB` 实例。
+-   (注: `db` 库主要封装 GORM，其 API 直接复用 GORM 的标准 API，如 `db.Model(&User{}).First(&user)`)
+
+### 6.5 `metrics` - 指标服务
+
+-   `New(cfg Config) (Provider, error)`: 创建一个新的指标服务提供者。
+-   `Inc(name string, labels ...string)`: 增加一个计数器指标。
+-   `Gauge(name string, value float64, labels ...string)`: 设置一个仪表盘指标。
+-   `Histogram(name string, value float64, labels ...string)`: 记录一个直方图指标的观测值。
+-   `Summary(name string, value float64, labels ...string)`: 记录一个摘要指标的观测值。
+
+### 6.6 `mq` - 消息队列服务
+
+-   `NewProducer(cfg ProducerConfig) (Producer, error)`: 创建一个消息生产者。
+-   `NewConsumerGroup(cfg ConsumerConfig) (ConsumerGroup, error)`: 创建一个消费者组。
+-   `Producer.Produce(ctx context.Context, msg Message) error`: 生产一条消息。
+-   `ConsumerGroup.Consume(ctx context.Context, handler func(Message) error)`: 消费消息并使用指定的处理器进行处理。
+
+### 6.7 `once` - 幂等性服务
+
+-   `New(cfg Config) (Idempotent, error)`: 创建一个幂等性检查器实例。
+-   `Do(ctx context.Context, key string, f func() error) error`: 检查 `key` 是否已经执行过，如果没有，则执行函数 `f` 并标记为已执行。
+
+### 6.8 `ratelimit` - 限流服务
+
+-   `New(ctx context.Context, serviceName string, opts ...Option) (Limiter, error)`: 创建一个新的限流器实例。
+-   `Allow(key string) bool`: 判断一个请求是否被允许。
+
+### 6.9 `uid` - 唯一 ID 服务
+
+-   `Init(cfg Config)`: 根据配置初始化全局 ID 生成器。
+-   `GenerateInt64() int64`: 生成一个全局唯一的 `int64` 类型的 ID (基于 Snowflake 算法)。
+-   `GenerateString() string`: 生成一个全局唯一的字符串类型的 ID。

@@ -10,7 +10,9 @@
 3.  **外部系统集成器**: 负责与所有第三方系统进行交互。这些交互通常伴随着网络延迟和不确定性。
     *   **典型案例**: 调用苹果/谷歌的服务器进行**离线推送**；调用第三方服务进行**内容安全审核**。
 4.  **后台作业执行者**: 执行所有预定的、周期性的后台任务。
-    *   **典型案例**: **数据归档**、**生成统计报表**等。
+    *   **典型案例**: **数据归档**、**生成统计报表**、**更新推荐模型**等。
+5.  **数据索引器 (Indexer)**: 负责将业务数据同步到外部的搜索和分析系统。
+    *   **典型案例**: 将消息数据**异步索引**到 Elasticsearch 和向量数据库。
 
 **设计目标**: 开发一个**可靠、可扩展、易于增加新任务类型**的异步任务处理服务。
 
@@ -31,11 +33,15 @@ graph TD
         C -- "task_type: fanout" --> D[Fanout Processor];
         C -- "task_type: push" --> E[Push Processor];
         C -- "task_type: audit" --> F[Audit Processor];
+        C -- "task_type: index" --> G[Index Processor];
+        C -- "task_type: recommend" --> H[Recommend Processor];
     end
 
-    D --> G((处理大群扩散));
-    E --> H((调用APNs/FCM));
-    F --> I((调用内容审核API));
+    D --> I((处理大群扩散));
+    E --> J((调用APNs/FCM));
+    F --> K((调用内容审核API));
+    G --> L((写入 ES / VectorDB));
+    H --> M((更新推荐结果));
 ```
 
 1.  **Consumer**: `im-task` 的 Kafka 消费者从 `im-task-topic` 中拉取消息。
@@ -52,6 +58,7 @@ graph TD
 | **gRPC 客户端** | `im-infra/rpc` | 用于调用 `im-repo` 服务获取任务处理所需的数据。 |
 | **服务发现** | `im-infra/coord` | 通过 etcd 发现 `im-repo` 服务。 |
 | **HTTP 客户端**| `net/http` | 用于调用第三方 RESTful API (如内容审核、离线推送)。 |
+| **ES/VectorDB 客户端** | - | 用于将数据写入 Elasticsearch 和向量数据库。 |
 
 ## 3. 核心任务详解
 
