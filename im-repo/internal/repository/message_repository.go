@@ -125,9 +125,9 @@ func (r *MessageRepository) GetConversationMessages(ctx context.Context, convers
 	var nextSeqID int64
 	if len(messages) > 0 {
 		if ascending {
-			nextSeqID = messages[len(messages)-1].SeqID + 1
+			nextSeqID = int64(messages[len(messages)-1].SeqID + 1)
 		} else {
-			nextSeqID = messages[len(messages)-1].SeqID - 1
+			nextSeqID = int64(messages[len(messages)-1].SeqID - 1)
 		}
 	}
 

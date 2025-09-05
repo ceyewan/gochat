@@ -87,30 +87,10 @@ func (h *healthChecker) checkCache(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// 执行简单的缓存操作
-	testKey := "health_check_test"
-	testValue := "ok"
-
-	// 设置测试值
-	err := h.server.cache.Set(checkCtx, testKey, testValue, time.Minute)
+	// 执行 Ping 操作
+	err := h.server.cache.Ping(checkCtx)
 	if err != nil {
-		return fmt.Errorf("缓存设置失败: %w", err)
-	}
-
-	// 获取测试值
-	value, err := h.server.cache.Get(checkCtx, testKey)
-	if err != nil {
-		return fmt.Errorf("缓存获取失败: %w", err)
-	}
-
-	if value != testValue {
-		return fmt.Errorf("缓存值不匹配: 期望 %s, 实际 %s", testValue, value)
-	}
-
-	// 删除测试值
-	err = h.server.cache.Delete(checkCtx, testKey)
-	if err != nil {
-		h.logger.Warn("删除测试缓存键失败", clog.Err(err))
+		return fmt.Errorf("缓存 Ping 失败: %w", err)
 	}
 
 	return nil

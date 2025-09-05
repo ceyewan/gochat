@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	repopb "github.com/ceyewan/gochat/api/gen/im_repo/v1"
 	"github.com/ceyewan/gochat/im-infra/clog"
@@ -143,11 +144,11 @@ func (s *MessageService) GetConversationMessages(ctx context.Context, req *repop
 	}
 
 	// 获取消息列表
-	messages, err := s.messageRepo.GetConversationMessages(
+	messages, hasMore, nextSeqID, err := s.messageRepo.GetConversationMessages(
 		ctx,
 		req.ConversationId,
-		uint64(req.StartSeqId),
-		uint64(req.EndSeqId),
+		req.StartSeqId,
+		req.EndSeqId,
 		limit,
 		req.Ascending,
 	)
@@ -160,17 +161,6 @@ func (s *MessageService) GetConversationMessages(ctx context.Context, req *repop
 	protoMessages := make([]*repopb.Message, len(messages))
 	for i, message := range messages {
 		protoMessages[i] = s.modelToProto(message)
-	}
-
-	// 判断是否还有更多消息
-	hasMore := len(messages) == limit
-	var nextSeqID int64
-	if hasMore && len(messages) > 0 {
-		if req.Ascending {
-			nextSeqID = int64(messages[len(messages)-1].SeqID) + 1
-		} else {
-			nextSeqID = int64(messages[len(messages)-1].SeqID) - 1
-		}
 	}
 
 	// 构造响应
@@ -224,13 +214,13 @@ func (s *MessageService) CheckMessageIdempotency(ctx context.Context, req *repop
 		return nil, status.Error(codes.InvalidArgument, "客户端消息ID不能为空")
 	}
 
-	ttlSeconds := int(req.TtlSeconds)
-	if ttlSeconds <= 0 {
-		ttlSeconds = 60 // 默认60秒
+	ttl := time.Duration(req.TtlSeconds) * time.Second
+	if req.TtlSeconds <= 0 {
+		ttl = 60 * time.Second // 默认60秒
 	}
 
 	// 检查幂等性
-	isNew, existingMsgID, err := s.messageRepo.CheckMessageIdempotency(ctx, req.ClientMsgId, ttlSeconds)
+	isNew, existingMsgID, err := s.messageRepo.CheckMessageIdempotency(ctx, req.ClientMsgId, ttl)
 	if err != nil {
 		s.logger.Error("检查消息幂等性失败", clog.Err(err))
 		return nil, status.Error(codes.Internal, "检查消息幂等性失败")

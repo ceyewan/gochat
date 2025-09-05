@@ -31,8 +31,7 @@ func NewOnlineStatusService(onlineStatusRepo *repository.OnlineStatusRepository)
 func (s *OnlineStatusService) SetUserOnline(ctx context.Context, req *repopb.SetUserOnlineRequest) (*repopb.SetUserOnlineResponse, error) {
 	s.logger.Debug("设置用户在线状态请求",
 		clog.String("user_id", req.UserId),
-		clog.String("gateway_id", req.GatewayId),
-		clog.Int32("ttl_seconds", req.TtlSeconds))
+		clog.String("gateway_id", req.GatewayId))
 
 	// 参数验证
 	if req.UserId == "" {
@@ -49,13 +48,8 @@ func (s *OnlineStatusService) SetUserOnline(ctx context.Context, req *repopb.Set
 		return nil, status.Error(codes.InvalidArgument, "用户ID格式错误")
 	}
 
-	ttlSeconds := int(req.TtlSeconds)
-	if ttlSeconds <= 0 {
-		ttlSeconds = 300 // 默认5分钟
-	}
-
 	// 设置用户在线状态
-	err = s.onlineStatusRepo.SetUserOnline(ctx, userID, req.GatewayId, ttlSeconds)
+	err = s.onlineStatusRepo.SetUserOnline(ctx, userID, req.GatewayId, 300) // 默认5分钟
 	if err != nil {
 		s.logger.Error("设置用户在线状态失败", clog.Err(err))
 		return nil, status.Error(codes.Internal, "设置用户在线状态失败")
@@ -64,6 +58,11 @@ func (s *OnlineStatusService) SetUserOnline(ctx context.Context, req *repopb.Set
 	// 构造响应
 	resp := &repopb.SetUserOnlineResponse{
 		Success: true,
+		Status: &repopb.OnlineStatus{
+			UserId:    req.UserId,
+			IsOnline:  true,
+			GatewayId: req.GatewayId,
+		},
 	}
 
 	s.logger.Debug("用户在线状态设置成功",
@@ -89,14 +88,6 @@ func (s *OnlineStatusService) SetUserOffline(ctx context.Context, req *repopb.Se
 		return nil, status.Error(codes.InvalidArgument, "用户ID格式错误")
 	}
 
-	// 先记录最后在线时间
-	if req.LastOnlineTime > 0 {
-		err = s.onlineStatusRepo.SetUserLastOnlineTime(ctx, userID, req.LastOnlineTime)
-		if err != nil {
-			s.logger.Warn("设置用户最后在线时间失败", clog.Err(err))
-		}
-	}
-
 	// 设置用户离线状态
 	err = s.onlineStatusRepo.SetUserOffline(ctx, userID)
 	if err != nil {
@@ -113,9 +104,9 @@ func (s *OnlineStatusService) SetUserOffline(ctx context.Context, req *repopb.Se
 	return resp, nil
 }
 
-// IsUserOnline 检查用户是否在线
-func (s *OnlineStatusService) IsUserOnline(ctx context.Context, req *repopb.IsUserOnlineRequest) (*repopb.IsUserOnlineResponse, error) {
-	s.logger.Debug("检查用户在线状态请求", clog.String("user_id", req.UserId))
+// GetUserOnlineStatus 获取用户在线状态
+func (s *OnlineStatusService) GetUserOnlineStatus(ctx context.Context, req *repopb.GetUserOnlineStatusRequest) (*repopb.GetUserOnlineStatusResponse, error) {
+	s.logger.Debug("获取用户在线状态请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
 	if req.UserId == "" {
@@ -137,9 +128,12 @@ func (s *OnlineStatusService) IsUserOnline(ctx context.Context, req *repopb.IsUs
 	}
 
 	// 构造响应
-	resp := &repopb.IsUserOnlineResponse{
-		IsOnline:  isOnline,
-		GatewayId: gatewayID,
+	resp := &repopb.GetUserOnlineStatusResponse{
+		Status: &repopb.OnlineStatus{
+			UserId:    req.UserId,
+			IsOnline:  isOnline,
+			GatewayId: gatewayID,
+		},
 	}
 
 	s.logger.Debug("用户在线状态检查完成",
@@ -150,14 +144,14 @@ func (s *OnlineStatusService) IsUserOnline(ctx context.Context, req *repopb.IsUs
 	return resp, nil
 }
 
-// BatchGetOnlineStatus 批量获取用户在线状态
-func (s *OnlineStatusService) BatchGetOnlineStatus(ctx context.Context, req *repopb.BatchGetOnlineStatusRequest) (*repopb.BatchGetOnlineStatusResponse, error) {
+// GetUsersOnlineStatus 批量获取用户在线状态
+func (s *OnlineStatusService) GetUsersOnlineStatus(ctx context.Context, req *repopb.GetUsersOnlineStatusRequest) (*repopb.GetUsersOnlineStatusResponse, error) {
 	s.logger.Debug("批量获取用户在线状态请求", clog.Int("user_count", len(req.UserIds)))
 
 	// 参数验证
 	if len(req.UserIds) == 0 {
-		return &repopb.BatchGetOnlineStatusResponse{
-			OnlineStatus: make(map[string]*repopb.UserOnlineStatus),
+		return &repopb.GetUsersOnlineStatusResponse{
+			Statuses: []*repopb.OnlineStatus{},
 		}, nil
 	}
 
@@ -182,21 +176,19 @@ func (s *OnlineStatusService) BatchGetOnlineStatus(ctx context.Context, req *rep
 	}
 
 	// 转换为 protobuf 格式
-	protoOnlineStatus := make(map[string]*repopb.UserOnlineStatus)
+	statuses := make([]*repopb.OnlineStatus, 0, len(userIDs))
 	for _, userID := range userIDs {
 		userIDStr := fmt.Sprintf("%d", userID)
-		isOnline := onlineStatusMap[userID]
-		gatewayID := gatewayMap[userID]
-
-		protoOnlineStatus[userIDStr] = &repopb.UserOnlineStatus{
-			IsOnline:  isOnline,
-			GatewayId: gatewayID,
-		}
+		statuses = append(statuses, &repopb.OnlineStatus{
+			UserId:    userIDStr,
+			IsOnline:  onlineStatusMap[userID],
+			GatewayId: gatewayMap[userID],
+		})
 	}
 
 	// 构造响应
-	resp := &repopb.BatchGetOnlineStatusResponse{
-		OnlineStatus: protoOnlineStatus,
+	resp := &repopb.GetUsersOnlineStatusResponse{
+		Statuses: statuses,
 	}
 
 	s.logger.Debug("批量获取用户在线状态完成",
@@ -206,11 +198,10 @@ func (s *OnlineStatusService) BatchGetOnlineStatus(ctx context.Context, req *rep
 	return resp, nil
 }
 
-// RefreshUserOnline 刷新用户在线状态TTL
-func (s *OnlineStatusService) RefreshUserOnline(ctx context.Context, req *repopb.RefreshUserOnlineRequest) (*repopb.RefreshUserOnlineResponse, error) {
-	s.logger.Debug("刷新用户在线状态TTL请求",
-		clog.String("user_id", req.UserId),
-		clog.Int32("ttl_seconds", req.TtlSeconds))
+// UpdateHeartbeat 更新心跳
+func (s *OnlineStatusService) UpdateHeartbeat(ctx context.Context, req *repopb.UpdateHeartbeatRequest) (*repopb.UpdateHeartbeatResponse, error) {
+	s.logger.Debug("更新心跳请求",
+		clog.String("user_id", req.UserId))
 
 	// 参数验证
 	if req.UserId == "" {
@@ -224,121 +215,28 @@ func (s *OnlineStatusService) RefreshUserOnline(ctx context.Context, req *repopb
 		return nil, status.Error(codes.InvalidArgument, "用户ID格式错误")
 	}
 
-	ttlSeconds := int(req.TtlSeconds)
-	if ttlSeconds <= 0 {
-		ttlSeconds = 300 // 默认5分钟
-	}
-
 	// 刷新用户在线状态TTL
-	err = s.onlineStatusRepo.RefreshUserOnline(ctx, userID, ttlSeconds)
+	err = s.onlineStatusRepo.RefreshUserOnline(ctx, userID, 300) // 默认5分钟
 	if err != nil {
 		s.logger.Error("刷新用户在线状态TTL失败", clog.Err(err))
 		return nil, status.Error(codes.Internal, "刷新用户在线状态TTL失败")
 	}
 
 	// 构造响应
-	resp := &repopb.RefreshUserOnlineResponse{
+	resp := &repopb.UpdateHeartbeatResponse{
 		Success: true,
 	}
 
-	s.logger.Debug("用户在线状态TTL刷新成功", clog.String("user_id", req.UserId))
+	s.logger.Debug("用户心跳更新成功", clog.String("user_id", req.UserId))
 	return resp, nil
 }
 
-// GetOnlineUsersByGateway 获取指定网关的在线用户列表
-func (s *OnlineStatusService) GetOnlineUsersByGateway(ctx context.Context, req *repopb.GetOnlineUsersByGatewayRequest) (*repopb.GetOnlineUsersByGatewayResponse, error) {
-	s.logger.Debug("获取网关在线用户列表请求", clog.String("gateway_id", req.GatewayId))
-
-	// 参数验证
-	if req.GatewayId == "" {
-		return nil, status.Error(codes.InvalidArgument, "网关ID不能为空")
-	}
-
-	// 获取网关在线用户列表
-	userIDs, err := s.onlineStatusRepo.GetOnlineUsersByGateway(ctx, req.GatewayId)
-	if err != nil {
-		s.logger.Error("获取网关在线用户列表失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "获取网关在线用户列表失败")
-	}
-
-	// 转换为字符串格式
-	userIDStrs := make([]string, len(userIDs))
-	for i, userID := range userIDs {
-		userIDStrs[i] = fmt.Sprintf("%d", userID)
-	}
-
-	// 构造响应
-	resp := &repopb.GetOnlineUsersByGatewayResponse{
-		UserIds: userIDStrs,
-	}
-
-	s.logger.Debug("获取网关在线用户列表完成",
-		clog.String("gateway_id", req.GatewayId),
-		clog.Int("user_count", len(userIDs)))
-
-	return resp, nil
-}
-
-// GetTotalOnlineCount 获取总在线用户数
-func (s *OnlineStatusService) GetTotalOnlineCount(ctx context.Context, req *repopb.GetTotalOnlineCountRequest) (*repopb.GetTotalOnlineCountResponse, error) {
-	s.logger.Debug("获取总在线用户数请求")
-
-	// 获取总在线用户数
-	count, err := s.onlineStatusRepo.GetTotalOnlineCount(ctx)
-	if err != nil {
-		s.logger.Error("获取总在线用户数失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "获取总在线用户数失败")
-	}
-
-	// 构造响应
-	resp := &repopb.GetTotalOnlineCountResponse{
-		Count: count,
-	}
-
-	s.logger.Debug("获取总在线用户数完成", clog.Int64("count", count))
-	return resp, nil
-}
-
-// GetUserLastOnlineTime 获取用户最后在线时间
-func (s *OnlineStatusService) GetUserLastOnlineTime(ctx context.Context, req *repopb.GetUserLastOnlineTimeRequest) (*repopb.GetUserLastOnlineTimeResponse, error) {
-	s.logger.Debug("获取用户最后在线时间请求", clog.String("user_id", req.UserId))
-
-	// 参数验证
-	if req.UserId == "" {
-		return nil, status.Error(codes.InvalidArgument, "用户ID不能为空")
-	}
-
-	// 转换用户ID
-	userID, err := strconv.ParseUint(req.UserId, 10, 64)
-	if err != nil {
-		s.logger.Error("用户ID格式错误", clog.Err(err))
-		return nil, status.Error(codes.InvalidArgument, "用户ID格式错误")
-	}
-
-	// 获取用户最后在线时间
-	lastOnlineTime, err := s.onlineStatusRepo.GetUserLastOnlineTime(ctx, userID)
-	if err != nil {
-		s.logger.Error("获取用户最后在线时间失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "获取用户最后在线时间失败")
-	}
-
-	// 构造响应
-	resp := &repopb.GetUserLastOnlineTimeResponse{
-		LastOnlineTime: lastOnlineTime,
-	}
-
-	s.logger.Debug("获取用户最后在线时间完成",
-		clog.String("user_id", req.UserId),
-		clog.Int64("last_online_time", lastOnlineTime))
-
-	return resp, nil
-}
-
-// CleanupExpiredOnlineStatus 清理过期的在线状态
-func (s *OnlineStatusService) CleanupExpiredOnlineStatus(ctx context.Context, req *repopb.CleanupExpiredOnlineStatusRequest) (*repopb.CleanupExpiredOnlineStatusResponse, error) {
+// CleanupExpiredStatus 清理过期的在线状态
+func (s *OnlineStatusService) CleanupExpiredStatus(ctx context.Context, req *repopb.CleanupExpiredStatusRequest) (*repopb.CleanupExpiredStatusResponse, error) {
 	s.logger.Debug("清理过期在线状态请求")
 
 	// 清理过期的在线状态
+	// 注意：当前 repository 实现不使用 req 中的参数，但保留以备将来扩展
 	cleanedCount, err := s.onlineStatusRepo.CleanupExpiredOnlineStatus(ctx)
 	if err != nil {
 		s.logger.Error("清理过期在线状态失败", clog.Err(err))
@@ -346,7 +244,7 @@ func (s *OnlineStatusService) CleanupExpiredOnlineStatus(ctx context.Context, re
 	}
 
 	// 构造响应
-	resp := &repopb.CleanupExpiredOnlineStatusResponse{
+	resp := &repopb.CleanupExpiredStatusResponse{
 		CleanedCount: cleanedCount,
 	}
 

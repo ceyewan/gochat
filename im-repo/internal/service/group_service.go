@@ -54,17 +54,6 @@ func (s *GroupService) CreateGroup(ctx context.Context, req *repopb.CreateGroupR
 		Name:        req.Name,
 		Description: req.Description,
 		OwnerID:     ownerID,
-		GroupType:   int(req.GroupType),
-		MaxMembers:  int(req.MaxMembers),
-		Avatar:      req.Avatar,
-	}
-
-	// 设置默认值
-	if group.MaxMembers <= 0 {
-		group.MaxMembers = 500 // 默认最大成员数
-	}
-	if group.GroupType <= 0 {
-		group.GroupType = 1 // 默认普通群组
 	}
 
 	// 创建群组
@@ -121,6 +110,43 @@ func (s *GroupService) GetGroup(ctx context.Context, req *repopb.GetGroupRequest
 	return resp, nil
 }
 
+// UpdateGroup 更新群组信息
+func (s *GroupService) UpdateGroup(ctx context.Context, req *repopb.UpdateGroupRequest) (*repopb.UpdateGroupResponse, error) {
+	s.logger.Info("更新群组信息请求", clog.String("group_id", req.GroupId))
+
+	// 参数验证
+	if req.GroupId == "" {
+		return nil, status.Error(codes.InvalidArgument, "群组ID不能为空")
+	}
+
+	// 转换群组ID
+	groupID, err := strconv.ParseUint(req.GroupId, 10, 64)
+	if err != nil {
+		s.logger.Error("群组ID格式错误", clog.Err(err))
+		return nil, status.Error(codes.InvalidArgument, "群组ID格式错误")
+	}
+
+	// 暂不支持更新
+	s.logger.Warn("UpdateGroup 方法未实现")
+	return nil, status.Error(codes.Unimplemented, "方法未实现")
+
+	// 获取更新后的群组信息
+	updatedGroup, err := s.groupRepo.GetGroup(ctx, groupID)
+	if err != nil {
+		s.logger.Error("获取更新后的群组信息失败", clog.Err(err))
+		return nil, status.Error(codes.Internal, "获取更新后的群组信息失败")
+	}
+
+	// 构造响应
+	resp := &repopb.UpdateGroupResponse{
+		Group: s.modelToProto(updatedGroup),
+	}
+
+	s.logger.Info("群组信息更新成功", clog.String("group_id", req.GroupId))
+
+	return resp, nil
+}
+
 // AddGroupMember 添加群组成员
 func (s *GroupService) AddGroupMember(ctx context.Context, req *repopb.AddGroupMemberRequest) (*repopb.AddGroupMemberResponse, error) {
 	s.logger.Info("添加群组成员请求",
@@ -163,7 +189,11 @@ func (s *GroupService) AddGroupMember(ctx context.Context, req *repopb.AddGroupM
 
 	// 构造响应
 	resp := &repopb.AddGroupMemberResponse{
-		Success: true,
+		Member: &repopb.GroupMember{
+			GroupId: req.GroupId,
+			UserId:  req.UserId,
+			Role:    req.Role,
+		},
 	}
 
 	s.logger.Info("群组成员添加成功",
@@ -275,6 +305,21 @@ func (s *GroupService) GetGroupMembers(ctx context.Context, req *repopb.GetGroup
 	return resp, nil
 }
 
+// GetMembersOnlineStatus 批量获取成员在线状态
+func (s *GroupService) GetMembersOnlineStatus(ctx context.Context, req *repopb.GetMembersOnlineStatusRequest) (*repopb.GetMembersOnlineStatusResponse, error) {
+	s.logger.Debug("批量获取成员在线状态请求", clog.Int("user_count", len(req.UserIds)))
+
+	// 这里简化实现，实际项目中需要调用在线状态服务
+	s.logger.Warn("GetMembersOnlineStatus 方法需要实现")
+
+	// 构造响应
+	resp := &repopb.GetMembersOnlineStatusResponse{
+		Statuses: []*repopb.OnlineStatus{}, // 返回空列表作为占位符
+	}
+
+	return resp, nil
+}
+
 // UpdateMemberRole 更新成员角色
 func (s *GroupService) UpdateMemberRole(ctx context.Context, req *repopb.UpdateMemberRoleRequest) (*repopb.UpdateMemberRoleResponse, error) {
 	s.logger.Info("更新成员角色请求",
@@ -326,121 +371,17 @@ func (s *GroupService) UpdateMemberRole(ctx context.Context, req *repopb.UpdateM
 	return resp, nil
 }
 
-// IsGroupMember 检查用户是否为群组成员
-func (s *GroupService) IsGroupMember(ctx context.Context, req *repopb.IsGroupMemberRequest) (*repopb.IsGroupMemberResponse, error) {
-	s.logger.Debug("检查群组成员请求",
-		clog.String("group_id", req.GroupId),
-		clog.String("user_id", req.UserId))
-
-	// 参数验证
-	if req.GroupId == "" {
-		return nil, status.Error(codes.InvalidArgument, "群组ID不能为空")
-	}
-	if req.UserId == "" {
-		return nil, status.Error(codes.InvalidArgument, "用户ID不能为空")
-	}
-
-	// 转换ID
-	groupID, err := strconv.ParseUint(req.GroupId, 10, 64)
-	if err != nil {
-		s.logger.Error("群组ID格式错误", clog.Err(err))
-		return nil, status.Error(codes.InvalidArgument, "群组ID格式错误")
-	}
-
-	userID, err := strconv.ParseUint(req.UserId, 10, 64)
-	if err != nil {
-		s.logger.Error("用户ID格式错误", clog.Err(err))
-		return nil, status.Error(codes.InvalidArgument, "用户ID格式错误")
-	}
-
-	// 检查是否为群组成员
-	isMember, role, err := s.groupRepo.IsGroupMember(ctx, groupID, userID)
-	if err != nil {
-		s.logger.Error("检查群组成员失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "检查群组成员失败")
-	}
-
-	// 构造响应
-	resp := &repopb.IsGroupMemberResponse{
-		IsMember: isMember,
-		Role:     int32(role),
-	}
-
-	s.logger.Debug("群组成员检查完成",
-		clog.String("group_id", req.GroupId),
-		clog.String("user_id", req.UserId),
-		clog.Bool("is_member", isMember),
-		clog.Int("role", role))
-
-	return resp, nil
-}
-
-// BatchGetGroupMembers 批量获取群组成员
-func (s *GroupService) BatchGetGroupMembers(ctx context.Context, req *repopb.BatchGetGroupMembersRequest) (*repopb.BatchGetGroupMembersResponse, error) {
-	s.logger.Debug("批量获取群组成员请求", clog.Int("group_count", len(req.GroupIds)))
-
-	// 参数验证
-	if len(req.GroupIds) == 0 {
-		return &repopb.BatchGetGroupMembersResponse{
-			GroupMembers: make(map[string]*repopb.GroupMemberList),
-		}, nil
-	}
-
-	result := make(map[string]*repopb.GroupMemberList)
-
-	// 为每个群组获取成员列表
-	for _, groupIDStr := range req.GroupIds {
-		groupID, err := strconv.ParseUint(groupIDStr, 10, 64)
-		if err != nil {
-			s.logger.Error("群组ID格式错误",
-				clog.String("group_id", groupIDStr),
-				clog.Err(err))
-			continue // 跳过格式错误的ID
-		}
-
-		// 获取群组成员（限制数量以避免返回过多数据）
-		members, _, _, err := s.groupRepo.GetGroupMembers(ctx, groupID, 0, 1000, 0)
-		if err != nil {
-			s.logger.Error("获取群组成员失败",
-				clog.String("group_id", groupIDStr),
-				clog.Err(err))
-			continue // 跳过失败的群组
-		}
-
-		// 转换为 protobuf 格式
-		protoMembers := make([]*repopb.GroupMember, len(members))
-		for i, member := range members {
-			protoMembers[i] = s.memberModelToProto(member)
-		}
-
-		result[groupIDStr] = &repopb.GroupMemberList{
-			Members: protoMembers,
-		}
-	}
-
-	// 构造响应
-	resp := &repopb.BatchGetGroupMembersResponse{
-		GroupMembers: result,
-	}
-
-	s.logger.Debug("批量获取群组成员完成",
-		clog.Int("requested_groups", len(req.GroupIds)),
-		clog.Int("successful_groups", len(result)))
-
-	return resp, nil
-}
-
 // modelToProto 将群组模型转换为 protobuf 格式
 func (s *GroupService) modelToProto(group *model.Group) *repopb.Group {
+	if group == nil {
+		return nil
+	}
 	return &repopb.Group{
 		Id:          fmt.Sprintf("%d", group.ID),
 		Name:        group.Name,
 		Description: group.Description,
 		OwnerId:     fmt.Sprintf("%d", group.OwnerID),
-		GroupType:   int32(group.GroupType),
 		MemberCount: int32(group.MemberCount),
-		MaxMembers:  int32(group.MaxMembers),
-		Avatar:      group.Avatar,
 		CreatedAt:   group.CreatedAt.Unix(),
 		UpdatedAt:   group.UpdatedAt.Unix(),
 	}

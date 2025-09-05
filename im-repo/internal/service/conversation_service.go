@@ -235,120 +235,24 @@ func (s *ConversationService) GetReadPointer(ctx context.Context, req *repopb.Ge
 		return nil, status.Error(codes.Internal, "获取已读位置失败")
 	}
 
-	var lastReadSeqID int64 = 0
-	var updatedAt int64 = 0
-
+	var protoReadPointer *repopb.ReadPointer
 	if readPointer != nil {
-		lastReadSeqID = int64(readPointer.LastReadSeqID)
-		updatedAt = readPointer.UpdatedAt.Unix()
+		protoReadPointer = &repopb.ReadPointer{
+			UserId:         req.UserId,
+			ConversationId: req.ConversationId,
+			LastReadSeqId:  int64(readPointer.LastReadSeqID),
+			UpdatedAt:      readPointer.UpdatedAt.Unix(),
+		}
 	}
 
 	// 构造响应
 	resp := &repopb.GetReadPointerResponse{
-		LastReadSeqId: lastReadSeqID,
-		UpdatedAt:     updatedAt,
+		ReadPointer: protoReadPointer,
 	}
 
 	s.logger.Debug("获取已读位置成功",
 		clog.String("user_id", req.UserId),
-		clog.String("conversation_id", req.ConversationId),
-		clog.Int64("last_read_seq_id", lastReadSeqID))
-
-	return resp, nil
-}
-
-// IncrementUnreadCount 增加未读消息数（当有新消息时调用）
-func (s *ConversationService) IncrementUnreadCount(ctx context.Context, req *repopb.IncrementUnreadCountRequest) (*repopb.IncrementUnreadCountResponse, error) {
-	s.logger.Debug("增加未读消息数请求",
-		clog.String("conversation_id", req.ConversationId),
-		clog.String("exclude_user_id", req.ExcludeUserId))
-
-	// 参数验证
-	if req.ConversationId == "" {
-		return nil, status.Error(codes.InvalidArgument, "会话ID不能为空")
-	}
-
-	var excludeUserID uint64 = 0
-	if req.ExcludeUserId != "" {
-		var err error
-		excludeUserID, err = strconv.ParseUint(req.ExcludeUserId, 10, 64)
-		if err != nil {
-			s.logger.Error("排除用户ID格式错误", clog.Err(err))
-			return nil, status.Error(codes.InvalidArgument, "排除用户ID格式错误")
-		}
-	}
-
-	// 增加未读消息数
-	err := s.conversationRepo.IncrementUnreadCount(ctx, req.ConversationId, excludeUserID)
-	if err != nil {
-		s.logger.Error("增加未读消息数失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "增加未读消息数失败")
-	}
-
-	// 构造响应
-	resp := &repopb.IncrementUnreadCountResponse{
-		Success: true,
-	}
-
-	s.logger.Debug("未读消息数增加成功",
-		clog.String("conversation_id", req.ConversationId),
-		clog.String("exclude_user_id", req.ExcludeUserId))
-
-	return resp, nil
-}
-
-// GetMaxSeqID 获取会话的最大序列号
-func (s *ConversationService) GetMaxSeqID(ctx context.Context, req *repopb.GetMaxSeqIDRequest) (*repopb.GetMaxSeqIDResponse, error) {
-	s.logger.Debug("获取会话最大序列号请求", clog.String("conversation_id", req.ConversationId))
-
-	// 参数验证
-	if req.ConversationId == "" {
-		return nil, status.Error(codes.InvalidArgument, "会话ID不能为空")
-	}
-
-	// 获取最大序列号
-	maxSeqID, err := s.messageRepo.GetMaxSeqID(ctx, req.ConversationId)
-	if err != nil {
-		s.logger.Error("获取会话最大序列号失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "获取会话最大序列号失败")
-	}
-
-	// 构造响应
-	resp := &repopb.GetMaxSeqIDResponse{
-		MaxSeqId: int64(maxSeqID),
-	}
-
-	s.logger.Debug("获取会话最大序列号成功",
-		clog.String("conversation_id", req.ConversationId),
-		clog.Int64("max_seq_id", int64(maxSeqID)))
-
-	return resp, nil
-}
-
-// CountMessages 统计会话消息数量
-func (s *ConversationService) CountMessages(ctx context.Context, req *repopb.CountMessagesRequest) (*repopb.CountMessagesResponse, error) {
-	s.logger.Debug("统计会话消息数量请求", clog.String("conversation_id", req.ConversationId))
-
-	// 参数验证
-	if req.ConversationId == "" {
-		return nil, status.Error(codes.InvalidArgument, "会话ID不能为空")
-	}
-
-	// 统计消息数量
-	count, err := s.messageRepo.CountMessages(ctx, req.ConversationId)
-	if err != nil {
-		s.logger.Error("统计会话消息数量失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "统计会话消息数量失败")
-	}
-
-	// 构造响应
-	resp := &repopb.CountMessagesResponse{
-		Count: count,
-	}
-
-	s.logger.Debug("统计会话消息数量成功",
-		clog.String("conversation_id", req.ConversationId),
-		clog.Int64("count", count))
+		clog.String("conversation_id", req.ConversationId))
 
 	return resp, nil
 }

@@ -115,41 +115,130 @@ func (c *CacheManager) DelUserInfo(ctx context.Context, userID string) error {
 
 // === 在线状态管理 ===
 
-// SetUserOnline 设置用户在线状态
-func (c *CacheManager) SetUserOnline(ctx context.Context, userID, gatewayID string) error {
+// SetUserOnlineStatus 设置用户在线状态
+func (c *CacheManager) SetUserOnlineStatus(ctx context.Context, userID string, onlineData map[string]interface{}, ttl time.Duration) error {
 	key := fmt.Sprintf(UserSessionKey, userID)
 
 	// 设置在线状态信息
-	err := c.cache.HSet(ctx, key, "gateway_id", gatewayID)
-	if err != nil {
-		return err
-	}
-
-	err = c.cache.HSet(ctx, key, "is_online", "true")
-	if err != nil {
-		return err
-	}
-
-	err = c.cache.HSet(ctx, key, "last_seen", fmt.Sprintf("%d", time.Now().Unix()))
-	if err != nil {
-		return err
+	for field, value := range onlineData {
+		if err := c.cache.HSet(ctx, key, field, fmt.Sprintf("%v", value)); err != nil {
+			return err
+		}
 	}
 
 	// 设置过期时间
-	ttl := c.config.Business.Cache.OnlineStatusTTL
 	return c.cache.Expire(ctx, key, ttl)
 }
 
-// SetUserOffline 设置用户离线状态
-func (c *CacheManager) SetUserOffline(ctx context.Context, userID string) error {
+// DeleteUserOnlineStatus 删除用户在线状态
+func (c *CacheManager) DeleteUserOnlineStatus(ctx context.Context, userID string) error {
 	key := fmt.Sprintf(UserSessionKey, userID)
 	return c.cache.Del(ctx, key)
 }
 
 // GetUserOnlineStatus 获取用户在线状态
-func (c *CacheManager) GetUserOnlineStatus(ctx context.Context, userID string) (map[string]string, error) {
+func (c *CacheManager) GetUserOnlineStatus(ctx context.Context, userID string) (map[string]interface{}, error) {
 	key := fmt.Sprintf(UserSessionKey, userID)
-	return c.cache.HGetAll(ctx, key)
+	result, err := c.cache.HGetAll(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return nil, nil
+	}
+
+	// 转换为 map[string]interface{}
+	onlineData := make(map[string]interface{})
+	for k, v := range result {
+		onlineData[k] = v
+	}
+
+	return onlineData, nil
+}
+
+// BatchGetUserOnlineStatus 批量获取用户在线状态
+func (c *CacheManager) BatchGetUserOnlineStatus(ctx context.Context, userIDs []string) (map[string]map[string]interface{}, error) {
+	result := make(map[string]map[string]interface{})
+
+	for _, userID := range userIDs {
+		onlineData, err := c.GetUserOnlineStatus(ctx, userID)
+		if err != nil {
+			c.logger.Warn("获取用户在线状态失败",
+				clog.String("user_id", userID),
+				clog.Err(err))
+			continue
+		}
+		result[userID] = onlineData
+	}
+
+	return result, nil
+}
+
+// RefreshUserOnlineStatus 刷新用户在线状态TTL
+func (c *CacheManager) RefreshUserOnlineStatus(ctx context.Context, userID string, ttl time.Duration) error {
+	key := fmt.Sprintf(UserSessionKey, userID)
+	return c.cache.Expire(ctx, key, ttl)
+}
+
+// GetOnlineUsersByGateway 获取指定网关的在线用户列表
+func (c *CacheManager) GetOnlineUsersByGateway(ctx context.Context, gatewayID string) ([]string, error) {
+	// 这里需要扫描所有在线用户，实际项目中可能需要更高效的实现
+	// 简化实现：返回空列表
+	c.logger.Warn("GetOnlineUsersByGateway 方法需要更高效的实现")
+	return []string{}, nil
+}
+
+// GetTotalOnlineUserCount 获取总在线用户数
+func (c *CacheManager) GetTotalOnlineUserCount(ctx context.Context) (int64, error) {
+	// 简化实现：返回0
+	c.logger.Warn("GetTotalOnlineUserCount 方法需要更高效的实现")
+	return 0, nil
+}
+
+// CleanupExpiredOnlineStatus 清理过期的在线状态
+func (c *CacheManager) CleanupExpiredOnlineStatus(ctx context.Context) (int64, error) {
+	// 简化实现：返回0
+	c.logger.Warn("CleanupExpiredOnlineStatus 方法需要更高效的实现")
+	return 0, nil
+}
+
+// SetUserLastOnlineTime 设置用户最后在线时间
+func (c *CacheManager) SetUserLastOnlineTime(ctx context.Context, userID string, timestamp int64) error {
+	key := fmt.Sprintf("last_online:%s", userID)
+	return c.cache.Set(ctx, key, timestamp, 24*time.Hour) // 保存24小时
+}
+
+// GetUserLastOnlineTime 获取用户最后在线时间
+func (c *CacheManager) GetUserLastOnlineTime(ctx context.Context, userID string) (int64, error) {
+	key := fmt.Sprintf("last_online:%s", userID)
+	timestampStr, err := c.cache.Get(ctx, key)
+	if err != nil {
+		return 0, err
+	}
+
+	if timestampStr == "" {
+		return 0, nil
+	}
+
+	var timestamp int64
+	fmt.Sscanf(timestampStr, "%d", &timestamp)
+	return timestamp, nil
+}
+
+// SetUserOnline 设置用户在线状态（兼容旧方法）
+func (c *CacheManager) SetUserOnline(ctx context.Context, userID, gatewayID string) error {
+	onlineData := map[string]interface{}{
+		"gateway_id": gatewayID,
+		"timestamp":  time.Now().Unix(),
+	}
+	ttl := c.config.Business.Cache.OnlineStatusTTL
+	return c.SetUserOnlineStatus(ctx, userID, onlineData, ttl)
+}
+
+// SetUserOffline 设置用户离线状态（兼容旧方法）
+func (c *CacheManager) SetUserOffline(ctx context.Context, userID string) error {
+	return c.DeleteUserOnlineStatus(ctx, userID)
 }
 
 // === 序列号生成 ===

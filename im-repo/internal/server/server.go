@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 
+	repopb "github.com/ceyewan/gochat/api/gen/im_repo/v1"
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-repo/internal/config"
 	"github.com/ceyewan/gochat/im-repo/internal/repository"
@@ -106,11 +107,11 @@ func (s *server) RegisterServices(grpcServer *grpc.Server) {
 	s.logger.Info("注册 gRPC 服务...")
 
 	// 注册具体的 gRPC 服务
-	v1.RegisterUserServiceServer(grpcServer, s.userService)
-	v1.RegisterMessageServiceServer(grpcServer, s.messageService)
-	v1.RegisterConversationServiceServer(grpcServer, s.conversationService)
-	v1.RegisterGroupServiceServer(grpcServer, s.groupService)
-	v1.RegisterOnlineStatusServiceServer(grpcServer, s.onlineStatusService)
+	repopb.RegisterUserServiceServer(grpcServer, s.userService)
+	repopb.RegisterMessageServiceServer(grpcServer, s.messageService)
+	repopb.RegisterConversationServiceServer(grpcServer, s.conversationService)
+	repopb.RegisterGroupServiceServer(grpcServer, s.groupService)
+	repopb.RegisterOnlineStatusServiceServer(grpcServer, s.onlineStatusService)
 
 	s.logger.Info("gRPC 服务注册完成")
 }

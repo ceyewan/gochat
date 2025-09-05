@@ -63,8 +63,8 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *model.User) error
 	return nil
 }
 
-// GetUser 获取用户信息
-func (r *UserRepository) GetUser(ctx context.Context, userID uint64) (*model.User, error) {
+// GetUserByID 获取用户信息
+func (r *UserRepository) GetUserByID(ctx context.Context, userID uint64) (*model.User, error) {
 	userIDStr := fmt.Sprintf("%d", userID)
 
 	// 先尝试从缓存获取

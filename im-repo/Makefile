@@ -27,7 +27,7 @@ build:
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
 		-ldflags "-s -w -X main.version=$(VERSION)" \
-		-o $(BUILD_DIR)/$(APP_NAME) \
+		-o $(BUILD_DIR)/$(APP_NAME).bin \
 		$(MAIN_FILE)
 	@echo "构建完成: $(BUILD_DIR)/$(APP_NAME)"
 

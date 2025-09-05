@@ -158,18 +158,15 @@ func (s *UserService) UpdateUser(ctx context.Context, req *repopb.UpdateUserRequ
 
 	// 构建更新字段
 	updates := make(map[string]interface{})
-
-	if req.Nickname != nil {
-		updates["nickname"] = req.Nickname.Value
-	}
-	if req.AvatarUrl != nil {
-		updates["avatar_url"] = req.AvatarUrl.Value
-	}
-	if req.PasswordHash != nil {
-		updates["password_hash"] = req.PasswordHash.Value
+	for _, field := range req.UpdateMask {
+		switch field {
+		case "nickname":
+			updates["nickname"] = req.Nickname
+		case "avatar_url":
+			updates["avatar_url"] = req.AvatarUrl
+		}
 	}
 
-	// 如果没有要更新的字段
 	if len(updates) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "没有要更新的字段")
 	}
@@ -197,14 +194,14 @@ func (s *UserService) UpdateUser(ctx context.Context, req *repopb.UpdateUserRequ
 	return resp, nil
 }
 
-// BatchGetUsers 批量获取用户信息
-func (s *UserService) BatchGetUsers(ctx context.Context, req *repopb.BatchGetUsersRequest) (*repopb.BatchGetUsersResponse, error) {
+// GetUsers 批量获取用户信息
+func (s *UserService) GetUsers(ctx context.Context, req *repopb.GetUsersRequest) (*repopb.GetUsersResponse, error) {
 	s.logger.Debug("批量获取用户信息请求", clog.Int("user_count", len(req.UserIds)))
 
 	// 参数验证
 	if len(req.UserIds) == 0 {
-		return &repopb.BatchGetUsersResponse{
-			Users: make(map[string]*repopb.User),
+		return &repopb.GetUsersResponse{
+			Users: []*repopb.User{},
 		}, nil
 	}
 
@@ -222,20 +219,20 @@ func (s *UserService) BatchGetUsers(ctx context.Context, req *repopb.BatchGetUse
 	}
 
 	// 批量获取用户信息
-	users, err := s.userRepo.BatchGetUsers(ctx, userIDs)
+	users, err := s.userRepo.GetUsers(ctx, userIDs)
 	if err != nil {
 		s.logger.Error("批量获取用户信息失败", clog.Err(err))
 		return nil, status.Error(codes.Internal, "批量获取用户信息失败")
 	}
 
 	// 转换为 protobuf 格式
-	protoUsers := make(map[string]*repopb.User)
-	for userID, user := range users {
-		protoUsers[fmt.Sprintf("%d", userID)] = s.modelToProto(user)
+	protoUsers := make([]*repopb.User, len(users))
+	for i, user := range users {
+		protoUsers[i] = s.modelToProto(user)
 	}
 
 	// 构造响应
-	resp := &repopb.BatchGetUsersResponse{
+	resp := &repopb.GetUsersResponse{
 		Users: protoUsers,
 	}
 
@@ -248,48 +245,14 @@ func (s *UserService) BatchGetUsers(ctx context.Context, req *repopb.BatchGetUse
 
 // VerifyPassword 验证用户密码
 func (s *UserService) VerifyPassword(ctx context.Context, req *repopb.VerifyPasswordRequest) (*repopb.VerifyPasswordResponse, error) {
-	s.logger.Debug("验证用户密码请求", clog.String("username", req.Username))
-
-	// 参数验证
-	if req.Username == "" {
-		return nil, status.Error(codes.InvalidArgument, "用户名不能为空")
-	}
-	if req.PasswordHash == "" {
-		return nil, status.Error(codes.InvalidArgument, "密码不能为空")
-	}
-
-	// 验证密码
-	user, valid, err := s.userRepo.VerifyPassword(ctx, req.Username, req.PasswordHash)
-	if err != nil {
-		s.logger.Error("验证用户密码失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "验证密码失败")
-	}
-
-	var protoUser *repopb.User
-	if user != nil {
-		protoUser = s.modelToProto(user)
-	}
-
-	// 构造响应
-	resp := &repopb.VerifyPasswordResponse{
-		Valid: valid,
-		User:  protoUser,
-	}
-
-	s.logger.Debug("用户密码验证完成",
-		clog.String("username", req.Username),
-		clog.Bool("valid", valid))
-
-	return resp, nil
-}
-
-// DeleteUser 删除用户
-func (s *UserService) DeleteUser(ctx context.Context, req *repopb.DeleteUserRequest) (*repopb.DeleteUserResponse, error) {
-	s.logger.Info("删除用户请求", clog.String("user_id", req.UserId))
+	s.logger.Debug("验证用户密码请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
 	if req.UserId == "" {
 		return nil, status.Error(codes.InvalidArgument, "用户ID不能为空")
+	}
+	if req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "密码不能为空")
 	}
 
 	// 转换用户ID
@@ -299,31 +262,36 @@ func (s *UserService) DeleteUser(ctx context.Context, req *repopb.DeleteUserRequ
 		return nil, status.Error(codes.InvalidArgument, "用户ID格式错误")
 	}
 
-	// 删除用户
-	err = s.userRepo.DeleteUser(ctx, userID)
+	// 验证密码
+	valid, err := s.userRepo.VerifyPassword(ctx, userID, req.Password)
 	if err != nil {
-		s.logger.Error("删除用户失败", clog.Err(err))
-		return nil, status.Error(codes.Internal, "删除用户失败")
+		s.logger.Error("验证用户密码失败", clog.Err(err))
+		return nil, status.Error(codes.Internal, "验证密码失败")
 	}
 
 	// 构造响应
-	resp := &repopb.DeleteUserResponse{
-		Success: true,
+	resp := &repopb.VerifyPasswordResponse{
+		Valid: valid,
 	}
 
-	s.logger.Info("用户删除成功", clog.String("user_id", req.UserId))
+	s.logger.Debug("用户密码验证完成",
+		clog.String("user_id", req.UserId),
+		clog.Bool("valid", valid))
+
 	return resp, nil
 }
 
 // modelToProto 将模型转换为 protobuf 格式
 func (s *UserService) modelToProto(user *model.User) *repopb.User {
+	if user == nil {
+		return nil
+	}
 	return &repopb.User{
-		Id:           fmt.Sprintf("%d", user.ID),
-		Username:     user.Username,
-		Nickname:     user.Nickname,
-		AvatarUrl:    user.AvatarURL,
-		CreatedAt:    user.CreatedAt.Unix(),
-		UpdatedAt:    user.UpdatedAt.Unix(),
-		PasswordHash: user.PasswordHash, // 注意：在实际生产环境中，不应该返回密码哈希
+		Id:        fmt.Sprintf("%d", user.ID),
+		Username:  user.Username,
+		Nickname:  user.Nickname,
+		AvatarUrl: user.AvatarURL,
+		CreatedAt: user.CreatedAt.Unix(),
+		UpdatedAt: user.UpdatedAt.Unix(),
 	}
 }
