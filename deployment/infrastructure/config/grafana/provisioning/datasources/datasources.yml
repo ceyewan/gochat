@@ -1,0 +1,48 @@
+# Grafana 数据源配置
+apiVersion: 1
+
+datasources:
+  # Prometheus 数据源 - 指标数据
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+
+  # Loki 数据源 - 日志数据
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: "prometheus"
+          matcherRegex: "trace_id=(\\w+)"
+          name: "TraceID"
+          url: "http://jaeger:16686/trace/$${__value.raw}"
+
+  # Jaeger 数据源 - 链路追踪
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    isDefault: false
+    editable: true
+    jsonData:
+      tracesToLogs:
+        datasourceUid: "loki"
+        tags: ["service", "trace_id"]
+        mappedTags:
+          - key: "service"
+            value: "service"
+        mapTagNamesEnabled: true
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"

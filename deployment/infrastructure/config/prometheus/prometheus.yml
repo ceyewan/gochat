@@ -1,0 +1,88 @@
+# Prometheus 配置文件 - GoChat 监控
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'gochat-dev'
+    environment: 'development'
+
+# 告警规则文件
+rule_files:
+  - "rules/*.yml"
+
+# 告警管理器配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# 抓取配置
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # Node Exporter 系统监控
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 10s
+
+  # cAdvisor 容器监控
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 10s
+
+  # GoChat 应用服务监控（预留）
+  - job_name: 'gochat-im-repo'
+    static_configs:
+      - targets: []  # 待应用服务启动后配置
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  - job_name: 'gochat-im-logic'
+    static_configs:
+      - targets: []  # 待应用服务启动后配置
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  - job_name: 'gochat-im-gateway'
+    static_configs:
+      - targets: []  # 待应用服务启动后配置
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  - job_name: 'gochat-im-task'
+    static_configs:
+      - targets: []  # 待应用服务启动后配置
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  # Redis 监控（如果有 Redis Exporter）
+  - job_name: 'redis'
+    static_configs:
+      - targets: []  # 待 Redis Exporter 配置后启用
+    scrape_interval: 10s
+
+  # MySQL 监控（如果有 MySQL Exporter）
+  - job_name: 'mysql'
+    static_configs:
+      - targets: []  # 待 MySQL Exporter 配置后启用
+    scrape_interval: 10s
+
+  # Kafka 监控（如果有 Kafka Exporter）
+  - job_name: 'kafka'
+    static_configs:
+      - targets: []  # 待 Kafka Exporter 配置后启用
+    scrape_interval: 10s
+
+  # etcd 监控
+  - job_name: 'etcd'
+    static_configs:
+      - targets: []  # 待 etcd 监控配置后启用
+    scrape_interval: 10s
