@@ -21,6 +21,7 @@ type Logger interface {
 	Info(msg string, fields ...zap.Field)
 	Warn(msg string, fields ...zap.Field)
 	Error(msg string, fields ...zap.Field)
+	Fatal(msg string, fields ...zap.Field) // TODO: 实现 Fatal 方法
 
 	With(fields ...zap.Field) Logger
 	WithOptions(opts ...zap.Option) Logger
@@ -139,6 +140,13 @@ func (l *zapLogger) WithOptions(opts ...zap.Option) Logger {
 		Logger: l.Logger.WithOptions(opts...),
 		hook:   l.hook,
 	}
+}
+
+// Fatal 记录 Fatal 级别的日志
+// TODO: 实现 Fatal 日志记录和程序退出逻辑
+func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
+	l.Logger.Error(msg, fields...)
+	// TODO: 调用 os.Exit(1) 或类似的退出机制
 }
 
 // Module 创建模块日志器 - 只能基于默认 logger，不支持嵌套

@@ -1,0 +1,121 @@
+// im_logic/v1/auth.proto
+// 定义 im-logic 服务的用户认证相关接口
+
+syntax = "proto3";
+
+package im.logic.v1;
+
+option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
+
+import "im_logic/v1/common.proto";
+
+// AuthService 用户认证服务
+// 提供用户登录、注册、令牌刷新等认证功能
+service AuthService {
+  // Login 用户登录
+  // 验证用户名密码，返回访问令牌和刷新令牌
+  rpc Login(LoginRequest) returns (LoginResponse);
+  
+  // Register 用户注册
+  // 创建新用户账号
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  
+  // RefreshToken 刷新访问令牌
+  // 使用刷新令牌获取新的访问令牌
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  
+  // Logout 用户登出
+  // 使访问令牌和刷新令牌失效
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  
+  // ValidateToken 验证令牌
+  // 验证访问令牌的有效性并返回用户信息
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+// LoginRequest 登录请求
+message LoginRequest {
+  // 用户名
+  string username = 1;
+  // 密码
+  string password = 2;
+  // 客户端信息（可选）
+  string client_info = 3;
+}
+
+// LoginResponse 登录响应
+message LoginResponse {
+  // 访问令牌
+  string access_token = 1;
+  // 刷新令牌
+  string refresh_token = 2;
+  // 访问令牌过期时间（Unix 时间戳）
+  int64 expires_in = 3;
+  // 用户信息
+  User user = 4;
+}
+
+// RegisterRequest 注册请求
+message RegisterRequest {
+  // 用户名
+  string username = 1;
+  // 密码
+  string password = 2;
+  // 昵称（可选）
+  string nickname = 3;
+  // 头像 URL（可选）
+  string avatar_url = 4;
+}
+
+// RegisterResponse 注册响应
+message RegisterResponse {
+  // 用户信息
+  User user = 1;
+}
+
+// RefreshTokenRequest 刷新令牌请求
+message RefreshTokenRequest {
+  // 刷新令牌
+  string refresh_token = 1;
+}
+
+// RefreshTokenResponse 刷新令牌响应
+message RefreshTokenResponse {
+  // 新的访问令牌
+  string access_token = 1;
+  // 新的刷新令牌
+  string refresh_token = 2;
+  // 访问令牌过期时间（Unix 时间戳）
+  int64 expires_in = 3;
+}
+
+// LogoutRequest 登出请求
+message LogoutRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 访问令牌
+  string access_token = 2;
+}
+
+// LogoutResponse 登出响应
+message LogoutResponse {
+  // 操作是否成功
+  bool success = 1;
+}
+
+// ValidateTokenRequest 验证令牌请求
+message ValidateTokenRequest {
+  // 访问令牌
+  string access_token = 1;
+}
+
+// ValidateTokenResponse 验证令牌响应
+message ValidateTokenResponse {
+  // 令牌是否有效
+  bool valid = 1;
+  // 用户信息（令牌有效时返回）
+  User user = 2;
+  // 令牌过期时间（Unix 时间戳）
+  int64 expires_at = 3;
+}
+

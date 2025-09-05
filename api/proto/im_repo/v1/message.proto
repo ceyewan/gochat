@@ -1,0 +1,190 @@
+// im_repo/v1/message.proto
+// 定义 im-repo 服务的消息数据相关接口
+
+syntax = "proto3";
+
+package im.repo.v1;
+
+option go_package = "github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1";
+
+// MessageService 消息数据服务
+// 提供消息数据的存储、查询和序列号管理
+service MessageService {
+  // SaveMessage 保存消息
+  // 将消息持久化到数据库并更新热点缓存
+  rpc SaveMessage(SaveMessageRequest) returns (SaveMessageResponse);
+  
+  // GetMessage 获取单条消息
+  // 根据消息 ID 获取消息详情
+  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
+  
+  // GetConversationMessages 获取会话消息列表
+  // 分页查询指定会话的消息列表
+  rpc GetConversationMessages(GetConversationMessagesRequest) returns (GetConversationMessagesResponse);
+  
+  // GenerateSeqID 生成序列号
+  // 为指定会话生成单调递增的序列号
+  rpc GenerateSeqID(GenerateSeqIDRequest) returns (GenerateSeqIDResponse);
+  
+  // CheckMessageIdempotency 检查消息幂等性
+  // 检查客户端消息 ID 是否已存在，实现幂等性
+  rpc CheckMessageIdempotency(CheckMessageIdempotencyRequest) returns (CheckMessageIdempotencyResponse);
+  
+  // GetLatestMessages 获取最新消息
+  // 获取会话中最新的 N 条消息（用于会话列表）
+  rpc GetLatestMessages(GetLatestMessagesRequest) returns (GetLatestMessagesResponse);
+  
+  // DeleteMessage 删除消息
+  // 软删除指定消息（标记为已删除）
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
+}
+
+// SaveMessageRequest 保存消息请求
+message SaveMessageRequest {
+  // 消息 ID
+  string message_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 发送者 ID
+  string sender_id = 3;
+  // 消息类型
+  int32 message_type = 4;
+  // 消息内容
+  string content = 5;
+  // 序列号
+  int64 seq_id = 6;
+  // 客户端消息 ID（用于幂等性）
+  string client_msg_id = 7;
+  // 消息扩展信息
+  string extra = 8;
+}
+
+// SaveMessageResponse 保存消息响应
+message SaveMessageResponse {
+  // 保存的消息信息
+  Message message = 1;
+}
+
+// GetMessageRequest 获取消息请求
+message GetMessageRequest {
+  // 消息 ID
+  string message_id = 1;
+}
+
+// GetMessageResponse 获取消息响应
+message GetMessageResponse {
+  // 消息信息
+  Message message = 1;
+}
+
+// GetConversationMessagesRequest 获取会话消息请求
+message GetConversationMessagesRequest {
+  // 会话 ID
+  string conversation_id = 1;
+  // 起始序列号（可选）
+  int64 start_seq_id = 2;
+  // 结束序列号（可选）
+  int64 end_seq_id = 3;
+  // 限制数量
+  int32 limit = 4;
+  // 排序方向（true: 升序, false: 降序）
+  bool ascending = 5;
+}
+
+// GetConversationMessagesResponse 获取会话消息响应
+message GetConversationMessagesResponse {
+  // 消息列表
+  repeated Message messages = 1;
+  // 是否还有更多消息
+  bool has_more = 2;
+  // 下一页的起始序列号
+  int64 next_seq_id = 3;
+}
+
+// GenerateSeqIDRequest 生成序列号请求
+message GenerateSeqIDRequest {
+  // 会话 ID
+  string conversation_id = 1;
+}
+
+// GenerateSeqIDResponse 生成序列号响应
+message GenerateSeqIDResponse {
+  // 生成的序列号
+  int64 seq_id = 1;
+}
+
+// CheckMessageIdempotencyRequest 检查消息幂等性请求
+message CheckMessageIdempotencyRequest {
+  // 客户端消息 ID
+  string client_msg_id = 1;
+  // TTL 秒数（可选，默认 60 秒）
+  int32 ttl_seconds = 2;
+}
+
+// CheckMessageIdempotencyResponse 检查消息幂等性响应
+message CheckMessageIdempotencyResponse {
+  // 是否已存在（true: 重复消息, false: 新消息）
+  bool exists = 1;
+  // 已存在的消息 ID（如果存在）
+  string existing_message_id = 2;
+}
+
+// GetLatestMessagesRequest 获取最新消息请求
+message GetLatestMessagesRequest {
+  // 会话 ID 列表
+  repeated string conversation_ids = 1;
+  // 每个会话返回的消息数量（默认 1）
+  int32 limit_per_conversation = 2;
+}
+
+// GetLatestMessagesResponse 获取最新消息响应
+message GetLatestMessagesResponse {
+  // 会话最新消息映射 (conversation_id -> messages)
+  map<string, ConversationMessages> conversation_messages = 1;
+}
+
+// ConversationMessages 会话消息列表
+message ConversationMessages {
+  // 消息列表
+  repeated Message messages = 1;
+}
+
+// DeleteMessageRequest 删除消息请求
+message DeleteMessageRequest {
+  // 消息 ID
+  string message_id = 1;
+  // 操作者 ID
+  string operator_id = 2;
+  // 删除原因（可选）
+  string reason = 3;
+}
+
+// DeleteMessageResponse 删除消息响应
+message DeleteMessageResponse {
+  // 操作是否成功
+  bool success = 1;
+}
+
+// Message 消息信息
+message Message {
+  // 消息 ID
+  string id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 发送者 ID
+  string sender_id = 3;
+  // 消息类型
+  int32 message_type = 4;
+  // 消息内容
+  string content = 5;
+  // 会话内序列号
+  int64 seq_id = 6;
+  // 创建时间（Unix 时间戳）
+  int64 created_at = 7;
+  // 更新时间（Unix 时间戳）
+  int64 updated_at = 8;
+  // 是否已删除
+  bool deleted = 9;
+  // 消息扩展信息
+  string extra = 10;
+}

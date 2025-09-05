@@ -147,6 +147,13 @@ func Error(msg string, fields ...Field) {
 	getDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
 }
 
+// Fatal 记录 Fatal 级别的日志并退出程序
+// TODO: 实现 Fatal 日志记录和程序退出逻辑
+func Fatal(msg string, fields ...Field) {
+	getDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
+	// TODO: 调用 os.Exit(1) 或类似的退出机制
+}
+
 // Init 初始化或重新配置全局日志器。
 // 这个函数主要用于应用程序启动时设置全局日志，或在运行时进行热重载。
 // 它通过调用 New() 来创建新的 logger，然后安全地更新全局实例。

@@ -1,0 +1,126 @@
+// im_repo/v1/conversation.proto
+// 定义 im-repo 服务的会话数据相关接口
+
+syntax = "proto3";
+
+package im.repo.v1;
+
+option go_package = "github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1";
+
+// ConversationService 会话数据服务
+// 提供会话数据的存储和查询
+service ConversationService {
+  // GetUserConversations 获取用户会话列表
+  // 查询用户参与的所有会话
+  rpc GetUserConversations(GetUserConversationsRequest) returns (GetUserConversationsResponse);
+  
+  // UpdateReadPointer 更新已读位置
+  // 更新用户在指定会话中的已读位置
+  rpc UpdateReadPointer(UpdateReadPointerRequest) returns (UpdateReadPointerResponse);
+  
+  // GetUnreadCount 获取未读消息数
+  // 计算用户在指定会话中的未读消息数量
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse);
+  
+  // GetReadPointer 获取已读位置
+  // 获取用户在指定会话中的已读位置
+  rpc GetReadPointer(GetReadPointerRequest) returns (GetReadPointerResponse);
+  
+  // BatchGetUnreadCounts 批量获取未读消息数
+  // 批量查询多个会话的未读消息数
+  rpc BatchGetUnreadCounts(BatchGetUnreadCountsRequest) returns (BatchGetUnreadCountsResponse);
+}
+
+// GetUserConversationsRequest 获取用户会话列表请求
+message GetUserConversationsRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 偏移量
+  int32 offset = 2;
+  // 限制数量
+  int32 limit = 3;
+  // 会话类型过滤（可选）
+  int32 type_filter = 4;
+}
+
+// GetUserConversationsResponse 获取用户会话列表响应
+message GetUserConversationsResponse {
+  // 会话 ID 列表
+  repeated string conversation_ids = 1;
+  // 总数量
+  int64 total = 2;
+  // 是否还有更多
+  bool has_more = 3;
+}
+
+// UpdateReadPointerRequest 更新已读位置请求
+message UpdateReadPointerRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 已读到的序列号
+  int64 seq_id = 3;
+}
+
+// UpdateReadPointerResponse 更新已读位置响应
+message UpdateReadPointerResponse {
+  // 操作是否成功
+  bool success = 1;
+  // 更新后的未读数量
+  int64 unread_count = 2;
+}
+
+// GetUnreadCountRequest 获取未读消息数请求
+message GetUnreadCountRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+}
+
+// GetUnreadCountResponse 获取未读消息数响应
+message GetUnreadCountResponse {
+  // 未读消息数量
+  int64 unread_count = 1;
+}
+
+// GetReadPointerRequest 获取已读位置请求
+message GetReadPointerRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+}
+
+// GetReadPointerResponse 获取已读位置响应
+message GetReadPointerResponse {
+  // 已读位置信息
+  ReadPointer read_pointer = 1;
+}
+
+// BatchGetUnreadCountsRequest 批量获取未读消息数请求
+message BatchGetUnreadCountsRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID 列表
+  repeated string conversation_ids = 2;
+}
+
+// BatchGetUnreadCountsResponse 批量获取未读消息数响应
+message BatchGetUnreadCountsResponse {
+  // 未读数量映射 (conversation_id -> unread_count)
+  map<string, int64> unread_counts = 1;
+}
+
+// ReadPointer 已读位置信息
+message ReadPointer {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 最后已读序列号
+  int64 last_read_seq_id = 3;
+  // 更新时间（Unix 时间戳）
+  int64 updated_at = 4;
+}

@@ -1,0 +1,162 @@
+// im_logic/v1/conversation.proto
+// 定义 im-logic 服务的会话管理相关接口
+
+syntax = "proto3";
+
+package im.logic.v1;
+
+option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
+
+import "im_logic/v1/common.proto";
+
+// ConversationService 会话管理服务
+// 提供会话列表、消息历史、已读状态等功能
+service ConversationService {
+  // GetConversations 获取用户会话列表
+  // 返回用户参与的所有会话，按最后消息时间排序
+  rpc GetConversations(GetConversationsRequest) returns (GetConversationsResponse);
+  
+  // GetConversation 获取单个会话详情
+  // 返回会话的详细信息
+  rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
+  
+  // GetMessages 获取会话历史消息
+  // 支持分页查询会话中的历史消息
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+  
+  // MarkAsRead 标记消息已读
+  // 更新用户在指定会话中的已读位置
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse);
+  
+  // GetUnreadCount 获取未读消息数
+  // 返回用户在指定会话中的未读消息数量
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse);
+}
+
+// GetConversationsRequest 获取会话列表请求
+message GetConversationsRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 页码（从 1 开始）
+  int32 page = 2;
+  // 每页大小
+  int32 page_size = 3;
+  // 会话类型过滤（可选）
+  ConversationType type = 4;
+}
+
+// GetConversationsResponse 获取会话列表响应
+message GetConversationsResponse {
+  // 会话列表
+  repeated Conversation conversations = 1;
+  // 总数量
+  int64 total = 2;
+  // 当前页码
+  int32 page = 3;
+  // 每页大小
+  int32 page_size = 4;
+}
+
+// GetConversationRequest 获取会话详情请求
+message GetConversationRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+}
+
+// GetConversationResponse 获取会话详情响应
+message GetConversationResponse {
+  // 会话信息
+  Conversation conversation = 1;
+}
+
+// GetMessagesRequest 获取历史消息请求
+message GetMessagesRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 起始序列号（可选，用于分页）
+  int64 start_seq_id = 3;
+  // 结束序列号（可选，用于分页）
+  int64 end_seq_id = 4;
+  // 限制数量
+  int32 limit = 5;
+  // 排序方向（true: 升序, false: 降序）
+  bool ascending = 6;
+}
+
+// GetMessagesResponse 获取历史消息响应
+message GetMessagesResponse {
+  // 消息列表
+  repeated Message messages = 1;
+  // 是否还有更多消息
+  bool has_more = 2;
+  // 下一页的起始序列号
+  int64 next_seq_id = 3;
+}
+
+// MarkAsReadRequest 标记已读请求
+message MarkAsReadRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 已读到的序列号
+  int64 seq_id = 3;
+}
+
+// MarkAsReadResponse 标记已读响应
+message MarkAsReadResponse {
+  // 操作是否成功
+  bool success = 1;
+  // 更新后的未读数量
+  int64 unread_count = 2;
+}
+
+// GetUnreadCountRequest 获取未读数请求
+message GetUnreadCountRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID（可选，不指定则返回所有会话的未读数）
+  string conversation_id = 2;
+}
+
+// GetUnreadCountResponse 获取未读数响应
+message GetUnreadCountResponse {
+  // 未读消息数量
+  int64 unread_count = 1;
+  // 各会话的未读数（当不指定会话 ID 时返回）
+  repeated ConversationUnreadCount conversation_counts = 2;
+}
+
+// ConversationUnreadCount 会话未读数
+message ConversationUnreadCount {
+  // 会话 ID
+  string conversation_id = 1;
+  // 未读数量
+  int64 unread_count = 2;
+}
+
+// Conversation 会话信息
+message Conversation {
+  // 会话 ID
+  string id = 1;
+  // 会话类型
+  ConversationType type = 2;
+  // 会话名称
+  string name = 3;
+  // 会话头像 URL
+  string avatar_url = 4;
+  // 最后一条消息
+  Message last_message = 5;
+  // 未读消息数量
+  int64 unread_count = 6;
+  // 最后更新时间（Unix 时间戳）
+  int64 updated_at = 7;
+  // 会话成员数量（群聊时有效）
+  int32 member_count = 8;
+  // 用户在该会话中的角色（群聊时有效）
+  int32 user_role = 9;
+}

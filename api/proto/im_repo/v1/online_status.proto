@@ -1,0 +1,136 @@
+// im_repo/v1/online_status.proto
+// 定义 im-repo 服务的在线状态相关接口
+
+syntax = "proto3";
+
+package im.repo.v1;
+
+option go_package = "github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1";
+
+// OnlineStatusService 在线状态服务
+// 提供用户在线状态的管理和查询
+service OnlineStatusService {
+  // SetUserOnline 设置用户在线状态
+  // 将用户标记为在线并记录所在网关
+  rpc SetUserOnline(SetUserOnlineRequest) returns (SetUserOnlineResponse);
+  
+  // SetUserOffline 设置用户离线状态
+  // 将用户标记为离线
+  rpc SetUserOffline(SetUserOfflineRequest) returns (SetUserOfflineResponse);
+  
+  // GetUserOnlineStatus 获取用户在线状态
+  // 查询单个用户的在线状态
+  rpc GetUserOnlineStatus(GetUserOnlineStatusRequest) returns (GetUserOnlineStatusResponse);
+  
+  // GetUsersOnlineStatus 批量获取用户在线状态
+  // 批量查询多个用户的在线状态
+  rpc GetUsersOnlineStatus(GetUsersOnlineStatusRequest) returns (GetUsersOnlineStatusResponse);
+  
+  // UpdateHeartbeat 更新心跳
+  // 更新用户的最后活跃时间
+  rpc UpdateHeartbeat(UpdateHeartbeatRequest) returns (UpdateHeartbeatResponse);
+  
+  // CleanupExpiredStatus 清理过期状态
+  // 清理长时间未活跃的在线状态
+  rpc CleanupExpiredStatus(CleanupExpiredStatusRequest) returns (CleanupExpiredStatusResponse);
+}
+
+// SetUserOnlineRequest 设置用户在线请求
+message SetUserOnlineRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 网关 ID
+  string gateway_id = 2;
+  // 客户端信息（可选）
+  string client_info = 3;
+}
+
+// SetUserOnlineResponse 设置用户在线响应
+message SetUserOnlineResponse {
+  // 操作是否成功
+  bool success = 1;
+  // 在线状态信息
+  OnlineStatus status = 2;
+}
+
+// SetUserOfflineRequest 设置用户离线请求
+message SetUserOfflineRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 网关 ID（可选，用于验证）
+  string gateway_id = 2;
+}
+
+// SetUserOfflineResponse 设置用户离线响应
+message SetUserOfflineResponse {
+  // 操作是否成功
+  bool success = 1;
+}
+
+// GetUserOnlineStatusRequest 获取用户在线状态请求
+message GetUserOnlineStatusRequest {
+  // 用户 ID
+  string user_id = 1;
+}
+
+// GetUserOnlineStatusResponse 获取用户在线状态响应
+message GetUserOnlineStatusResponse {
+  // 在线状态信息
+  OnlineStatus status = 1;
+}
+
+// GetUsersOnlineStatusRequest 批量获取用户在线状态请求
+message GetUsersOnlineStatusRequest {
+  // 用户 ID 列表
+  repeated string user_ids = 1;
+}
+
+// GetUsersOnlineStatusResponse 批量获取用户在线状态响应
+message GetUsersOnlineStatusResponse {
+  // 在线状态列表
+  repeated OnlineStatus statuses = 1;
+}
+
+// UpdateHeartbeatRequest 更新心跳请求
+message UpdateHeartbeatRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 网关 ID
+  string gateway_id = 2;
+}
+
+// UpdateHeartbeatResponse 更新心跳响应
+message UpdateHeartbeatResponse {
+  // 操作是否成功
+  bool success = 1;
+  // 更新后的最后活跃时间
+  int64 last_seen = 2;
+}
+
+// CleanupExpiredStatusRequest 清理过期状态请求
+message CleanupExpiredStatusRequest {
+  // 过期时间阈值（Unix 时间戳）
+  int64 expired_before = 1;
+  // 批量处理大小
+  int32 batch_size = 2;
+}
+
+// CleanupExpiredStatusResponse 清理过期状态响应
+message CleanupExpiredStatusResponse {
+  // 清理的记录数量
+  int64 cleaned_count = 1;
+}
+
+// OnlineStatus 在线状态信息
+message OnlineStatus {
+  // 用户 ID
+  string user_id = 1;
+  // 是否在线
+  bool is_online = 2;
+  // 所在网关 ID
+  string gateway_id = 3;
+  // 最后在线时间（Unix 时间戳）
+  int64 last_seen = 4;
+  // 客户端信息
+  string client_info = 5;
+}

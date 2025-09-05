@@ -5,3 +5,4 @@ gochat.bin
 .env
 data/
 qdrant_storage/
+bin/
