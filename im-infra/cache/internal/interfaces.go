@@ -14,8 +14,8 @@ type Cache interface {
 	HashOperations
 	SetOperations
 	LockOperations
-	BloomOperations
-	ScriptOperations
+	// BloomOperations  // TODO: 暂时禁用布隆过滤器
+	// ScriptOperations // TODO: 暂时禁用脚本操作
 
 	// Connection management - 连接管理
 	Ping(ctx context.Context) error

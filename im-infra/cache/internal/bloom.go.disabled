@@ -89,7 +89,18 @@ func (c *cache) BloomAdd(ctx context.Context, key string, item string) error {
 	bloomLogger := clog.Module("cache.bloom")
 
 	return c.executeWithLogging(ctx, "BLOOM_ADD", key, func() error {
-		// 使用 pipeline 批量设置位
+		// TODO: 修复 Redis Pipeline SetBit 接口问题
+		// 暂时使用单个命令代替 pipeline
+		for _, hash := range hashes {
+			bitOffset := hash % metadata.BitSize
+			err := c.client.SetBit(ctx, bloomKey, int64(bitOffset), 1).Err()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+		
+		/* 原 pipeline 代码，待修复
 		pipe := c.client.Pipeline()
 		for _, hash := range hashes {
 			bitOffset := hash % metadata.BitSize
@@ -137,7 +148,21 @@ func (c *cache) BloomExists(ctx context.Context, key string, item string) (bool,
 
 	var exists bool
 	err = c.executeWithLogging(ctx, "BLOOM_EXISTS", key, func() error {
-		// 使用 pipeline 批量检查位
+		// TODO: 修复 Redis Pipeline GetBit 接口问题
+		// 暂时使用单个命令代替 pipeline
+		for _, hash := range hashes {
+			bitOffset := hash % metadata.BitSize
+			bit, err := c.client.GetBit(ctx, bloomKey, int64(bitOffset)).Result()
+			if err != nil {
+				return false, err
+			}
+			if bit == 0 {
+				return false, nil // 如果任何一位为0，则元素肯定不存在
+			}
+		}
+		return true, nil
+		
+		/* 原 pipeline 代码，待修复
 		pipe := c.client.Pipeline()
 		cmds := make([]*redis.IntCmd, len(hashes))
 

@@ -11,16 +11,16 @@ import (
 
 // User 示例用户模型
 type User struct {
-	ID        uint      `gorm:"primaryKey"`
-	Name      string    `gorm:"size:100;not null"`
-	Email     string    `gorm:"uniqueIndex;size:100"`
+	ID        uint   `gorm:"primaryKey"`
+	Name      string `gorm:"size:100;not null"`
+	Email     string `gorm:"uniqueIndex;size:100"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
 func main() {
 	// 1. 初始化 coord 实例
-	coordInstance := coord.New(coord.Config{
+	coordInstance, _ := coord.New(coord.Config{
 		Endpoints: []string{"localhost:2379"}, // etcd endpoints
 		Timeout:   5 * time.Second,
 	})

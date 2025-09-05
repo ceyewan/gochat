@@ -6,3 +6,4 @@ gochat.bin
 data/
 qdrant_storage/
 bin/
+bin

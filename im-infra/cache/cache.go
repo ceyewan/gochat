@@ -201,20 +201,21 @@ func AcquireLock(ctx context.Context, key string, expiration time.Duration) (Loc
 	return getDefaultCache().Lock(ctx, key, expiration)
 }
 
+// TODO: 暂时禁用布隆过滤器功能
 // BloomAdd 使用全局默认缓存向布隆过滤器添加元素
-func BloomAdd(ctx context.Context, key string, item string) error {
-	return getDefaultCache().BloomAdd(ctx, key, item)
-}
+// func BloomAdd(ctx context.Context, key string, item string) error {
+// 	return getDefaultCache().BloomAdd(ctx, key, item)
+// }
 
 // BloomExists 使用全局默认缓存检查元素是否可能存在于布隆过滤器中
-func BloomExists(ctx context.Context, key string, item string) (bool, error) {
-	return getDefaultCache().BloomExists(ctx, key, item)
-}
+// func BloomExists(ctx context.Context, key string, item string) (bool, error) {
+// 	return getDefaultCache().BloomExists(ctx, key, item)
+// }
 
 // BloomInit 使用全局默认缓存初始化布隆过滤器
-func BloomInit(ctx context.Context, key string, capacity uint64, errorRate float64) error {
-	return getDefaultCache().BloomInit(ctx, key, capacity, errorRate)
-}
+// func BloomInit(ctx context.Context, key string, capacity uint64, errorRate float64) error {
+// 	return getDefaultCache().BloomInit(ctx, key, capacity, errorRate)
+// }
 
 // Ping 使用全局默认缓存检查 Redis 连接是否正常
 func Ping(ctx context.Context) error {
