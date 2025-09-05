@@ -28,6 +28,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.38.0
 	go.opentelemetry.io/otel/trace v1.38.0
 	go.uber.org/zap v1.27.0
+	golang.org/x/crypto v0.41.0
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -89,7 +90,6 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect

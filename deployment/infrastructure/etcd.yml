@@ -129,18 +129,18 @@ services:
       start_period: 60s
 
   # etcd 管理界面
-  etcd-manager:
-    image: evildecay/etcdkeeper:latest
-    container_name: etcd-manager-standalone
-    hostname: etcd-manager
+  etcd-workbench:
+    image: tzfun/etcd-workbench:latest
+    container_name: my-etcd-workbench
+    hostname: etcd-workbench
     restart: unless-stopped
-    environment:
-      - ETCD_HOSTS=etcd1:2379,etcd2:2379,etcd3:2379
     ports:
-      - "8081:8080"
+      - "8002:8002"
     networks:
       - etcd-cluster
     depends_on:
       - etcd1
       - etcd2
       - etcd3
+    environment:
+      - ETCD_HOST=etcd1:2379,etcd2:2379,etcd3:2379

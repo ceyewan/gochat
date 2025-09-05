@@ -1,21 +1,25 @@
 {
-  "level": "info",
-  "format": "json",
-  "output": "file",
-  "filename": "/app/logs/app.log",
-  "maxSize": 100,
-  "maxBackups": 3,
-  "maxAge": 7,
-  "compress": true,
-  "enableCaller": true,
-  "enableStacktrace": false,
-  "development": false,
-  "encoding": "json",
-  "outputPaths": ["/app/logs/app.log"],
-  "errorOutputPaths": ["/app/logs/error.log"],
-  "initialFields": {
-    "service": "im-repo",
-    "environment": "dev",
-    "version": "1.0.0"
-  }
+    "level": "info",
+    "format": "json",
+    "output": "file",
+    "filename": "/app/logs/app.log",
+    "maxSize": 100,
+    "maxBackups": 3,
+    "maxAge": 7,
+    "compress": true,
+    "enableCaller": true,
+    "enableStacktrace": false,
+    "development": false,
+    "encoding": "json",
+    "outputPaths": [
+        "/app/logs/app.log"
+    ],
+    "errorOutputPaths": [
+        "/app/logs/error.log"
+    ],
+    "initialFields": {
+        "service": "im-repo",
+        "environment": "dev",
+        "version": "1.0.0"
+    }
 }

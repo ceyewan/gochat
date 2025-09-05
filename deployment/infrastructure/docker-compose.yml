@@ -194,10 +194,14 @@ services:
 
   # ===== Kafka 集群 =====
   kafka1:
-    image: apache/kafka:3.7.0
+    image: apache/kafka:latest
     container_name: gochat-kafka1
     hostname: kafka1
     restart: unless-stopped
+    ports:
+      - "19092:19092"
+    networks:
+      - infra-net
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -207,30 +211,24 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
-      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
-      KAFKA_MIN_INSYNC_REPLICAS: 2
-      CLUSTER_ID: 'gochat-kafka-cluster-2024'
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: '${KAFKA_CLUSTER_ID}'
     volumes:
-      - kafka-data-1:/var/lib/kafka/data
-    ports:
-      - "19092:19092"
-    networks:
-      - infra-net
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - ./data/kafka1:/tmp/kafka-logs
 
   kafka2:
-    image: apache/kafka:3.7.0
+    image: apache/kafka:latest
     container_name: gochat-kafka2
     hostname: kafka2
     restart: unless-stopped
+    ports:
+      - "29092:29092"
+    networks:
+      - infra-net
+    depends_on:
+      - kafka1
     environment:
       KAFKA_NODE_ID: 2
       KAFKA_PROCESS_ROLES: broker,controller
@@ -240,32 +238,25 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
-      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
-      KAFKA_MIN_INSYNC_REPLICAS: 2
-      CLUSTER_ID: 'gochat-kafka-cluster-2024'
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: '${KAFKA_CLUSTER_ID}'
     volumes:
-      - kafka-data-2:/var/lib/kafka/data
+      - ./data/kafka2:/tmp/kafka-logs
+
+  kafka3:
+    image: apache/kafka:latest
+    container_name: gochat-kafka3
+    hostname: kafka3
+    restart: unless-stopped
     ports:
-      - "29092:29092"
+      - "39092:39092"
     networks:
       - infra-net
     depends_on:
       - kafka1
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  kafka3:
-    image: apache/kafka:3.7.0
-    container_name: gochat-kafka3
-    hostname: kafka3
-    restart: unless-stopped
+      - kafka2
     environment:
       KAFKA_NODE_ID: 3
       KAFKA_PROCESS_ROLES: broker,controller
@@ -275,27 +266,12 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
-      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
-      KAFKA_MIN_INSYNC_REPLICAS: 2
-      CLUSTER_ID: 'gochat-kafka-cluster-2024'
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: '${KAFKA_CLUSTER_ID}'
     volumes:
-      - kafka-data-3:/var/lib/kafka/data
-    ports:
-      - "39092:39092"
-    networks:
-      - infra-net
-    depends_on:
-      - kafka1
-      - kafka2
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - ./data/kafka3:/tmp/kafka-logs
 
   # ===== 管理界面 =====
   # Kafka UI 管理界面
@@ -304,11 +280,6 @@ services:
     container_name: gochat-kafka-ui
     hostname: kafka-ui
     restart: unless-stopped
-    environment:
-      KAFKA_CLUSTERS_0_NAME: GoChat-Kafka-Cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092,kafka3:9092
-      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
-      SERVER_SERVLET_CONTEXT_PATH: /kafka-ui
     ports:
       - "8080:8080"
     networks:
@@ -318,22 +289,19 @@ services:
       - kafka1
       - kafka2
       - kafka3
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/kafka-ui/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    environment:
+      KAFKA_CLUSTERS_0_NAME: KraftCluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092,kafka3:9092
+      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
 
   # etcd 管理界面
-  etcd-manager:
-    image: evildecay/etcdkeeper:latest
-    container_name: gochat-etcd-manager
-    hostname: etcd-manager
+  etcd-workbench:
+    image: tzfun/etcd-workbench:latest
+    container_name: gochat-etcd-workbench
+    hostname: etcd-workbench
     restart: unless-stopped
-    environment:
-      - ETCD_HOSTS=etcd1:2379,etcd2:2379,etcd3:2379
     ports:
-      - "8081:8080"
+      - "8002:8002"
     networks:
       - infra-net
       - monitoring-net
@@ -341,18 +309,17 @@ services:
       - etcd1
       - etcd2
       - etcd3
+    environment:
+      ETCD_HOST: etcd1:2379,etcd2:2379,etcd3:2379
 
   # Redis 管理界面 - RedisInsight
   redis-insight:
-    image: redislabs/redisinsight:latest
+    image: redis/redisinsight:latest
     container_name: gochat-redis-insight
     hostname: redis-insight
     restart: unless-stopped
-    environment:
-      - RIPORT=8001
-      - RIHOMEDIR=/db
     ports:
-      - "8001:8001"
+      - "5540:5540"
     networks:
       - infra-net
       - monitoring-net
@@ -360,12 +327,6 @@ services:
       - redis
     volumes:
       - redis-insight-data:/data
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8001/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
   # MySQL 管理界面 (phpMyAdmin)
   phpmyadmin:

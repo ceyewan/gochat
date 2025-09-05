@@ -18,12 +18,34 @@ volumes:
     driver: local
 
 services:
+  kafka-init:
+    image: apache/kafka:3.7.0
+    container_name: kafka-init-standalone
+    restart: "no"
+    entrypoint: /bin/sh
+    command: -c "
+      if ! grep -q 'KAFKA_CLUSTER_ID' ./.env || [ -z \"$$(grep 'KAFKA_CLUSTER_ID' ./.env | cut -d '=' -f2)\" ]; then
+        ID=$$(kafka-storage.sh random-uuid);
+        echo \"KAFKA_CLUSTER_ID=$$ID\" > ./.env;
+        echo \"Generated new Kafka Cluster ID: $$ID\";
+      else
+        echo \"Kafka Cluster ID already exists in .env file.\";
+      fi"
+    volumes:
+      - .:/app
+    working_dir: /app
+
   kafka1:
     image: apache/kafka:3.7.0
     container_name: kafka1-standalone
     hostname: kafka1
     restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - kafka-init
     environment:
+      KAFKA_CLUSTER_ID: ${KAFKA_CLUSTER_ID}
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://kafka1:9092,CONTROLLER://kafka1:9093,EXTERNAL://0.0.0.0:19092
@@ -48,8 +70,6 @@ services:
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 1073741824
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
-      # 集群标识
-      CLUSTER_ID: 'kafka-cluster-standalone-2024'
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka-data-1:/var/lib/kafka/data
@@ -70,7 +90,13 @@ services:
     container_name: kafka2-standalone
     hostname: kafka2
     restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      kafka1:
+        condition: service_healthy
     environment:
+      KAFKA_CLUSTER_ID: ${KAFKA_CLUSTER_ID}
       KAFKA_NODE_ID: 2
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://kafka2:9092,CONTROLLER://kafka2:9093,EXTERNAL://0.0.0.0:29092
@@ -95,8 +121,6 @@ services:
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 1073741824
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
-      # 集群标识
-      CLUSTER_ID: 'kafka-cluster-standalone-2024'
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka-data-2:/var/lib/kafka/data
@@ -105,8 +129,6 @@ services:
     networks:
       kafka-cluster:
         ipv4_address: 172.24.0.11
-    depends_on:
-      - kafka1
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
       interval: 30s
@@ -119,7 +141,15 @@ services:
     container_name: kafka3-standalone
     hostname: kafka3
     restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
     environment:
+      KAFKA_CLUSTER_ID: ${KAFKA_CLUSTER_ID}
       KAFKA_NODE_ID: 3
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://kafka3:9092,CONTROLLER://kafka3:9093,EXTERNAL://0.0.0.0:39092
@@ -144,8 +174,6 @@ services:
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 1073741824
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
-      # 集群标识
-      CLUSTER_ID: 'kafka-cluster-standalone-2024'
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka-data-3:/var/lib/kafka/data
@@ -154,9 +182,6 @@ services:
     networks:
       kafka-cluster:
         ipv4_address: 172.24.0.12
-    depends_on:
-      - kafka1
-      - kafka2
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
       interval: 30s
@@ -192,29 +217,32 @@ services:
       retries: 3
       start_period: 30s
 
-  # Kafka 主题初始化服务
-  kafka-init:
-    image: apache/kafka:3.7.0
-    container_name: kafka-init-standalone
-    hostname: kafka-init
-    restart: "no"
-    networks:
-      - kafka-cluster
-    depends_on:
-      - kafka1
-      - kafka2
-      - kafka3
-    command: >
-      bash -c "
-        echo 'Waiting for Kafka to be ready...'
-        sleep 30
+  # Kafka 主题初始化服务 (可选, 建议在应用启动时或手动创建)
+  # kafka-topic-creator:
+  #   image: apache/kafka:3.7.0
+  #   container_name: kafka-topic-creator-standalone
+  #   hostname: kafka-topic-creator
+  #   restart: "no"
+  #   networks:
+  #     - kafka-cluster
+  #   depends_on:
+  #     kafka1:
+  #       condition: service_healthy
+  #     kafka2:
+  #       condition: service_healthy
+  #     kafka3:
+  #       condition: service_healthy
+  #   command: >
+  #     bash -c "
+  #       echo 'Waiting for Kafka to be ready...'
+  #       sleep 5
         
-        echo 'Creating topics...'
-        kafka-topics.sh --create --topic gochat.messages --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 6 --replication-factor 3 --if-not-exists
-        kafka-topics.sh --create --topic gochat.notifications --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 3 --replication-factor 3 --if-not-exists
-        kafka-topics.sh --create --topic gochat.events --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 3 --replication-factor 3 --if-not-exists
-        kafka-topics.sh --create --topic gochat.user-status --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 6 --replication-factor 3 --if-not-exists
+  #       echo 'Creating topics...'
+  #       kafka-topics.sh --create --topic gochat.messages --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 6 --replication-factor 3 --if-not-exists
+  #       kafka-topics.sh --create --topic gochat.notifications --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 3 --replication-factor 3 --if-not-exists
+  #       kafka-topics.sh --create --topic gochat.events --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 3 --replication-factor 3 --if-not-exists
+  #       kafka-topics.sh --create --topic gochat.user-status --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 --partitions 6 --replication-factor 3 --if-not-exists
         
-        echo 'Topics created successfully!'
-        kafka-topics.sh --list --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092
-      "
+  #       echo 'Topics created successfully!'
+  #       kafka-topics.sh --list --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092
+  #     "

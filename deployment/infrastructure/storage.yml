@@ -123,13 +123,10 @@ services:
 
   # Redis 管理界面 - RedisInsight
   redis-insight:
-    image: redislabs/redisinsight:latest
+    image: redis/redisinsight:latest
     container_name: redis-insight-standalone
     hostname: redis-insight
     restart: unless-stopped
-    environment:
-      - RIPORT=8001
-      - RIHOMEDIR=/db
     ports:
       - "8001:8001"
     networks:
@@ -137,42 +134,10 @@ services:
     depends_on:
       - redis
     volumes:
-      - redis-insight-data:/db
+      - redis-insight-data:/data
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8001/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-
-  # 数据库初始化服务
-  mysql-init:
-    image: mysql:8.0
-    container_name: mysql-init-standalone
-    hostname: mysql-init
-    restart: "no"
-    networks:
-      - storage-net
-    depends_on:
-      - mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: gochat_root_2024
-    command: >
-      bash -c "
-        echo 'Waiting for MySQL to be ready...'
-        until mysql -h mysql -u root -pgochat_root_2024 -e 'SELECT 1'; do
-          echo 'MySQL is not ready yet...'
-          sleep 5
-        done
-        
-        echo 'MySQL is ready! Creating additional databases...'
-        mysql -h mysql -u root -pgochat_root_2024 -e \"
-          CREATE DATABASE IF NOT EXISTS gochat_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-          CREATE DATABASE IF NOT EXISTS gochat_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-          GRANT ALL PRIVILEGES ON gochat_test.* TO 'gochat'@'%';
-          GRANT ALL PRIVILEGES ON gochat_prod.* TO 'gochat'@'%';
-          FLUSH PRIVILEGES;
-        \"
-        
-        echo 'Additional databases created successfully!'
-      "

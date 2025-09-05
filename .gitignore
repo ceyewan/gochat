@@ -7,3 +7,4 @@ data/
 qdrant_storage/
 bin/
 bin
+*.bin
