@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	repopb "github.com/ceyewan/gochat/api/gen/im_repo/v1"
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-repo/internal/repository"
 	"google.golang.org/grpc/codes"
@@ -13,7 +14,7 @@ import (
 
 // OnlineStatusService 在线状态服务实现
 type OnlineStatusService struct {
-	v1.UnimplementedOnlineStatusServiceServer
+	repopb.UnimplementedOnlineStatusServiceServer
 	onlineStatusRepo *repository.OnlineStatusRepository
 	logger           clog.Logger
 }
@@ -27,7 +28,7 @@ func NewOnlineStatusService(onlineStatusRepo *repository.OnlineStatusRepository)
 }
 
 // SetUserOnline 设置用户在线状态
-func (s *OnlineStatusService) SetUserOnline(ctx context.Context, req *v1.SetUserOnlineRequest) (*v1.SetUserOnlineResponse, error) {
+func (s *OnlineStatusService) SetUserOnline(ctx context.Context, req *repopb.SetUserOnlineRequest) (*repopb.SetUserOnlineResponse, error) {
 	s.logger.Debug("设置用户在线状态请求",
 		clog.String("user_id", req.UserId),
 		clog.String("gateway_id", req.GatewayId),
@@ -61,7 +62,7 @@ func (s *OnlineStatusService) SetUserOnline(ctx context.Context, req *v1.SetUser
 	}
 
 	// 构造响应
-	resp := &v1.SetUserOnlineResponse{
+	resp := &repopb.SetUserOnlineResponse{
 		Success: true,
 	}
 
@@ -73,7 +74,7 @@ func (s *OnlineStatusService) SetUserOnline(ctx context.Context, req *v1.SetUser
 }
 
 // SetUserOffline 设置用户离线状态
-func (s *OnlineStatusService) SetUserOffline(ctx context.Context, req *v1.SetUserOfflineRequest) (*v1.SetUserOfflineResponse, error) {
+func (s *OnlineStatusService) SetUserOffline(ctx context.Context, req *repopb.SetUserOfflineRequest) (*repopb.SetUserOfflineResponse, error) {
 	s.logger.Debug("设置用户离线状态请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
@@ -104,7 +105,7 @@ func (s *OnlineStatusService) SetUserOffline(ctx context.Context, req *v1.SetUse
 	}
 
 	// 构造响应
-	resp := &v1.SetUserOfflineResponse{
+	resp := &repopb.SetUserOfflineResponse{
 		Success: true,
 	}
 
@@ -113,7 +114,7 @@ func (s *OnlineStatusService) SetUserOffline(ctx context.Context, req *v1.SetUse
 }
 
 // IsUserOnline 检查用户是否在线
-func (s *OnlineStatusService) IsUserOnline(ctx context.Context, req *v1.IsUserOnlineRequest) (*v1.IsUserOnlineResponse, error) {
+func (s *OnlineStatusService) IsUserOnline(ctx context.Context, req *repopb.IsUserOnlineRequest) (*repopb.IsUserOnlineResponse, error) {
 	s.logger.Debug("检查用户在线状态请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
@@ -136,7 +137,7 @@ func (s *OnlineStatusService) IsUserOnline(ctx context.Context, req *v1.IsUserOn
 	}
 
 	// 构造响应
-	resp := &v1.IsUserOnlineResponse{
+	resp := &repopb.IsUserOnlineResponse{
 		IsOnline:  isOnline,
 		GatewayId: gatewayID,
 	}
@@ -150,13 +151,13 @@ func (s *OnlineStatusService) IsUserOnline(ctx context.Context, req *v1.IsUserOn
 }
 
 // BatchGetOnlineStatus 批量获取用户在线状态
-func (s *OnlineStatusService) BatchGetOnlineStatus(ctx context.Context, req *v1.BatchGetOnlineStatusRequest) (*v1.BatchGetOnlineStatusResponse, error) {
+func (s *OnlineStatusService) BatchGetOnlineStatus(ctx context.Context, req *repopb.BatchGetOnlineStatusRequest) (*repopb.BatchGetOnlineStatusResponse, error) {
 	s.logger.Debug("批量获取用户在线状态请求", clog.Int("user_count", len(req.UserIds)))
 
 	// 参数验证
 	if len(req.UserIds) == 0 {
-		return &v1.BatchGetOnlineStatusResponse{
-			OnlineStatus: make(map[string]*v1.UserOnlineStatus),
+		return &repopb.BatchGetOnlineStatusResponse{
+			OnlineStatus: make(map[string]*repopb.UserOnlineStatus),
 		}, nil
 	}
 
@@ -181,20 +182,20 @@ func (s *OnlineStatusService) BatchGetOnlineStatus(ctx context.Context, req *v1.
 	}
 
 	// 转换为 protobuf 格式
-	protoOnlineStatus := make(map[string]*v1.UserOnlineStatus)
+	protoOnlineStatus := make(map[string]*repopb.UserOnlineStatus)
 	for _, userID := range userIDs {
 		userIDStr := fmt.Sprintf("%d", userID)
 		isOnline := onlineStatusMap[userID]
 		gatewayID := gatewayMap[userID]
 
-		protoOnlineStatus[userIDStr] = &v1.UserOnlineStatus{
+		protoOnlineStatus[userIDStr] = &repopb.UserOnlineStatus{
 			IsOnline:  isOnline,
 			GatewayId: gatewayID,
 		}
 	}
 
 	// 构造响应
-	resp := &v1.BatchGetOnlineStatusResponse{
+	resp := &repopb.BatchGetOnlineStatusResponse{
 		OnlineStatus: protoOnlineStatus,
 	}
 
@@ -206,7 +207,7 @@ func (s *OnlineStatusService) BatchGetOnlineStatus(ctx context.Context, req *v1.
 }
 
 // RefreshUserOnline 刷新用户在线状态TTL
-func (s *OnlineStatusService) RefreshUserOnline(ctx context.Context, req *v1.RefreshUserOnlineRequest) (*v1.RefreshUserOnlineResponse, error) {
+func (s *OnlineStatusService) RefreshUserOnline(ctx context.Context, req *repopb.RefreshUserOnlineRequest) (*repopb.RefreshUserOnlineResponse, error) {
 	s.logger.Debug("刷新用户在线状态TTL请求",
 		clog.String("user_id", req.UserId),
 		clog.Int32("ttl_seconds", req.TtlSeconds))
@@ -236,7 +237,7 @@ func (s *OnlineStatusService) RefreshUserOnline(ctx context.Context, req *v1.Ref
 	}
 
 	// 构造响应
-	resp := &v1.RefreshUserOnlineResponse{
+	resp := &repopb.RefreshUserOnlineResponse{
 		Success: true,
 	}
 
@@ -245,7 +246,7 @@ func (s *OnlineStatusService) RefreshUserOnline(ctx context.Context, req *v1.Ref
 }
 
 // GetOnlineUsersByGateway 获取指定网关的在线用户列表
-func (s *OnlineStatusService) GetOnlineUsersByGateway(ctx context.Context, req *v1.GetOnlineUsersByGatewayRequest) (*v1.GetOnlineUsersByGatewayResponse, error) {
+func (s *OnlineStatusService) GetOnlineUsersByGateway(ctx context.Context, req *repopb.GetOnlineUsersByGatewayRequest) (*repopb.GetOnlineUsersByGatewayResponse, error) {
 	s.logger.Debug("获取网关在线用户列表请求", clog.String("gateway_id", req.GatewayId))
 
 	// 参数验证
@@ -267,7 +268,7 @@ func (s *OnlineStatusService) GetOnlineUsersByGateway(ctx context.Context, req *
 	}
 
 	// 构造响应
-	resp := &v1.GetOnlineUsersByGatewayResponse{
+	resp := &repopb.GetOnlineUsersByGatewayResponse{
 		UserIds: userIDStrs,
 	}
 
@@ -279,7 +280,7 @@ func (s *OnlineStatusService) GetOnlineUsersByGateway(ctx context.Context, req *
 }
 
 // GetTotalOnlineCount 获取总在线用户数
-func (s *OnlineStatusService) GetTotalOnlineCount(ctx context.Context, req *v1.GetTotalOnlineCountRequest) (*v1.GetTotalOnlineCountResponse, error) {
+func (s *OnlineStatusService) GetTotalOnlineCount(ctx context.Context, req *repopb.GetTotalOnlineCountRequest) (*repopb.GetTotalOnlineCountResponse, error) {
 	s.logger.Debug("获取总在线用户数请求")
 
 	// 获取总在线用户数
@@ -290,7 +291,7 @@ func (s *OnlineStatusService) GetTotalOnlineCount(ctx context.Context, req *v1.G
 	}
 
 	// 构造响应
-	resp := &v1.GetTotalOnlineCountResponse{
+	resp := &repopb.GetTotalOnlineCountResponse{
 		Count: count,
 	}
 
@@ -299,7 +300,7 @@ func (s *OnlineStatusService) GetTotalOnlineCount(ctx context.Context, req *v1.G
 }
 
 // GetUserLastOnlineTime 获取用户最后在线时间
-func (s *OnlineStatusService) GetUserLastOnlineTime(ctx context.Context, req *v1.GetUserLastOnlineTimeRequest) (*v1.GetUserLastOnlineTimeResponse, error) {
+func (s *OnlineStatusService) GetUserLastOnlineTime(ctx context.Context, req *repopb.GetUserLastOnlineTimeRequest) (*repopb.GetUserLastOnlineTimeResponse, error) {
 	s.logger.Debug("获取用户最后在线时间请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
@@ -322,7 +323,7 @@ func (s *OnlineStatusService) GetUserLastOnlineTime(ctx context.Context, req *v1
 	}
 
 	// 构造响应
-	resp := &v1.GetUserLastOnlineTimeResponse{
+	resp := &repopb.GetUserLastOnlineTimeResponse{
 		LastOnlineTime: lastOnlineTime,
 	}
 
@@ -334,7 +335,7 @@ func (s *OnlineStatusService) GetUserLastOnlineTime(ctx context.Context, req *v1
 }
 
 // CleanupExpiredOnlineStatus 清理过期的在线状态
-func (s *OnlineStatusService) CleanupExpiredOnlineStatus(ctx context.Context, req *v1.CleanupExpiredOnlineStatusRequest) (*v1.CleanupExpiredOnlineStatusResponse, error) {
+func (s *OnlineStatusService) CleanupExpiredOnlineStatus(ctx context.Context, req *repopb.CleanupExpiredOnlineStatusRequest) (*repopb.CleanupExpiredOnlineStatusResponse, error) {
 	s.logger.Debug("清理过期在线状态请求")
 
 	// 清理过期的在线状态
@@ -345,7 +346,7 @@ func (s *OnlineStatusService) CleanupExpiredOnlineStatus(ctx context.Context, re
 	}
 
 	// 构造响应
-	resp := &v1.CleanupExpiredOnlineStatusResponse{
+	resp := &repopb.CleanupExpiredOnlineStatusResponse{
 		CleanedCount: cleanedCount,
 	}
 

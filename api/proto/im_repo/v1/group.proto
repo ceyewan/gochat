@@ -5,6 +5,8 @@ syntax = "proto3";
 
 package im.repo.v1;
 
+import "im_repo/v1/online_status.proto";
+
 option go_package = "github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1";
 
 // GroupService 群组数据服务
@@ -209,14 +211,3 @@ message GroupMember {
   int64 joined_at = 4;
 }
 
-// OnlineStatus 在线状态信息
-message OnlineStatus {
-  // 用户 ID
-  string user_id = 1;
-  // 是否在线
-  bool is_online = 2;
-  // 所在网关 ID
-  string gateway_id = 3;
-  // 最后在线时间（Unix 时间戳）
-  int64 last_seen = 4;
-}

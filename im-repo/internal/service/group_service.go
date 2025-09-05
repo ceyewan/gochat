@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	repopb "github.com/ceyewan/gochat/api/gen/im_repo/v1"
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-repo/internal/model"
 	"github.com/ceyewan/gochat/im-repo/internal/repository"
@@ -14,7 +15,7 @@ import (
 
 // GroupService 群组服务实现
 type GroupService struct {
-	v1.UnimplementedGroupServiceServer
+	repopb.UnimplementedGroupServiceServer
 	groupRepo *repository.GroupRepository
 	logger    clog.Logger
 }
@@ -28,7 +29,7 @@ func NewGroupService(groupRepo *repository.GroupRepository) *GroupService {
 }
 
 // CreateGroup 创建群组
-func (s *GroupService) CreateGroup(ctx context.Context, req *v1.CreateGroupRequest) (*v1.CreateGroupResponse, error) {
+func (s *GroupService) CreateGroup(ctx context.Context, req *repopb.CreateGroupRequest) (*repopb.CreateGroupResponse, error) {
 	s.logger.Info("创建群组请求",
 		clog.String("name", req.Name),
 		clog.String("owner_id", req.OwnerId))
@@ -74,7 +75,7 @@ func (s *GroupService) CreateGroup(ctx context.Context, req *v1.CreateGroupReque
 	}
 
 	// 构造响应
-	resp := &v1.CreateGroupResponse{
+	resp := &repopb.CreateGroupResponse{
 		Group: s.modelToProto(group),
 	}
 
@@ -86,7 +87,7 @@ func (s *GroupService) CreateGroup(ctx context.Context, req *v1.CreateGroupReque
 }
 
 // GetGroup 获取群组信息
-func (s *GroupService) GetGroup(ctx context.Context, req *v1.GetGroupRequest) (*v1.GetGroupResponse, error) {
+func (s *GroupService) GetGroup(ctx context.Context, req *repopb.GetGroupRequest) (*repopb.GetGroupResponse, error) {
 	s.logger.Debug("获取群组信息请求", clog.String("group_id", req.GroupId))
 
 	// 参数验证
@@ -113,7 +114,7 @@ func (s *GroupService) GetGroup(ctx context.Context, req *v1.GetGroupRequest) (*
 	}
 
 	// 构造响应
-	resp := &v1.GetGroupResponse{
+	resp := &repopb.GetGroupResponse{
 		Group: s.modelToProto(group),
 	}
 
@@ -121,7 +122,7 @@ func (s *GroupService) GetGroup(ctx context.Context, req *v1.GetGroupRequest) (*
 }
 
 // AddGroupMember 添加群组成员
-func (s *GroupService) AddGroupMember(ctx context.Context, req *v1.AddGroupMemberRequest) (*v1.AddGroupMemberResponse, error) {
+func (s *GroupService) AddGroupMember(ctx context.Context, req *repopb.AddGroupMemberRequest) (*repopb.AddGroupMemberResponse, error) {
 	s.logger.Info("添加群组成员请求",
 		clog.String("group_id", req.GroupId),
 		clog.String("user_id", req.UserId),
@@ -161,7 +162,7 @@ func (s *GroupService) AddGroupMember(ctx context.Context, req *v1.AddGroupMembe
 	}
 
 	// 构造响应
-	resp := &v1.AddGroupMemberResponse{
+	resp := &repopb.AddGroupMemberResponse{
 		Success: true,
 	}
 
@@ -173,7 +174,7 @@ func (s *GroupService) AddGroupMember(ctx context.Context, req *v1.AddGroupMembe
 }
 
 // RemoveGroupMember 移除群组成员
-func (s *GroupService) RemoveGroupMember(ctx context.Context, req *v1.RemoveGroupMemberRequest) (*v1.RemoveGroupMemberResponse, error) {
+func (s *GroupService) RemoveGroupMember(ctx context.Context, req *repopb.RemoveGroupMemberRequest) (*repopb.RemoveGroupMemberResponse, error) {
 	s.logger.Info("移除群组成员请求",
 		clog.String("group_id", req.GroupId),
 		clog.String("user_id", req.UserId))
@@ -207,7 +208,7 @@ func (s *GroupService) RemoveGroupMember(ctx context.Context, req *v1.RemoveGrou
 	}
 
 	// 构造响应
-	resp := &v1.RemoveGroupMemberResponse{
+	resp := &repopb.RemoveGroupMemberResponse{
 		Success: true,
 	}
 
@@ -219,7 +220,7 @@ func (s *GroupService) RemoveGroupMember(ctx context.Context, req *v1.RemoveGrou
 }
 
 // GetGroupMembers 获取群组成员列表
-func (s *GroupService) GetGroupMembers(ctx context.Context, req *v1.GetGroupMembersRequest) (*v1.GetGroupMembersResponse, error) {
+func (s *GroupService) GetGroupMembers(ctx context.Context, req *repopb.GetGroupMembersRequest) (*repopb.GetGroupMembersResponse, error) {
 	s.logger.Debug("获取群组成员列表请求",
 		clog.String("group_id", req.GroupId),
 		clog.Int32("offset", req.Offset),
@@ -254,13 +255,13 @@ func (s *GroupService) GetGroupMembers(ctx context.Context, req *v1.GetGroupMemb
 	}
 
 	// 转换为 protobuf 格式
-	protoMembers := make([]*v1.GroupMember, len(members))
+	protoMembers := make([]*repopb.GroupMember, len(members))
 	for i, member := range members {
 		protoMembers[i] = s.memberModelToProto(member)
 	}
 
 	// 构造响应
-	resp := &v1.GetGroupMembersResponse{
+	resp := &repopb.GetGroupMembersResponse{
 		Members: protoMembers,
 		Total:   total,
 		HasMore: hasMore,
@@ -275,7 +276,7 @@ func (s *GroupService) GetGroupMembers(ctx context.Context, req *v1.GetGroupMemb
 }
 
 // UpdateMemberRole 更新成员角色
-func (s *GroupService) UpdateMemberRole(ctx context.Context, req *v1.UpdateMemberRoleRequest) (*v1.UpdateMemberRoleResponse, error) {
+func (s *GroupService) UpdateMemberRole(ctx context.Context, req *repopb.UpdateMemberRoleRequest) (*repopb.UpdateMemberRoleResponse, error) {
 	s.logger.Info("更新成员角色请求",
 		clog.String("group_id", req.GroupId),
 		clog.String("user_id", req.UserId),
@@ -313,7 +314,7 @@ func (s *GroupService) UpdateMemberRole(ctx context.Context, req *v1.UpdateMembe
 	}
 
 	// 构造响应
-	resp := &v1.UpdateMemberRoleResponse{
+	resp := &repopb.UpdateMemberRoleResponse{
 		Success: true,
 	}
 
@@ -326,7 +327,7 @@ func (s *GroupService) UpdateMemberRole(ctx context.Context, req *v1.UpdateMembe
 }
 
 // IsGroupMember 检查用户是否为群组成员
-func (s *GroupService) IsGroupMember(ctx context.Context, req *v1.IsGroupMemberRequest) (*v1.IsGroupMemberResponse, error) {
+func (s *GroupService) IsGroupMember(ctx context.Context, req *repopb.IsGroupMemberRequest) (*repopb.IsGroupMemberResponse, error) {
 	s.logger.Debug("检查群组成员请求",
 		clog.String("group_id", req.GroupId),
 		clog.String("user_id", req.UserId))
@@ -360,7 +361,7 @@ func (s *GroupService) IsGroupMember(ctx context.Context, req *v1.IsGroupMemberR
 	}
 
 	// 构造响应
-	resp := &v1.IsGroupMemberResponse{
+	resp := &repopb.IsGroupMemberResponse{
 		IsMember: isMember,
 		Role:     int32(role),
 	}
@@ -375,17 +376,17 @@ func (s *GroupService) IsGroupMember(ctx context.Context, req *v1.IsGroupMemberR
 }
 
 // BatchGetGroupMembers 批量获取群组成员
-func (s *GroupService) BatchGetGroupMembers(ctx context.Context, req *v1.BatchGetGroupMembersRequest) (*v1.BatchGetGroupMembersResponse, error) {
+func (s *GroupService) BatchGetGroupMembers(ctx context.Context, req *repopb.BatchGetGroupMembersRequest) (*repopb.BatchGetGroupMembersResponse, error) {
 	s.logger.Debug("批量获取群组成员请求", clog.Int("group_count", len(req.GroupIds)))
 
 	// 参数验证
 	if len(req.GroupIds) == 0 {
-		return &v1.BatchGetGroupMembersResponse{
-			GroupMembers: make(map[string]*v1.GroupMemberList),
+		return &repopb.BatchGetGroupMembersResponse{
+			GroupMembers: make(map[string]*repopb.GroupMemberList),
 		}, nil
 	}
 
-	result := make(map[string]*v1.GroupMemberList)
+	result := make(map[string]*repopb.GroupMemberList)
 
 	// 为每个群组获取成员列表
 	for _, groupIDStr := range req.GroupIds {
@@ -407,18 +408,18 @@ func (s *GroupService) BatchGetGroupMembers(ctx context.Context, req *v1.BatchGe
 		}
 
 		// 转换为 protobuf 格式
-		protoMembers := make([]*v1.GroupMember, len(members))
+		protoMembers := make([]*repopb.GroupMember, len(members))
 		for i, member := range members {
 			protoMembers[i] = s.memberModelToProto(member)
 		}
 
-		result[groupIDStr] = &v1.GroupMemberList{
+		result[groupIDStr] = &repopb.GroupMemberList{
 			Members: protoMembers,
 		}
 	}
 
 	// 构造响应
-	resp := &v1.BatchGetGroupMembersResponse{
+	resp := &repopb.BatchGetGroupMembersResponse{
 		GroupMembers: result,
 	}
 
@@ -430,8 +431,8 @@ func (s *GroupService) BatchGetGroupMembers(ctx context.Context, req *v1.BatchGe
 }
 
 // modelToProto 将群组模型转换为 protobuf 格式
-func (s *GroupService) modelToProto(group *model.Group) *v1.Group {
-	return &v1.Group{
+func (s *GroupService) modelToProto(group *model.Group) *repopb.Group {
+	return &repopb.Group{
 		Id:          fmt.Sprintf("%d", group.ID),
 		Name:        group.Name,
 		Description: group.Description,
@@ -446,8 +447,8 @@ func (s *GroupService) modelToProto(group *model.Group) *v1.Group {
 }
 
 // memberModelToProto 将群组成员模型转换为 protobuf 格式
-func (s *GroupService) memberModelToProto(member *model.GroupMember) *v1.GroupMember {
-	return &v1.GroupMember{
+func (s *GroupService) memberModelToProto(member *model.GroupMember) *repopb.GroupMember {
+	return &repopb.GroupMember{
 		GroupId:  fmt.Sprintf("%d", member.GroupID),
 		UserId:   fmt.Sprintf("%d", member.UserID),
 		Role:     int32(member.Role),

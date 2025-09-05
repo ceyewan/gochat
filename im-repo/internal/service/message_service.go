@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	repopb "github.com/ceyewan/gochat/api/gen/im_repo/v1"
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-repo/internal/model"
 	"github.com/ceyewan/gochat/im-repo/internal/repository"
@@ -14,7 +15,7 @@ import (
 
 // MessageService 消息服务实现
 type MessageService struct {
-	v1.UnimplementedMessageServiceServer
+	repopb.UnimplementedMessageServiceServer
 	messageRepo      *repository.MessageRepository
 	conversationRepo *repository.ConversationRepository
 	logger           clog.Logger
@@ -30,7 +31,7 @@ func NewMessageService(messageRepo *repository.MessageRepository, conversationRe
 }
 
 // SaveMessage 保存消息
-func (s *MessageService) SaveMessage(ctx context.Context, req *v1.SaveMessageRequest) (*v1.SaveMessageResponse, error) {
+func (s *MessageService) SaveMessage(ctx context.Context, req *repopb.SaveMessageRequest) (*repopb.SaveMessageResponse, error) {
 	s.logger.Info("保存消息请求",
 		clog.String("message_id", req.MessageId),
 		clog.String("conversation_id", req.ConversationId))
@@ -79,7 +80,7 @@ func (s *MessageService) SaveMessage(ctx context.Context, req *v1.SaveMessageReq
 	}
 
 	// 构造响应
-	resp := &v1.SaveMessageResponse{
+	resp := &repopb.SaveMessageResponse{
 		Message: s.modelToProto(message),
 	}
 
@@ -88,7 +89,7 @@ func (s *MessageService) SaveMessage(ctx context.Context, req *v1.SaveMessageReq
 }
 
 // GetMessage 获取消息
-func (s *MessageService) GetMessage(ctx context.Context, req *v1.GetMessageRequest) (*v1.GetMessageResponse, error) {
+func (s *MessageService) GetMessage(ctx context.Context, req *repopb.GetMessageRequest) (*repopb.GetMessageResponse, error) {
 	s.logger.Debug("获取消息请求", clog.String("message_id", req.MessageId))
 
 	// 参数验证
@@ -115,7 +116,7 @@ func (s *MessageService) GetMessage(ctx context.Context, req *v1.GetMessageReque
 	}
 
 	// 构造响应
-	resp := &v1.GetMessageResponse{
+	resp := &repopb.GetMessageResponse{
 		Message: s.modelToProto(message),
 	}
 
@@ -123,7 +124,7 @@ func (s *MessageService) GetMessage(ctx context.Context, req *v1.GetMessageReque
 }
 
 // GetConversationMessages 获取会话消息列表
-func (s *MessageService) GetConversationMessages(ctx context.Context, req *v1.GetConversationMessagesRequest) (*v1.GetConversationMessagesResponse, error) {
+func (s *MessageService) GetConversationMessages(ctx context.Context, req *repopb.GetConversationMessagesRequest) (*repopb.GetConversationMessagesResponse, error) {
 	s.logger.Debug("获取会话消息列表请求",
 		clog.String("conversation_id", req.ConversationId),
 		clog.Int32("limit", req.Limit))
@@ -156,7 +157,7 @@ func (s *MessageService) GetConversationMessages(ctx context.Context, req *v1.Ge
 	}
 
 	// 转换为 protobuf 格式
-	protoMessages := make([]*v1.Message, len(messages))
+	protoMessages := make([]*repopb.Message, len(messages))
 	for i, message := range messages {
 		protoMessages[i] = s.modelToProto(message)
 	}
@@ -173,7 +174,7 @@ func (s *MessageService) GetConversationMessages(ctx context.Context, req *v1.Ge
 	}
 
 	// 构造响应
-	resp := &v1.GetConversationMessagesResponse{
+	resp := &repopb.GetConversationMessagesResponse{
 		Messages:  protoMessages,
 		HasMore:   hasMore,
 		NextSeqId: nextSeqID,
@@ -187,7 +188,7 @@ func (s *MessageService) GetConversationMessages(ctx context.Context, req *v1.Ge
 }
 
 // GenerateSeqID 生成序列号
-func (s *MessageService) GenerateSeqID(ctx context.Context, req *v1.GenerateSeqIDRequest) (*v1.GenerateSeqIDResponse, error) {
+func (s *MessageService) GenerateSeqID(ctx context.Context, req *repopb.GenerateSeqIDRequest) (*repopb.GenerateSeqIDResponse, error) {
 	s.logger.Debug("生成序列号请求", clog.String("conversation_id", req.ConversationId))
 
 	// 参数验证
@@ -203,7 +204,7 @@ func (s *MessageService) GenerateSeqID(ctx context.Context, req *v1.GenerateSeqI
 	}
 
 	// 构造响应
-	resp := &v1.GenerateSeqIDResponse{
+	resp := &repopb.GenerateSeqIDResponse{
 		SeqId: int64(seqID),
 	}
 
@@ -215,7 +216,7 @@ func (s *MessageService) GenerateSeqID(ctx context.Context, req *v1.GenerateSeqI
 }
 
 // CheckMessageIdempotency 检查消息幂等性
-func (s *MessageService) CheckMessageIdempotency(ctx context.Context, req *v1.CheckMessageIdempotencyRequest) (*v1.CheckMessageIdempotencyResponse, error) {
+func (s *MessageService) CheckMessageIdempotency(ctx context.Context, req *repopb.CheckMessageIdempotencyRequest) (*repopb.CheckMessageIdempotencyResponse, error) {
 	s.logger.Debug("检查消息幂等性请求", clog.String("client_msg_id", req.ClientMsgId))
 
 	// 参数验证
@@ -236,7 +237,7 @@ func (s *MessageService) CheckMessageIdempotency(ctx context.Context, req *v1.Ch
 	}
 
 	// 构造响应
-	resp := &v1.CheckMessageIdempotencyResponse{
+	resp := &repopb.CheckMessageIdempotencyResponse{
 		Exists:            !isNew,
 		ExistingMessageId: existingMsgID,
 	}
@@ -249,13 +250,13 @@ func (s *MessageService) CheckMessageIdempotency(ctx context.Context, req *v1.Ch
 }
 
 // GetLatestMessages 获取最新消息
-func (s *MessageService) GetLatestMessages(ctx context.Context, req *v1.GetLatestMessagesRequest) (*v1.GetLatestMessagesResponse, error) {
+func (s *MessageService) GetLatestMessages(ctx context.Context, req *repopb.GetLatestMessagesRequest) (*repopb.GetLatestMessagesResponse, error) {
 	s.logger.Debug("获取最新消息请求", clog.Int("conversation_count", len(req.ConversationIds)))
 
 	// 参数验证
 	if len(req.ConversationIds) == 0 {
-		return &v1.GetLatestMessagesResponse{
-			ConversationMessages: make(map[string]*v1.ConversationMessages),
+		return &repopb.GetLatestMessagesResponse{
+			ConversationMessages: make(map[string]*repopb.ConversationMessages),
 		}, nil
 	}
 
@@ -272,19 +273,19 @@ func (s *MessageService) GetLatestMessages(ctx context.Context, req *v1.GetLates
 	}
 
 	// 转换为 protobuf 格式
-	protoMessagesMap := make(map[string]*v1.ConversationMessages)
+	protoMessagesMap := make(map[string]*repopb.ConversationMessages)
 	for conversationID, messages := range messagesMap {
-		protoMessages := make([]*v1.Message, len(messages))
+		protoMessages := make([]*repopb.Message, len(messages))
 		for i, message := range messages {
 			protoMessages[i] = s.modelToProto(message)
 		}
-		protoMessagesMap[conversationID] = &v1.ConversationMessages{
+		protoMessagesMap[conversationID] = &repopb.ConversationMessages{
 			Messages: protoMessages,
 		}
 	}
 
 	// 构造响应
-	resp := &v1.GetLatestMessagesResponse{
+	resp := &repopb.GetLatestMessagesResponse{
 		ConversationMessages: protoMessagesMap,
 	}
 
@@ -296,7 +297,7 @@ func (s *MessageService) GetLatestMessages(ctx context.Context, req *v1.GetLates
 }
 
 // DeleteMessage 删除消息
-func (s *MessageService) DeleteMessage(ctx context.Context, req *v1.DeleteMessageRequest) (*v1.DeleteMessageResponse, error) {
+func (s *MessageService) DeleteMessage(ctx context.Context, req *repopb.DeleteMessageRequest) (*repopb.DeleteMessageResponse, error) {
 	s.logger.Info("删除消息请求",
 		clog.String("message_id", req.MessageId),
 		clog.String("operator_id", req.OperatorId))
@@ -330,7 +331,7 @@ func (s *MessageService) DeleteMessage(ctx context.Context, req *v1.DeleteMessag
 	}
 
 	// 构造响应
-	resp := &v1.DeleteMessageResponse{
+	resp := &repopb.DeleteMessageResponse{
 		Success: true,
 	}
 
@@ -339,8 +340,8 @@ func (s *MessageService) DeleteMessage(ctx context.Context, req *v1.DeleteMessag
 }
 
 // modelToProto 将模型转换为 protobuf 格式
-func (s *MessageService) modelToProto(message *model.Message) *v1.Message {
-	return &v1.Message{
+func (s *MessageService) modelToProto(message *model.Message) *repopb.Message {
+	return &repopb.Message{
 		Id:             fmt.Sprintf("%d", message.ID),
 		ConversationId: message.ConversationID,
 		SenderId:       fmt.Sprintf("%d", message.SenderID),

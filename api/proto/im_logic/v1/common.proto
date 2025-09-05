@@ -89,8 +89,10 @@ message OnlineStatus {
 
 // ErrorCode 错误码
 enum ErrorCode {
+  // 未指定
+  ERROR_CODE_UNSPECIFIED = 0;
   // 成功
-  ERROR_CODE_SUCCESS = 0;
+  ERROR_CODE_SUCCESS = 1;
   // 内部错误
   ERROR_CODE_INTERNAL_ERROR = 1000;
   // 参数无效

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	repopb "github.com/ceyewan/gochat/api/gen/im_repo/v1"
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-repo/internal/repository"
 	"google.golang.org/grpc/codes"
@@ -12,7 +13,7 @@ import (
 
 // ConversationService 会话服务实现
 type ConversationService struct {
-	v1.UnimplementedConversationServiceServer
+	repopb.UnimplementedConversationServiceServer
 	conversationRepo *repository.ConversationRepository
 	messageRepo      *repository.MessageRepository
 	logger           clog.Logger
@@ -28,7 +29,7 @@ func NewConversationService(conversationRepo *repository.ConversationRepository,
 }
 
 // GetUserConversations 获取用户会话列表
-func (s *ConversationService) GetUserConversations(ctx context.Context, req *v1.GetUserConversationsRequest) (*v1.GetUserConversationsResponse, error) {
+func (s *ConversationService) GetUserConversations(ctx context.Context, req *repopb.GetUserConversationsRequest) (*repopb.GetUserConversationsResponse, error) {
 	s.logger.Debug("获取用户会话列表请求",
 		clog.String("user_id", req.UserId),
 		clog.Int32("offset", req.Offset),
@@ -63,7 +64,7 @@ func (s *ConversationService) GetUserConversations(ctx context.Context, req *v1.
 	}
 
 	// 构造响应
-	resp := &v1.GetUserConversationsResponse{
+	resp := &repopb.GetUserConversationsResponse{
 		ConversationIds: conversationIDs,
 		Total:           total,
 		HasMore:         int64(offset+len(conversationIDs)) < total,
@@ -78,7 +79,7 @@ func (s *ConversationService) GetUserConversations(ctx context.Context, req *v1.
 }
 
 // UpdateReadPointer 更新已读位置
-func (s *ConversationService) UpdateReadPointer(ctx context.Context, req *v1.UpdateReadPointerRequest) (*v1.UpdateReadPointerResponse, error) {
+func (s *ConversationService) UpdateReadPointer(ctx context.Context, req *repopb.UpdateReadPointerRequest) (*repopb.UpdateReadPointerResponse, error) {
 	s.logger.Debug("更新已读位置请求",
 		clog.String("user_id", req.UserId),
 		clog.String("conversation_id", req.ConversationId),
@@ -110,7 +111,7 @@ func (s *ConversationService) UpdateReadPointer(ctx context.Context, req *v1.Upd
 	}
 
 	// 构造响应
-	resp := &v1.UpdateReadPointerResponse{
+	resp := &repopb.UpdateReadPointerResponse{
 		Success: true,
 	}
 
@@ -123,7 +124,7 @@ func (s *ConversationService) UpdateReadPointer(ctx context.Context, req *v1.Upd
 }
 
 // GetUnreadCount 获取未读消息数
-func (s *ConversationService) GetUnreadCount(ctx context.Context, req *v1.GetUnreadCountRequest) (*v1.GetUnreadCountResponse, error) {
+func (s *ConversationService) GetUnreadCount(ctx context.Context, req *repopb.GetUnreadCountRequest) (*repopb.GetUnreadCountResponse, error) {
 	s.logger.Debug("获取未读消息数请求",
 		clog.String("user_id", req.UserId),
 		clog.String("conversation_id", req.ConversationId))
@@ -151,7 +152,7 @@ func (s *ConversationService) GetUnreadCount(ctx context.Context, req *v1.GetUnr
 	}
 
 	// 构造响应
-	resp := &v1.GetUnreadCountResponse{
+	resp := &repopb.GetUnreadCountResponse{
 		UnreadCount: unreadCount,
 	}
 
@@ -164,7 +165,7 @@ func (s *ConversationService) GetUnreadCount(ctx context.Context, req *v1.GetUnr
 }
 
 // BatchGetUnreadCounts 批量获取未读消息数
-func (s *ConversationService) BatchGetUnreadCounts(ctx context.Context, req *v1.BatchGetUnreadCountsRequest) (*v1.BatchGetUnreadCountsResponse, error) {
+func (s *ConversationService) BatchGetUnreadCounts(ctx context.Context, req *repopb.BatchGetUnreadCountsRequest) (*repopb.BatchGetUnreadCountsResponse, error) {
 	s.logger.Debug("批量获取未读消息数请求",
 		clog.String("user_id", req.UserId),
 		clog.Int("conversation_count", len(req.ConversationIds)))
@@ -174,7 +175,7 @@ func (s *ConversationService) BatchGetUnreadCounts(ctx context.Context, req *v1.
 		return nil, status.Error(codes.InvalidArgument, "用户ID不能为空")
 	}
 	if len(req.ConversationIds) == 0 {
-		return &v1.BatchGetUnreadCountsResponse{
+		return &repopb.BatchGetUnreadCountsResponse{
 			UnreadCounts: make(map[string]int64),
 		}, nil
 	}
@@ -194,7 +195,7 @@ func (s *ConversationService) BatchGetUnreadCounts(ctx context.Context, req *v1.
 	}
 
 	// 构造响应
-	resp := &v1.BatchGetUnreadCountsResponse{
+	resp := &repopb.BatchGetUnreadCountsResponse{
 		UnreadCounts: unreadCounts,
 	}
 
@@ -207,7 +208,7 @@ func (s *ConversationService) BatchGetUnreadCounts(ctx context.Context, req *v1.
 }
 
 // GetReadPointer 获取已读位置
-func (s *ConversationService) GetReadPointer(ctx context.Context, req *v1.GetReadPointerRequest) (*v1.GetReadPointerResponse, error) {
+func (s *ConversationService) GetReadPointer(ctx context.Context, req *repopb.GetReadPointerRequest) (*repopb.GetReadPointerResponse, error) {
 	s.logger.Debug("获取已读位置请求",
 		clog.String("user_id", req.UserId),
 		clog.String("conversation_id", req.ConversationId))
@@ -243,7 +244,7 @@ func (s *ConversationService) GetReadPointer(ctx context.Context, req *v1.GetRea
 	}
 
 	// 构造响应
-	resp := &v1.GetReadPointerResponse{
+	resp := &repopb.GetReadPointerResponse{
 		LastReadSeqId: lastReadSeqID,
 		UpdatedAt:     updatedAt,
 	}
@@ -257,7 +258,7 @@ func (s *ConversationService) GetReadPointer(ctx context.Context, req *v1.GetRea
 }
 
 // IncrementUnreadCount 增加未读消息数（当有新消息时调用）
-func (s *ConversationService) IncrementUnreadCount(ctx context.Context, req *v1.IncrementUnreadCountRequest) (*v1.IncrementUnreadCountResponse, error) {
+func (s *ConversationService) IncrementUnreadCount(ctx context.Context, req *repopb.IncrementUnreadCountRequest) (*repopb.IncrementUnreadCountResponse, error) {
 	s.logger.Debug("增加未读消息数请求",
 		clog.String("conversation_id", req.ConversationId),
 		clog.String("exclude_user_id", req.ExcludeUserId))
@@ -285,7 +286,7 @@ func (s *ConversationService) IncrementUnreadCount(ctx context.Context, req *v1.
 	}
 
 	// 构造响应
-	resp := &v1.IncrementUnreadCountResponse{
+	resp := &repopb.IncrementUnreadCountResponse{
 		Success: true,
 	}
 
@@ -297,7 +298,7 @@ func (s *ConversationService) IncrementUnreadCount(ctx context.Context, req *v1.
 }
 
 // GetMaxSeqID 获取会话的最大序列号
-func (s *ConversationService) GetMaxSeqID(ctx context.Context, req *v1.GetMaxSeqIDRequest) (*v1.GetMaxSeqIDResponse, error) {
+func (s *ConversationService) GetMaxSeqID(ctx context.Context, req *repopb.GetMaxSeqIDRequest) (*repopb.GetMaxSeqIDResponse, error) {
 	s.logger.Debug("获取会话最大序列号请求", clog.String("conversation_id", req.ConversationId))
 
 	// 参数验证
@@ -313,7 +314,7 @@ func (s *ConversationService) GetMaxSeqID(ctx context.Context, req *v1.GetMaxSeq
 	}
 
 	// 构造响应
-	resp := &v1.GetMaxSeqIDResponse{
+	resp := &repopb.GetMaxSeqIDResponse{
 		MaxSeqId: int64(maxSeqID),
 	}
 
@@ -325,7 +326,7 @@ func (s *ConversationService) GetMaxSeqID(ctx context.Context, req *v1.GetMaxSeq
 }
 
 // CountMessages 统计会话消息数量
-func (s *ConversationService) CountMessages(ctx context.Context, req *v1.CountMessagesRequest) (*v1.CountMessagesResponse, error) {
+func (s *ConversationService) CountMessages(ctx context.Context, req *repopb.CountMessagesRequest) (*repopb.CountMessagesResponse, error) {
 	s.logger.Debug("统计会话消息数量请求", clog.String("conversation_id", req.ConversationId))
 
 	// 参数验证
@@ -341,7 +342,7 @@ func (s *ConversationService) CountMessages(ctx context.Context, req *v1.CountMe
 	}
 
 	// 构造响应
-	resp := &v1.CountMessagesResponse{
+	resp := &repopb.CountMessagesResponse{
 		Count: count,
 	}
 

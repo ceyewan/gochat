@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	repopb "github.com/ceyewan/gochat/api/gen/im_repo/v1"
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-repo/internal/model"
 	"github.com/ceyewan/gochat/im-repo/internal/repository"
@@ -15,7 +16,7 @@ import (
 
 // UserService 用户服务实现
 type UserService struct {
-	v1.UnimplementedUserServiceServer
+	repopb.UnimplementedUserServiceServer
 	userRepo *repository.UserRepository
 	logger   clog.Logger
 }
@@ -29,7 +30,7 @@ func NewUserService(userRepo *repository.UserRepository) *UserService {
 }
 
 // CreateUser 创建用户
-func (s *UserService) CreateUser(ctx context.Context, req *v1.CreateUserRequest) (*v1.CreateUserResponse, error) {
+func (s *UserService) CreateUser(ctx context.Context, req *repopb.CreateUserRequest) (*repopb.CreateUserResponse, error) {
 	s.logger.Info("创建用户请求", clog.String("username", req.Username))
 
 	// 参数验证
@@ -65,7 +66,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *v1.CreateUserRequest)
 	}
 
 	// 构造响应
-	resp := &v1.CreateUserResponse{
+	resp := &repopb.CreateUserResponse{
 		User: s.modelToProto(user),
 	}
 
@@ -77,7 +78,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *v1.CreateUserRequest)
 }
 
 // GetUser 获取用户信息
-func (s *UserService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.GetUserResponse, error) {
+func (s *UserService) GetUser(ctx context.Context, req *repopb.GetUserRequest) (*repopb.GetUserResponse, error) {
 	s.logger.Debug("获取用户信息请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
@@ -104,7 +105,7 @@ func (s *UserService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.
 	}
 
 	// 构造响应
-	resp := &v1.GetUserResponse{
+	resp := &repopb.GetUserResponse{
 		User: s.modelToProto(user),
 	}
 
@@ -112,7 +113,7 @@ func (s *UserService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.
 }
 
 // GetUserByUsername 根据用户名获取用户信息
-func (s *UserService) GetUserByUsername(ctx context.Context, req *v1.GetUserByUsernameRequest) (*v1.GetUserByUsernameResponse, error) {
+func (s *UserService) GetUserByUsername(ctx context.Context, req *repopb.GetUserByUsernameRequest) (*repopb.GetUserByUsernameResponse, error) {
 	s.logger.Debug("根据用户名获取用户信息请求", clog.String("username", req.Username))
 
 	// 参数验证
@@ -132,7 +133,7 @@ func (s *UserService) GetUserByUsername(ctx context.Context, req *v1.GetUserByUs
 	}
 
 	// 构造响应
-	resp := &v1.GetUserByUsernameResponse{
+	resp := &repopb.GetUserByUsernameResponse{
 		User: s.modelToProto(user),
 	}
 
@@ -140,7 +141,7 @@ func (s *UserService) GetUserByUsername(ctx context.Context, req *v1.GetUserByUs
 }
 
 // UpdateUser 更新用户信息
-func (s *UserService) UpdateUser(ctx context.Context, req *v1.UpdateUserRequest) (*v1.UpdateUserResponse, error) {
+func (s *UserService) UpdateUser(ctx context.Context, req *repopb.UpdateUserRequest) (*repopb.UpdateUserResponse, error) {
 	s.logger.Info("更新用户信息请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
@@ -188,7 +189,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *v1.UpdateUserRequest)
 	}
 
 	// 构造响应
-	resp := &v1.UpdateUserResponse{
+	resp := &repopb.UpdateUserResponse{
 		User: s.modelToProto(user),
 	}
 
@@ -197,13 +198,13 @@ func (s *UserService) UpdateUser(ctx context.Context, req *v1.UpdateUserRequest)
 }
 
 // BatchGetUsers 批量获取用户信息
-func (s *UserService) BatchGetUsers(ctx context.Context, req *v1.BatchGetUsersRequest) (*v1.BatchGetUsersResponse, error) {
+func (s *UserService) BatchGetUsers(ctx context.Context, req *repopb.BatchGetUsersRequest) (*repopb.BatchGetUsersResponse, error) {
 	s.logger.Debug("批量获取用户信息请求", clog.Int("user_count", len(req.UserIds)))
 
 	// 参数验证
 	if len(req.UserIds) == 0 {
-		return &v1.BatchGetUsersResponse{
-			Users: make(map[string]*v1.User),
+		return &repopb.BatchGetUsersResponse{
+			Users: make(map[string]*repopb.User),
 		}, nil
 	}
 
@@ -228,13 +229,13 @@ func (s *UserService) BatchGetUsers(ctx context.Context, req *v1.BatchGetUsersRe
 	}
 
 	// 转换为 protobuf 格式
-	protoUsers := make(map[string]*v1.User)
+	protoUsers := make(map[string]*repopb.User)
 	for userID, user := range users {
 		protoUsers[fmt.Sprintf("%d", userID)] = s.modelToProto(user)
 	}
 
 	// 构造响应
-	resp := &v1.BatchGetUsersResponse{
+	resp := &repopb.BatchGetUsersResponse{
 		Users: protoUsers,
 	}
 
@@ -246,7 +247,7 @@ func (s *UserService) BatchGetUsers(ctx context.Context, req *v1.BatchGetUsersRe
 }
 
 // VerifyPassword 验证用户密码
-func (s *UserService) VerifyPassword(ctx context.Context, req *v1.VerifyPasswordRequest) (*v1.VerifyPasswordResponse, error) {
+func (s *UserService) VerifyPassword(ctx context.Context, req *repopb.VerifyPasswordRequest) (*repopb.VerifyPasswordResponse, error) {
 	s.logger.Debug("验证用户密码请求", clog.String("username", req.Username))
 
 	// 参数验证
@@ -264,13 +265,13 @@ func (s *UserService) VerifyPassword(ctx context.Context, req *v1.VerifyPassword
 		return nil, status.Error(codes.Internal, "验证密码失败")
 	}
 
-	var protoUser *v1.User
+	var protoUser *repopb.User
 	if user != nil {
 		protoUser = s.modelToProto(user)
 	}
 
 	// 构造响应
-	resp := &v1.VerifyPasswordResponse{
+	resp := &repopb.VerifyPasswordResponse{
 		Valid: valid,
 		User:  protoUser,
 	}
@@ -283,7 +284,7 @@ func (s *UserService) VerifyPassword(ctx context.Context, req *v1.VerifyPassword
 }
 
 // DeleteUser 删除用户
-func (s *UserService) DeleteUser(ctx context.Context, req *v1.DeleteUserRequest) (*v1.DeleteUserResponse, error) {
+func (s *UserService) DeleteUser(ctx context.Context, req *repopb.DeleteUserRequest) (*repopb.DeleteUserResponse, error) {
 	s.logger.Info("删除用户请求", clog.String("user_id", req.UserId))
 
 	// 参数验证
@@ -306,7 +307,7 @@ func (s *UserService) DeleteUser(ctx context.Context, req *v1.DeleteUserRequest)
 	}
 
 	// 构造响应
-	resp := &v1.DeleteUserResponse{
+	resp := &repopb.DeleteUserResponse{
 		Success: true,
 	}
 
@@ -315,8 +316,8 @@ func (s *UserService) DeleteUser(ctx context.Context, req *v1.DeleteUserRequest)
 }
 
 // modelToProto 将模型转换为 protobuf 格式
-func (s *UserService) modelToProto(user *model.User) *v1.User {
-	return &v1.User{
+func (s *UserService) modelToProto(user *model.User) *repopb.User {
+	return &repopb.User{
 		Id:           fmt.Sprintf("%d", user.ID),
 		Username:     user.Username,
 		Nickname:     user.Nickname,
