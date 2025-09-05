@@ -219,10 +219,3 @@ services:
     volumes:
       - ./config/im-task:/app/config
       - ./logs/im-task:/app/logs
-
-# 外部网络引用
-networks:
-  infra-net:
-    external: true
-  monitoring-net:
-    external: true

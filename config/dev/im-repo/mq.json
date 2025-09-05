@@ -1,0 +1,32 @@
+{
+  "brokers": ["kafka1:9092", "kafka2:9092", "kafka3:9092"],
+  "producer": {
+    "clientId": "im-repo-producer",
+    "acks": "all",
+    "retries": 3,
+    "batchSize": 16384,
+    "lingerMs": 5,
+    "bufferMemory": 33554432,
+    "compressionType": "snappy",
+    "maxRequestSize": 1048576,
+    "enableIdempotence": true
+  },
+  "consumer": {
+    "groupId": "im-repo-group",
+    "clientId": "im-repo-consumer",
+    "autoOffsetReset": "earliest",
+    "enableAutoCommit": false,
+    "sessionTimeoutMs": 30000,
+    "heartbeatIntervalMs": 3000,
+    "maxPollRecords": 500,
+    "fetchMinBytes": 1,
+    "fetchMaxWaitMs": 500
+  },
+  "topics": {
+    "userEvents": "gochat.user-events",
+    "messageEvents": "gochat.message-events",
+    "notifications": "gochat.notifications"
+  },
+  "enableMetrics": true,
+  "enableTracing": true
+}

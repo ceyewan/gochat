@@ -1,0 +1,13 @@
+{
+  "dsn": "gochat:gochat_pass_2024@tcp(mysql:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local",
+  "driver": "mysql",
+  "maxOpenConns": 25,
+  "maxIdleConns": 10,
+  "connMaxLifetime": "1h",
+  "connMaxIdleTime": "30m",
+  "logLevel": "info",
+  "slowThreshold": "200ms",
+  "enableMetrics": true,
+  "enableTracing": true,
+  "tablePrefix": "im_repo_"
+}

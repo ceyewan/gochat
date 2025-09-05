@@ -1,0 +1,14 @@
+{
+  "serviceName": "im-repo",
+  "exporterType": "prometheus",
+  "exporterEndpoint": "",
+  "prometheusListenAddr": ":9091",
+  "samplerType": "const",
+  "samplerRatio": 1.0,
+  "slowRequestThreshold": "200ms",
+  "enableTracing": true,
+  "enableMetrics": true,
+  "jaegerEndpoint": "http://jaeger:14268/api/traces",
+  "metricsNamespace": "gochat",
+  "metricsSubsystem": "im_repo"
+}

@@ -58,14 +58,14 @@
   - 为所有基础组件创建完整的配置模板
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 2.1 重新组织配置目录结构
+- [x] 2.1 重新组织配置目录结构
   - 创建新的配置目录结构 `config/{env}/{service}/{component}.json`
   - 迁移现有配置文件到新结构中
   - 为 im-repo、im-logic、im-gateway、im-task 创建服务配置目录
   - 为每个基础组件（cache、db、mq、metrics、coord、clog）创建配置模板
   - _需求: 2.1, 2.5_
 
-- [ ] 2.2 扩展 config-cli 工具功能
+- [x] 2.2 扩展 config-cli 工具功能
   - 在现有 config-cli 基础上添加 `init` 命令，支持初始化开发环境配置
   - 添加 `import` 命令，支持批量导入配置文件到 etcd
   - 添加 `validate` 命令，验证配置文件格式和内容
