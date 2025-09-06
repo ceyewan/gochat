@@ -258,7 +258,7 @@ func TestCustomClient(t *testing.T) {
 	cfg := NewConfigBuilder().
 		KeyPrefix("test").
 		DefaultTTL(30 * time.Second).
-		CacheConfig(cache.TestConfig()).
+		CacheConfig(cache.DefaultConfig()).
 		Build()
 
 	client, err := New(cfg)

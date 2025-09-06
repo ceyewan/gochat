@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -27,7 +26,7 @@ func NewIdempotentClient(cfg Config) (Idempotent, error) {
 	}
 
 	// 创建缓存实例
-	cacheInstance, err := cache.New(cfg.CacheConfig)
+	cacheInstance, err := cache.New(context.Background(), cfg.CacheConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cache instance: %w", err)
 	}
@@ -47,16 +46,8 @@ func (c *client) Check(ctx context.Context, key string) (bool, error) {
 
 	formattedKey := c.formatKey(key)
 
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		c.logger.Debug("Check 操作完成",
-			clog.String("key", key),
-			clog.Duration("duration", duration),
-		)
-	}()
-
-	count, err := c.cache.Exists(ctx, formattedKey)
+	// 使用 Exists 检查键是否存在，优化性能
+	existsCount, err := c.cache.Exists(ctx, formattedKey)
 	if err != nil {
 		c.logger.Error("检查键存在性失败",
 			clog.String("key", key),
@@ -65,7 +56,8 @@ func (c *client) Check(ctx context.Context, key string) (bool, error) {
 		return false, fmt.Errorf("failed to check key existence: %w", err)
 	}
 
-	exists := count > 0
+	exists := existsCount > 0
+
 	c.logger.Debug("键存在性检查完成",
 		clog.String("key", key),
 		clog.Bool("exists", exists),
@@ -84,15 +76,6 @@ func (c *client) Set(ctx context.Context, key string, ttl time.Duration) (bool, 
 	if ttl == 0 {
 		ttl = c.config.DefaultTTL
 	}
-
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		c.logger.Debug("Set 操作完成",
-			clog.String("key", key),
-			clog.Duration("duration", duration),
-		)
-	}()
 
 	// 使用 SetNX 实现原子性的设置操作
 	success, err := c.cache.SetNX(ctx, formattedKey, "1", ttl)
@@ -129,15 +112,6 @@ func (c *client) SetWithResult(ctx context.Context, key string, result interface
 	if ttl == 0 {
 		ttl = c.config.DefaultTTL
 	}
-
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		c.logger.Debug("SetWithResult 操作完成",
-			clog.String("key", key),
-			clog.Duration("duration", duration),
-		)
-	}()
 
 	// 序列化结果
 	serializedResult, err := c.serialize(result)
@@ -325,6 +299,61 @@ func (c *client) Refresh(ctx context.Context, key string, ttl time.Duration) err
 	return nil
 }
 
+// Do 执行幂等操作，如果key已经执行过则跳过，否则执行函数f
+func (c *client) Do(ctx context.Context, key string, f func() error) error {
+	if err := c.validateKey(key); err != nil {
+		return err
+	}
+
+	// 先检查是否已经执行过
+	exists, err := c.Check(ctx, key)
+	if err != nil {
+		return fmt.Errorf("failed to check key existence: %w", err)
+	}
+
+	if exists {
+		c.logger.Debug("幂等操作已执行，跳过",
+			clog.String("key", key),
+		)
+		return nil
+	}
+
+	// 尝试设置幂等标记
+	success, err := c.Set(ctx, key, c.config.DefaultTTL)
+	if err != nil {
+		return fmt.Errorf("failed to set idempotent key: %w", err)
+	}
+
+	if !success {
+		// 并发情况下，其他协程已经设置了标记
+		c.logger.Debug("并发执行检测到，跳过",
+			clog.String("key", key),
+		)
+		return nil
+	}
+
+	// 首次执行，调用函数f
+	if err := f(); err != nil {
+		// 执行失败，删除标记以允许重试
+		if deleteErr := c.Delete(ctx, key); deleteErr != nil {
+			c.logger.Error("删除失败的幂等标记时出错",
+				clog.String("key", key),
+				clog.Err(deleteErr),
+			)
+		}
+		c.logger.Error("幂等操作函数执行失败",
+			clog.String("key", key),
+			clog.Err(err),
+		)
+		return fmt.Errorf("function execution failed: %w", err)
+	}
+
+	c.logger.Debug("幂等操作首次执行完成",
+		clog.String("key", key),
+	)
+	return nil
+}
+
 // Close 关闭幂等客户端，释放资源
 func (c *client) Close() error {
 	c.logger.Info("关闭幂等客户端")
@@ -348,75 +377,24 @@ func (c *client) validateKey(key string) error {
 		return fmt.Errorf("key cannot be empty")
 	}
 
-	if len(key) > c.config.MaxKeyLength {
-		return fmt.Errorf("key length exceeds maximum: %d > %d", len(key), c.config.MaxKeyLength)
-	}
-
-	// 根据配置的验证器进行验证
-	switch c.config.KeyValidator {
-	case "strict":
-		return c.validateKeyStrict(key)
-	case "loose":
-		return c.validateKeyLoose(key)
-	default:
-		return c.validateKeyDefault(key)
-	}
-}
-
-// validateKeyDefault 默认键名验证
-func (c *client) validateKeyDefault(key string) error {
-	// 不允许包含空格和特殊字符
+	// 基础验证：不允许包含空格和特殊字符
 	if strings.ContainsAny(key, " \t\n\r") {
 		return fmt.Errorf("key cannot contain whitespace characters")
 	}
-	return nil
-}
 
-// validateKeyStrict 严格键名验证
-func (c *client) validateKeyStrict(key string) error {
-	// 只允许字母、数字、下划线、连字符和冒号
-	matched, _ := regexp.MatchString(`^[a-zA-Z0-9_:-]+$`, key)
-	if !matched {
-		return fmt.Errorf("key contains invalid characters (strict mode)")
-	}
-	return nil
-}
-
-// validateKeyLoose 宽松键名验证
-func (c *client) validateKeyLoose(key string) error {
-	// 只检查是否包含换行符
-	if strings.ContainsAny(key, "\n\r") {
-		return fmt.Errorf("key cannot contain newline characters")
-	}
 	return nil
 }
 
 // serialize 序列化值
 func (c *client) serialize(value interface{}) (string, error) {
-	switch c.config.Serializer {
-	case "json":
-		data, err := json.Marshal(value)
-		if err != nil {
-			return "", err
-		}
-		return string(data), nil
-	default:
-		// 默认使用 JSON
-		data, err := json.Marshal(value)
-		if err != nil {
-			return "", err
-		}
-		return string(data), nil
+	data, err := json.Marshal(value)
+	if err != nil {
+		return "", err
 	}
+	return string(data), nil
 }
 
 // deserialize 反序列化值
 func (c *client) deserialize(data []byte, value interface{}) error {
-	switch c.config.Serializer {
-	case "json":
-		return json.Unmarshal(data, value)
-	default:
-		// 默认使用 JSON
-		return json.Unmarshal(data, value)
-	}
+	return json.Unmarshal(data, value)
 }

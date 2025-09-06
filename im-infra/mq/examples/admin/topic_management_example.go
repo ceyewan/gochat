@@ -65,9 +65,9 @@ func main() {
 
 	log.Println("\n🏗️ 创建测试 topics...")
 	for _, topicConfig := range testTopics {
-		log.Printf("创建 topic: %s (分区: %d, 副本: %d)", 
+		log.Printf("创建 topic: %s (分区: %d, 副本: %d)",
 			topicConfig.Name, topicConfig.Partitions, topicConfig.ReplicationFactor)
-		
+
 		err := admin.CreateTopic(ctx, topicConfig)
 		if err != nil {
 			log.Printf("❌ 创建 topic %s 失败: %v", topicConfig.Name, err)

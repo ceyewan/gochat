@@ -153,6 +153,19 @@ func Refresh(ctx context.Context, key string, ttl time.Duration) error {
 	return getDefaultClient().Refresh(ctx, key, ttl)
 }
 
+// Do 使用全局默认客户端执行幂等操作，如果key已经执行过则跳过，否则执行函数f
+// 这是核心的幂等操作方法，参考了sync.Once的设计模式
+//
+// 示例：
+//
+//	err := idempotent.Do(ctx, "user:create:123", func() error {
+//	    // 执行实际的业务逻辑
+//	    return createUser(123)
+//	})
+func Do(ctx context.Context, key string, f func() error) error {
+	return getDefaultClient().Do(ctx, key, f)
+}
+
 // ===== 便捷方法 =====
 
 // Execute 执行幂等操作，如果是首次执行则调用回调函数

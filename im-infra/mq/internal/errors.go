@@ -9,76 +9,76 @@ import (
 var (
 	// ErrInvalidConfig 配置无效错误
 	ErrInvalidConfig = errors.New("配置无效")
-	
+
 	// ErrConnectionFailed 连接失败错误
 	ErrConnectionFailed = errors.New("连接失败")
-	
+
 	// ErrConnectionClosed 连接已关闭错误
 	ErrConnectionClosed = errors.New("连接已关闭")
-	
+
 	// ErrConnectionPoolExhausted 连接池耗尽错误
 	ErrConnectionPoolExhausted = errors.New("连接池耗尽")
-	
+
 	// ErrProducerClosed 生产者已关闭错误
 	ErrProducerClosed = errors.New("生产者已关闭")
-	
+
 	// ErrConsumerClosed 消费者已关闭错误
 	ErrConsumerClosed = errors.New("消费者已关闭")
-	
+
 	// ErrMessageTooLarge 消息过大错误
 	ErrMessageTooLarge = errors.New("消息过大")
-	
+
 	// ErrInvalidTopic 无效主题错误
 	ErrInvalidTopic = errors.New("无效主题")
-	
+
 	// ErrInvalidPartition 无效分区错误
 	ErrInvalidPartition = errors.New("无效分区")
-	
+
 	// ErrInvalidOffset 无效偏移量错误
 	ErrInvalidOffset = errors.New("无效偏移量")
-	
+
 	// ErrTimeout 超时错误
 	ErrTimeout = errors.New("操作超时")
-	
+
 	// ErrRetryExhausted 重试次数耗尽错误
 	ErrRetryExhausted = errors.New("重试次数耗尽")
-	
+
 	// ErrSerializationFailed 序列化失败错误
 	ErrSerializationFailed = errors.New("序列化失败")
-	
+
 	// ErrDeserializationFailed 反序列化失败错误
 	ErrDeserializationFailed = errors.New("反序列化失败")
-	
+
 	// ErrCompressionFailed 压缩失败错误
 	ErrCompressionFailed = errors.New("压缩失败")
-	
+
 	// ErrDecompressionFailed 解压失败错误
 	ErrDecompressionFailed = errors.New("解压失败")
-	
+
 	// ErrOffsetCommitFailed 偏移量提交失败错误
 	ErrOffsetCommitFailed = errors.New("偏移量提交失败")
-	
+
 	// ErrRebalanceInProgress 重平衡进行中错误
 	ErrRebalanceInProgress = errors.New("重平衡进行中")
-	
+
 	// ErrGroupCoordinatorNotFound 组协调器未找到错误
 	ErrGroupCoordinatorNotFound = errors.New("组协调器未找到")
-	
+
 	// ErrUnknownMemberId 未知成员ID错误
 	ErrUnknownMemberId = errors.New("未知成员ID")
-	
+
 	// ErrIllegalGeneration 非法代数错误
 	ErrIllegalGeneration = errors.New("非法代数")
-	
+
 	// ErrInconsistentGroupProtocol 不一致的组协议错误
 	ErrInconsistentGroupProtocol = errors.New("不一致的组协议")
-	
+
 	// ErrInvalidSessionTimeout 无效会话超时错误
 	ErrInvalidSessionTimeout = errors.New("无效会话超时")
-	
+
 	// ErrAuthenticationFailed 认证失败错误
 	ErrAuthenticationFailed = errors.New("认证失败")
-	
+
 	// ErrAuthorizationFailed 授权失败错误
 	ErrAuthorizationFailed = errors.New("授权失败")
 )
@@ -87,13 +87,13 @@ var (
 type MQError struct {
 	// Code 错误代码
 	Code string
-	
+
 	// Message 错误消息
 	Message string
-	
+
 	// Cause 原始错误
 	Cause error
-	
+
 	// Context 错误上下文信息
 	Context map[string]interface{}
 }
@@ -141,51 +141,51 @@ func NewMQError(code, message string, cause error) *MQError {
 // 错误代码常量
 const (
 	// 连接相关错误代码
-	ErrCodeConnectionFailed    = "CONNECTION_FAILED"
-	ErrCodeConnectionClosed    = "CONNECTION_CLOSED"
-	ErrCodeConnectionTimeout   = "CONNECTION_TIMEOUT"
-	ErrCodePoolExhausted      = "POOL_EXHAUSTED"
-	
+	ErrCodeConnectionFailed  = "CONNECTION_FAILED"
+	ErrCodeConnectionClosed  = "CONNECTION_CLOSED"
+	ErrCodeConnectionTimeout = "CONNECTION_TIMEOUT"
+	ErrCodePoolExhausted     = "POOL_EXHAUSTED"
+
 	// 配置相关错误代码
-	ErrCodeInvalidConfig      = "INVALID_CONFIG"
-	ErrCodeMissingConfig      = "MISSING_CONFIG"
-	
+	ErrCodeInvalidConfig = "INVALID_CONFIG"
+	ErrCodeMissingConfig = "MISSING_CONFIG"
+
 	// 生产者相关错误代码
-	ErrCodeProducerClosed     = "PRODUCER_CLOSED"
-	ErrCodeProduceFailed      = "PRODUCE_FAILED"
-	ErrCodeMessageTooLarge    = "MESSAGE_TOO_LARGE"
+	ErrCodeProducerClosed      = "PRODUCER_CLOSED"
+	ErrCodeProduceFailed       = "PRODUCE_FAILED"
+	ErrCodeMessageTooLarge     = "MESSAGE_TOO_LARGE"
 	ErrCodeSerializationFailed = "SERIALIZATION_FAILED"
-	ErrCodeCompressionFailed  = "COMPRESSION_FAILED"
-	
+	ErrCodeCompressionFailed   = "COMPRESSION_FAILED"
+
 	// 消费者相关错误代码
-	ErrCodeConsumerClosed     = "CONSUMER_CLOSED"
-	ErrCodeConsumeFailed      = "CONSUME_FAILED"
-	ErrCodeOffsetCommitFailed = "OFFSET_COMMIT_FAILED"
-	ErrCodeRebalanceInProgress = "REBALANCE_IN_PROGRESS"
+	ErrCodeConsumerClosed        = "CONSUMER_CLOSED"
+	ErrCodeConsumeFailed         = "CONSUME_FAILED"
+	ErrCodeOffsetCommitFailed    = "OFFSET_COMMIT_FAILED"
+	ErrCodeRebalanceInProgress   = "REBALANCE_IN_PROGRESS"
 	ErrCodeDeserializationFailed = "DESERIALIZATION_FAILED"
-	ErrCodeDecompressionFailed = "DECOMPRESSION_FAILED"
-	
+	ErrCodeDecompressionFailed   = "DECOMPRESSION_FAILED"
+
 	// 主题和分区相关错误代码
-	ErrCodeInvalidTopic       = "INVALID_TOPIC"
-	ErrCodeInvalidPartition   = "INVALID_PARTITION"
-	ErrCodeInvalidOffset      = "INVALID_OFFSET"
-	ErrCodeTopicNotFound      = "TOPIC_NOT_FOUND"
-	ErrCodePartitionNotFound  = "PARTITION_NOT_FOUND"
-	
+	ErrCodeInvalidTopic      = "INVALID_TOPIC"
+	ErrCodeInvalidPartition  = "INVALID_PARTITION"
+	ErrCodeInvalidOffset     = "INVALID_OFFSET"
+	ErrCodeTopicNotFound     = "TOPIC_NOT_FOUND"
+	ErrCodePartitionNotFound = "PARTITION_NOT_FOUND"
+
 	// 认证和授权相关错误代码
 	ErrCodeAuthenticationFailed = "AUTHENTICATION_FAILED"
 	ErrCodeAuthorizationFailed  = "AUTHORIZATION_FAILED"
-	
+
 	// 超时和重试相关错误代码
-	ErrCodeTimeout            = "TIMEOUT"
-	ErrCodeRetryExhausted     = "RETRY_EXHAUSTED"
-	
+	ErrCodeTimeout        = "TIMEOUT"
+	ErrCodeRetryExhausted = "RETRY_EXHAUSTED"
+
 	// 组管理相关错误代码
-	ErrCodeGroupCoordinatorNotFound = "GROUP_COORDINATOR_NOT_FOUND"
-	ErrCodeUnknownMemberId         = "UNKNOWN_MEMBER_ID"
-	ErrCodeIllegalGeneration       = "ILLEGAL_GENERATION"
+	ErrCodeGroupCoordinatorNotFound  = "GROUP_COORDINATOR_NOT_FOUND"
+	ErrCodeUnknownMemberId           = "UNKNOWN_MEMBER_ID"
+	ErrCodeIllegalGeneration         = "ILLEGAL_GENERATION"
 	ErrCodeInconsistentGroupProtocol = "INCONSISTENT_GROUP_PROTOCOL"
-	ErrCodeInvalidSessionTimeout   = "INVALID_SESSION_TIMEOUT"
+	ErrCodeInvalidSessionTimeout     = "INVALID_SESSION_TIMEOUT"
 )
 
 // 便捷的错误创建函数
@@ -237,7 +237,7 @@ func IsRetryableError(err error) bool {
 			return false
 		}
 	}
-	
+
 	// 检查一些常见的可重试错误
 	switch err {
 	case ErrConnectionFailed, ErrTimeout, ErrConnectionPoolExhausted:
@@ -263,7 +263,7 @@ func IsFatalError(err error) bool {
 			return false
 		}
 	}
-	
+
 	// 检查一些常见的致命错误
 	switch err {
 	case ErrAuthenticationFailed, ErrAuthorizationFailed:
