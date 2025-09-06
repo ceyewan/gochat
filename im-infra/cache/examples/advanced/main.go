@@ -75,6 +75,12 @@ func main() {
 	// 初始化布隆过滤器，错误率 0.1%，容量 1000
 	err = cacheClient.BFInit(ctx, bfKey, 0.001, 1000)
 	if err != nil {
+		// 检查是否是因为服务器不支持该功能
+		if err.Error() == "redis server does not support bloom filter commands (RedisBloom module may not be installed)" {
+			log.Printf("跳过布隆过滤器演示: %v", err)
+			log.Println("\n高级功能示例执行完毕！")
+			return
+		}
 		log.Fatalf("初始化布隆过滤器失败: %v", err)
 	}
 	log.Printf("成功初始化布隆过滤器 '%s'", bfKey)
