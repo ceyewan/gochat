@@ -84,6 +84,27 @@ test-service:
 	@echo "测试服务 $(SERVICE)..."
 	@go test -v -race ./$(SERVICE)/...
 
+# 运行集成测试
+.PHONY: test-integration
+test-integration:
+	@echo "运行集成测试..."
+	@echo "确保 Redis 和 etcd 正在运行..."
+	@go test -v -race -tags=integration ./im-infra/ratelimit/...
+	@echo "集成测试完成"
+
+# 测试 ratelimit 组件
+.PHONY: test-ratelimit
+test-ratelimit:
+	@echo "测试 ratelimit 组件..."
+	@go test -v -race ./im-infra/ratelimit/...
+	@echo "ratelimit 组件测试完成"
+
+# 运行 ratelimit 示例
+.PHONY: demo-ratelimit
+demo-ratelimit:
+	@echo "运行 ratelimit 基本示例..."
+	@cd im-infra/ratelimit/examples/basic && go run main.go
+
 # 生成 protobuf 代码
 .PHONY: proto
 proto:
