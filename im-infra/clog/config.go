@@ -1,5 +1,7 @@
 package clog
 
+import "fmt"
+
 // Config 是 clog 的主配置结构体
 type Config struct {
 	// Level 控制输出的最小日志级别
@@ -44,4 +46,40 @@ func DefaultConfig() Config {
 		EnableColor: true,
 		RootPath:    "gochat",
 	}
+}
+
+// Validate 验证配置的有效性
+func (c *Config) Validate() error {
+	// 验证日志级别
+	validLevels := map[string]bool{
+		"debug": true, "info": true, "warn": true, "error": true, "fatal": true,
+	}
+	if !validLevels[c.Level] {
+		return fmt.Errorf("invalid log level: %s", c.Level)
+	}
+
+	// 验证日志格式
+	if c.Format != "json" && c.Format != "console" {
+		return fmt.Errorf("invalid log format: %s", c.Format)
+	}
+
+	// 验证输出目标
+	if c.Output == "" {
+		return fmt.Errorf("log output cannot be empty")
+	}
+
+	// 验证轮转配置
+	if c.Rotation != nil {
+		if c.Rotation.MaxSize < 0 {
+			return fmt.Errorf("rotation maxSize cannot be negative")
+		}
+		if c.Rotation.MaxBackups < 0 {
+			return fmt.Errorf("rotation maxBackups cannot be negative")
+		}
+		if c.Rotation.MaxAge < 0 {
+			return fmt.Errorf("rotation maxAge cannot be negative")
+		}
+	}
+
+	return nil
 }

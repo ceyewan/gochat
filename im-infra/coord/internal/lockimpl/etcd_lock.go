@@ -106,9 +106,13 @@ type etcdLock struct {
 
 // Unlock 释放锁
 func (l *etcdLock) Unlock(ctx context.Context) error {
-	l.logger.Debug("释放锁",
-		clog.String("key", l.mutex.Key()),
-		clog.Int64("lease", int64(l.session.Lease())))
+	// 在所有操作之前缓存 key 和 lease，防止 session 关闭后无法获取
+	key := l.mutex.Key()
+	leaseID := l.session.Lease()
+
+	l.logger.Debug("准备释放锁",
+		clog.String("key", key),
+		clog.Int64("lease", int64(leaseID)))
 
 	// 先解锁互斥锁
 	if err := l.mutex.Unlock(ctx); err != nil {
@@ -122,7 +126,8 @@ func (l *etcdLock) Unlock(ctx context.Context) error {
 		return client.NewError(client.ErrCodeConnection, "failed to close session", err)
 	}
 
-	l.logger.Info("锁释放成功", clog.String("key", l.mutex.Key()))
+	// 使用缓存的 key 进行日志记录
+	l.logger.Info("锁释放成功", clog.String("key", key))
 	return nil
 }
 

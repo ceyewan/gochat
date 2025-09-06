@@ -102,14 +102,23 @@ func (r *EtcdServiceRegistry) Register(ctx context.Context, service registry.Ser
 	r.sessionsMu.Unlock()
 
 	// 会话的 keep-alive 在后台运行，可通过 Done 通道监控会话过期
+	// 使用带缓冲的 channel 和非阻塞的方式来避免死锁
 	go func() {
+		defer func() {
+			// 确保从 sessions map 中删除，防止内存泄漏
+			r.sessionsMu.Lock()
+			delete(r.sessions, service.ID)
+			r.sessionsMu.Unlock()
+		}()
+
 		<-session.Done()
-		r.sessionsMu.Lock()
-		delete(r.sessions, service.ID)
-		r.sessionsMu.Unlock()
-		r.logger.Warn("服务会话已过期或关闭",
-			clog.String("service_name", service.Name),
-			clog.String("service_id", service.ID))
+		// 使用非阻塞的方式记录日志，避免死锁
+		// 在高并发情况下，如果日志写入有问题，不应该阻塞核心逻辑
+		go func() {
+			r.logger.Warn("服务会话已过期或关闭",
+				clog.String("service_name", service.Name),
+				clog.String("service_id", service.ID))
+		}()
 	}()
 
 	return nil
@@ -123,12 +132,14 @@ func (r *EtcdServiceRegistry) Unregister(ctx context.Context, serviceID string) 
 
 	r.sessionsMu.Lock()
 	session, ok := r.sessions[serviceID]
+	if ok {
+		delete(r.sessions, serviceID) // 先从 map 中删除，避免重复操作
+	}
 	r.sessionsMu.Unlock()
 
 	// 如果本地有会话，关闭会话最干净
 	if ok {
 		r.logger.Info("通过关闭会话注销服务", clog.String("service_id", serviceID))
-		delete(r.sessions, serviceID)
 		if err := session.Close(); err != nil {
 			return client.NewError(client.ErrCodeConnection, "注销服务时关闭会话失败", err)
 		}

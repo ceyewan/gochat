@@ -7,15 +7,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-)
 
-// Logger 日志接口，避免循环依赖
-type Logger interface {
-	Debug(msg string, fields ...any)
-	Info(msg string, fields ...any)
-	Warn(msg string, fields ...any)
-	Error(msg string, fields ...any)
-}
+	"github.com/ceyewan/gochat/im-infra/clog"
+)
 
 // Validator 配置验证器接口
 type Validator[T any] interface {
@@ -54,7 +48,7 @@ type Manager[T any] struct {
 	// 可选组件
 	validator Validator[T]
 	updater   ConfigUpdater[T]
-	logger    Logger
+	logger    clog.Logger
 
 	// 配置监听器
 	watcher Watcher[any]
@@ -65,8 +59,7 @@ type Manager[T any] struct {
 	watching bool
 
 	// 生命周期控制
-	startOnce sync.Once
-	stopOnce  sync.Once
+	started bool
 }
 
 // ManagerOption 配置管理器选项
@@ -87,7 +80,7 @@ func WithUpdater[T any](updater ConfigUpdater[T]) ManagerOption[T] {
 }
 
 // WithLogger 设置日志器
-func WithLogger[T any](logger Logger) ManagerOption[T] {
+func WithLogger[T any](logger clog.Logger) ManagerOption[T] {
 	return func(m *Manager[T]) {
 		m.logger = logger
 	}
@@ -135,33 +128,38 @@ func (m *Manager[T]) GetCurrentConfig() *T {
 // Start 启动配置管理器和监听器
 // 这个方法是幂等的，可以安全地多次调用
 func (m *Manager[T]) Start() {
-	m.startOnce.Do(func() {
-		m.mu.Lock()
-		defer m.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-		// 启动时加载一次配置
-		if m.configCenter != nil {
-			m.loadConfigFromCenter()
-			m.startWatching()
-		}
-	})
+	if m.started {
+		return
+	}
+
+	// 启动时加载一次配置
+	if m.configCenter != nil {
+		m.loadConfigFromCenter()
+		m.startWatching()
+	}
+
+	m.started = true
 }
 
 // Stop 停止配置管理器和监听器
 // 这个方法是幂等的，可以安全地多次调用
 func (m *Manager[T]) Stop() {
-	m.stopOnce.Do(func() {
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		m.stopWatching()
-	})
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if !m.started {
+		return
+	}
+
+	m.stopWatching()
+	m.started = false
 }
 
 // ReloadConfig 重新加载配置
 func (m *Manager[T]) ReloadConfig() {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	if m.configCenter != nil {
 		m.loadConfigFromCenter()
 	}
@@ -189,11 +187,11 @@ func (m *Manager[T]) loadConfigFromCenter() {
 		// 记录错误但不阻断，继续使用当前配置
 		if m.logger != nil {
 			m.logger.Warn("failed to load config from center, using current config",
-				"error", err,
-				"key", key,
-				"env", m.env,
-				"service", m.service,
-				"component", m.component)
+				clog.Err(err),
+				clog.String("key", key),
+				clog.String("env", m.env),
+				clog.String("service", m.service),
+				clog.String("component", m.component))
 		}
 		return
 	}
@@ -202,18 +200,18 @@ func (m *Manager[T]) loadConfigFromCenter() {
 	if err := m.safeUpdateAndApply(&config); err != nil {
 		if m.logger != nil {
 			m.logger.Error("failed to apply config from center",
-				"error", err,
-				"key", key)
+				clog.Err(err),
+				clog.String("key", key))
 		}
 		return
 	}
 
 	if m.logger != nil {
 		m.logger.Info("config loaded from center",
-			"key", key,
-			"env", m.env,
-			"service", m.service,
-			"component", m.component)
+			clog.String("key", key),
+			clog.String("env", m.env),
+			clog.String("service", m.service),
+			clog.String("component", m.component))
 	}
 }
 
@@ -222,12 +220,11 @@ func (m *Manager[T]) loadConfigFromCenter() {
 func (m *Manager[T]) safeUpdateAndApply(newConfig *T) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	// 1. 验证配置
 	if m.validator != nil {
 		if err := m.validator.Validate(newConfig); err != nil {
 			if m.logger != nil {
-				m.logger.Warn("invalid config received, update rejected", "error", err)
+				m.logger.Warn("invalid config received, update rejected", clog.Err(err))
 			}
 			return fmt.Errorf("validation failed: %w", err)
 		}
@@ -238,7 +235,7 @@ func (m *Manager[T]) safeUpdateAndApply(newConfig *T) error {
 	if m.updater != nil {
 		if err := m.updater.OnConfigUpdate(oldConfig, newConfig); err != nil {
 			if m.logger != nil {
-				m.logger.Error("config updater failed, update rejected", "error", err)
+				m.logger.Error("config updater failed, update rejected", clog.Err(err))
 			}
 			return fmt.Errorf("updater failed: %w", err)
 		}
@@ -248,7 +245,7 @@ func (m *Manager[T]) safeUpdateAndApply(newConfig *T) error {
 	m.currentConfig.Store(newConfig)
 
 	if m.logger != nil {
-		m.logger.Info("config updated and applied successfully", "key", m.buildConfigKey())
+		m.logger.Info("config updated and applied successfully", clog.String("key", m.buildConfigKey()))
 	}
 	return nil
 }
@@ -277,8 +274,8 @@ func (m *Manager[T]) startWatching() {
 	if err != nil {
 		if m.logger != nil {
 			m.logger.Warn("failed to start config watcher",
-				"error", err,
-				"key", m.buildConfigKey())
+				clog.Err(err),
+				clog.String("key", m.buildConfigKey()))
 		}
 		return
 	}
@@ -291,7 +288,7 @@ func (m *Manager[T]) startWatching() {
 
 	if m.logger != nil {
 		m.logger.Info("config watcher started",
-			"key", m.buildConfigKey())
+			clog.String("key", m.buildConfigKey()))
 	}
 }
 
@@ -309,9 +306,14 @@ func (m *Manager[T]) stopWatching() {
 		m.watcher = nil
 	}
 
-	// 关闭 channel，通知 watchLoop 退出
-	// 使用 close 而不是发送，确保 watchLoop 能立即收到信号
-	close(m.stopCh)
+	// 安全地关闭 channel，通知 watchLoop 退出
+	// 使用 select + default 避免重复关闭已关闭的 channel
+	select {
+	case <-m.stopCh:
+		// channel 已经关闭
+	default:
+		close(m.stopCh)
+	}
 
 	// 重新创建 stopCh 以便下次使用
 	m.stopCh = make(chan struct{})
@@ -323,8 +325,8 @@ func (m *Manager[T]) watchLoop() {
 		if r := recover(); r != nil {
 			if m.logger != nil {
 				m.logger.Error("config watch loop panic",
-					"recover", r,
-					"key", m.buildConfigKey())
+					clog.Any("recover", r),
+					clog.String("key", m.buildConfigKey()))
 			}
 		}
 	}()
@@ -335,7 +337,7 @@ func (m *Manager[T]) watchLoop() {
 			if !ok {
 				if m.logger != nil {
 					m.logger.Debug("config watcher channel closed",
-						"key", m.buildConfigKey())
+						clog.String("key", m.buildConfigKey()))
 				}
 				return
 			}
@@ -347,22 +349,22 @@ func (m *Manager[T]) watchLoop() {
 					if err := m.safeUpdateAndApply(config); err != nil {
 						if m.logger != nil {
 							m.logger.Error("failed to apply config from watcher",
-								"error", err,
-								"key", m.buildConfigKey())
+								clog.Err(err),
+								clog.String("key", m.buildConfigKey()))
 						}
 						continue
 					}
 
 					if m.logger != nil {
 						m.logger.Info("config updated from watcher",
-							"key", m.buildConfigKey())
+							clog.String("key", m.buildConfigKey()))
 					}
 				} else {
 					if m.logger != nil {
 						m.logger.Error("failed to parse config from event",
-							"error", err,
-							"key", m.buildConfigKey(),
-							"value", event.Value)
+							clog.Err(err),
+							clog.String("key", m.buildConfigKey()),
+							clog.Any("value", event.Value))
 					}
 				}
 			}
@@ -402,7 +404,7 @@ func SimpleManager[T any](
 	configCenter ConfigCenter,
 	env, service, component string,
 	defaultConfig T,
-	logger Logger,
+	logger clog.Logger,
 ) *Manager[T] {
 	manager := NewManager(configCenter, env, service, component, defaultConfig,
 		WithLogger[T](logger))
@@ -417,7 +419,7 @@ func ValidatedManager[T any](
 	env, service, component string,
 	defaultConfig T,
 	validator Validator[T],
-	logger Logger,
+	logger clog.Logger,
 ) *Manager[T] {
 	manager := NewManager(configCenter, env, service, component, defaultConfig,
 		WithValidator[T](validator),
@@ -434,7 +436,7 @@ func FullManager[T any](
 	defaultConfig T,
 	validator Validator[T],
 	updater ConfigUpdater[T],
-	logger Logger,
+	logger clog.Logger,
 ) *Manager[T] {
 	manager := NewManager(configCenter, env, service, component, defaultConfig,
 		WithValidator[T](validator),

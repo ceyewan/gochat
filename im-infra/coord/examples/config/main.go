@@ -49,7 +49,7 @@ func main() {
 
 func testBasicTypes(ctx context.Context, cc config.ConfigCenter) {
 	clog.Info("--- Testing Basic Types ---")
-	key := "app/log_level"
+	key := "examples/app/log_level"
 	value := "debug"
 
 	// Set
@@ -74,7 +74,7 @@ func testBasicTypes(ctx context.Context, cc config.ConfigCenter) {
 
 func testStructType(ctx context.Context, cc config.ConfigCenter) {
 	clog.Info("--- Testing Struct Type ---")
-	key := "app/settings"
+	key := "examples/app/settings"
 	appCfg := AppConfig{
 		AppName:    "GoChat",
 		Version:    "1.2.3",
@@ -109,23 +109,23 @@ func testWatch(ctx context.Context, cc config.ConfigCenter) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	prefix := "notifications/email"
+	prefix := "examples/notifications/email"
 	key1 := prefix + "/server"
 	key2 := prefix + "/port"
 
 	// Watcher goroutine
 	go func() {
 		defer wg.Done()
-		// 监听 "notifications/" 前缀下的所有变化
+		// 监听 "examples/notifications/" 前缀下的所有变化
 		// 使用 interface{} 来处理不同类型的配置值
 		var watchValue interface{}
-		watcher, err := cc.WatchPrefix(ctx, "notifications", &watchValue)
+		watcher, err := cc.WatchPrefix(ctx, "examples/notifications", &watchValue)
 		if err != nil {
 			clog.Error("Failed to start watcher", clog.Err(err))
 			return
 		}
 		defer watcher.Close()
-		clog.Info("Watcher started on prefix", clog.String("prefix", "notifications/"))
+		clog.Info("Watcher started on prefix", clog.String("prefix", "examples/notifications/"))
 
 		timeout := time.After(5 * time.Second)
 		for i := 0; i < 4; i++ { // 等待 4 个事件

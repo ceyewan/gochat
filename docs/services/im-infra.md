@@ -57,7 +57,7 @@ sequenceDiagram
 ### 原型一：有状态服务型 (Stateful Service)
 
 - **定义**: 提供一个长期运行、有内部状态、有生命周期的后台服务。
-- **示例**: `metrics`, `ratelimit`, `coordination`, `mq` (消费者)
+- **示例**: `metrics`, `ratelimit`, `coord`, `mq` (消费者)
 - **核心特征**:
     - **生命周期管理**: 必须提供 `New()` 和 `Close()`/`Shutdown()` 方法。`New` 方法应接收 `context.Context` 以支持优雅关闭。
     - **依赖注入**: 应通过 `Option` 函数模式接收可选依赖，如 `metrics.Provider` 或 `clog.Logger`。
@@ -103,10 +103,10 @@ func New(cfg Config, opts ...Option) (Cache, error) {
 ### 原型三：全局单例工具型 (Singleton Utility)
 
 - **定义**: 提供一组全局可用的功能函数，内部维护一个对用户透明的单例。
-- **示例**: `clog`, `id-gen`
+- **示例**: `clog`, `uid`
 - **核心特征**:
-    - **包级别函数**: 主要通过包级别函数对外提供服务 (`clog.Info()`, `idgen.GenerateInt64()`)。
-    - **优雅降级与升级**: 核心能力。启动时使用安全的默认配置（如 `clog` 输出到控制台），在配置就绪后，通过 `Init` 或类似函数重新加载配置，实现能力“升级”。
+    - **包级别函数**: 主要通过包级别函数对外提供服务 (`clog.Info()`, `uid.GenerateInt64()`)。
+    - **优雅降级与升级**: 核心能力。启动时使用安全的默认配置（如 `clog` 输出到控制台），在配置就绪后，通过 `Init` 或类似函数重新加载配置，实现能力"升级"。
     - **无实例概念**: 用户通常不需要 `New()` 一个实例来使用它。
     - **轻量级定制**: 可提供 `Module()` 或 `With()` 等函数，返回一个携带了部分上下文的新接口，方便使用。
 
@@ -145,13 +145,13 @@ func Info(msg string, fields ...Field) {
 
 ### 4.2 推荐初始化顺序：两阶段初始化
 
-为了解决 `clog` 和 `coordination` 之间的“鸡生蛋”式循环依赖问题，服务启动时必须遵循 **两阶段初始化 (Two-Phase Initialization)** 模式。
+为了解决 `clog` 和 `coord` 之间的"鸡生蛋"式循环依赖问题，服务启动时必须遵循 **两阶段初始化 (Two-Phase Initialization)** 模式。
 
 ```mermaid
 graph TD
     subgraph "阶段一：引导 (Bootstrap)"
         A(Start) --> B(clog 降级启动);
-        B --> C(coordination 启动);
+        B --> C(coord 启动);
         C --> D{Etcd 可达?};
     end
 
@@ -166,12 +166,12 @@ graph TD
     D -- No --> J(Fatal);
 ```
 
-1.  **阶段一：引导 (Bootstrap Phase)** - 目标是让服务“点火”并具备最基础的日志和配置能力。
+1.  **阶段一：引导 (Bootstrap Phase)** - 目标是让服务"点火"并具备最基础的日志和配置能力。
     - **`clog` 降级启动**: 在 `main` 函数的入口处，立即初始化一个 **引导 Logger**。此 Logger 不依赖任何外部配置，直接向 `os.Stdout` 输出文本日志。它的唯一使命是记录启动过程。
-    - **`coordination` 启动**: `NewCoordination` 函数接收上一步创建的引导 Logger 作为依赖，然后去连接 `etcd`。
+    - **`coord` 启动**: `NewCoord` 函数接收上一步创建的引导 Logger 作为依赖，然后去连接 `etcd`。
 
-2.  **阶段二：功能完备 (Full-Power Phase)** - 目标是让所有基础库和业务服务“引擎全开”。
-    - **`clog` 配置重载**: `coordination` 从 `etcd` 读取到完整的日志配置后，调用 `clog.Init()` 创建一个 **生产 Logger**（具备完整的格式化、级别控制、输出到文件或远端的能力），并原子替换掉全局的引导 Logger。此后，所有日志都将通过生产 Logger 输出。
+2.  **阶段二：功能完备 (Full-Power Phase)** - 目标是让所有基础库和业务服务"引擎全开"。
+    - **`clog` 配置重载**: `coord` 从 `etcd` 读取到完整的日志配置后，调用 `clog.Init()` 创建一个 **生产 Logger**（具备完整的格式化、级别控制、输出到文件或远端的能力），并原子替换掉全局的引导 Logger。此后，所有日志都将通过生产 Logger 输出。
     - **`metrics` 启动**: 使用从 `etcd` 获取的配置初始化 `metrics` 服务。
     - **其他基础库启动**: 依次初始化 `cache`, `db`, `mq` 等。此时，它们可以通过依赖注入，获取到功能完备的 `clog.Logger` 和 `metrics.Provider` 实例。
     - **业务逻辑启动**: 启动所有 gRPC/HTTP 服务，开始处理业务请求。
@@ -192,8 +192,8 @@ graph TD
 
 ### 5.2 文档与注释
 
-- **`README.md`**: 解释“为什么”和设计理念。
-- **`API.md`**: 解释“如何使用”，并根据库的原型提供对应的示例。
+- **`README.md`**: 解释"为什么"和设计理念。
+- **`API.md`**: 解释"如何使用"，并根据库的原型提供对应的示例。
 - **Go Doc**: 所有公共 API 必须有完整的 Go Doc 注释。
 
 ### 5.3 日志使用规范
@@ -294,11 +294,180 @@ graph TD
 
 ### 6.3 `coord` - 分布式协调服务
 
--   `New(ctx context.Context, serviceName string, opts ...Option) (Provider, error)`: 创建一个新的协调服务提供者。
--   `Register(serviceInfo ServiceInfo) error`: 注册一个服务实例。
--   `Deregister() error`: 注销当前服务实例。
--   `Discover(serviceName string) ([]ServiceInfo, error)`: 发现一个服务的所有健康实例。
--   `Watch(key string) <-chan Event`: 监听一个键的变化。
+`coord` 模块是基于 etcd 的分布式协调库，为 gochat 项目提供分布式锁、服务注册发现、配置中心等核心功能。
+
+#### 6.3.1 核心特性
+
+- ⚡ **gRPC 动态服务发现**：标准 resolver 插件，实时感知服务变化，自动负载均衡
+- 🔒 **分布式锁**：基于 etcd 的高可靠互斥锁，支持 TTL 和自动续约
+- ⚙️ **配置中心**：强类型配置管理，支持实时监听和 CAS 操作
+- 📈 **高性能**：连接复用，毫秒级故障转移，5000+ calls/sec
+- 🛡️ **通用配置管理器**：为所有模块提供统一的配置管理能力
+
+#### 6.3.2 主要接口
+
+**主协调器接口**:
+```go
+// Provider 定义协调器的核心接口
+type Provider interface {
+    // Lock 获取分布式锁服务
+    Lock() lock.DistributedLock
+    // Registry 获取服务注册发现服务  
+    Registry() registry.ServiceRegistry
+    // Config 获取配置中心服务
+    Config() config.ConfigCenter
+    // Close 关闭协调器并释放资源
+    Close() error
+}
+```
+
+**分布式锁接口**:
+```go
+type DistributedLock interface {
+    // Acquire 获取互斥锁，如果锁已被占用，会阻塞直到获取成功或 context 取消
+    Acquire(ctx context.Context, key string, ttl time.Duration) (Lock, error)
+    // TryAcquire 尝试获取锁（非阻塞），如果锁已被占用，会立即返回错误
+    TryAcquire(ctx context.Context, key string, ttl time.Duration) (Lock, error)
+}
+
+type Lock interface {
+    // Unlock 释放锁
+    Unlock(ctx context.Context) error
+    // TTL 获取锁的剩余有效时间
+    TTL(ctx context.Context) (time.Duration, error)
+    // Key 获取锁的键
+    Key() string
+}
+```
+
+**服务注册发现接口**:
+```go
+type ServiceRegistry interface {
+    // Register 注册服务，ttl 是租约的有效期
+    Register(ctx context.Context, service ServiceInfo, ttl time.Duration) error
+    // Unregister 注销服务
+    Unregister(ctx context.Context, serviceID string) error
+    // Discover 发现服务
+    Discover(ctx context.Context, serviceName string) ([]ServiceInfo, error)
+    // Watch 监听服务变化
+    Watch(ctx context.Context, serviceName string) (<-chan ServiceEvent, error)
+    // GetConnection 获取到指定服务的 gRPC 连接，支持负载均衡
+    GetConnection(ctx context.Context, serviceName string) (*grpc.ClientConn, error)
+}
+```
+
+**配置中心接口**:
+```go
+type ConfigCenter interface {
+    // Get 获取配置值并反序列化到提供的类型中
+    Get(ctx context.Context, key string, v interface{}) error
+    // Set 序列化并存储配置值
+    Set(ctx context.Context, key string, value interface{}) error
+    // Delete 删除配置键
+    Delete(ctx context.Context, key string) error
+    // List 列出给定前缀下的所有键
+    List(ctx context.Context, prefix string) ([]string, error)
+    // Watch 监听单个键的变化
+    Watch(ctx context.Context, key string, v interface{}) (Watcher[any], error)
+    // WatchPrefix 监听给定前缀下的所有键的变化
+    WatchPrefix(ctx context.Context, prefix string, v interface{}) (Watcher[any], error)
+    // GetWithVersion 获取配置值和版本信息（CAS支持）
+    GetWithVersion(ctx context.Context, key string, v interface{}) (version int64, err error)
+    // CompareAndSet 原子地比较并设置配置值
+    CompareAndSet(ctx context.Context, key string, value interface{}, expectedVersion int64) error
+}
+```
+
+#### 6.3.3 通用配置管理器
+
+coord 提供了基于泛型的通用配置管理器，为所有基础设施模块提供统一的配置管理能力：
+
+```go
+// 创建配置管理器
+manager := config.NewManager(
+    configCenter,
+    "dev", "gochat", "component",
+    defaultConfig,
+    config.WithValidator[T](validator),
+    config.WithUpdater[T](updater),
+    config.WithLogger[T](logger),
+)
+
+// 显式启动配置管理器
+manager.Start()
+defer manager.Stop()
+
+// 获取当前配置
+currentConfig := manager.GetCurrentConfig()
+```
+
+**特性**:
+- 🔧 **类型安全**: 使用 Go 泛型确保配置类型安全
+- 🛡️ **降级策略**: 配置中心不可用时自动使用默认配置
+- 🔄 **热更新**: 支持配置热更新和实时监听
+- ✅ **配置验证**: 支持自定义配置验证器
+- 🔄 **更新回调**: 支持配置更新时的自定义逻辑
+
+#### 6.3.4 构造函数签名
+
+```go
+// 创建新的协调器实例
+func New(ctx context.Context, cfg CoordinatorConfig, opts ...Option) (Provider, error)
+
+// 配置选项
+type CoordinatorConfig struct {
+    Endpoints   []string     `json:"endpoints"`      // etcd 服务器地址列表
+    Username    string       `json:"username,omitempty"`  // etcd 用户名（可选）
+    Password    string       `json:"password,omitempty"`  // etcd 密码（可选）
+    Timeout     time.Duration `json:"timeout"`       // 连接超时时间
+    RetryConfig *RetryConfig `json:"retry_config,omitempty"`  // 重试配置
+}
+```
+
+#### 6.3.5 使用示例
+
+**基本用法**:
+```go
+// 创建协调器（使用默认配置连接 localhost:2379）
+coordinator, err := coord.New(context.Background(), coord.DefaultConfig())
+if err != nil {
+    log.Fatal(err)
+}
+defer coordinator.Close()
+
+// 使用分布式锁
+lock, err := coordinator.Lock().Acquire(ctx, "my-resource", 30*time.Second)
+if err != nil {
+    return err
+}
+defer lock.Unlock(ctx)
+
+// 注册服务
+service := registry.ServiceInfo{
+    ID:      "chat-service-001",
+    Name:    "chat-service",
+    Address: "127.0.0.1",
+    Port:    8080,
+}
+err = coordinator.Registry().Register(ctx, service, 30*time.Second)
+```
+
+**gRPC 动态服务发现**:
+```go
+// 注册服务
+coordinator.Registry().Register(ctx, serviceInfo, 30*time.Second)
+
+// 获取 gRPC 连接（自动负载均衡）
+conn, err := coordinator.Registry().GetConnection(ctx, "user-service")
+if err != nil {
+    return err
+}
+defer conn.Close()
+
+// 创建 gRPC 客户端
+client := yourpb.NewYourServiceClient(conn)
+resp, err := client.YourMethod(ctx, &yourpb.YourRequest{})
+```
 
 ### 6.4 `db` - 数据库访问层
 
@@ -336,3 +505,42 @@ graph TD
 -   `Init(cfg Config)`: 根据配置初始化全局 ID 生成器。
 -   `GenerateInt64() int64`: 生成一个全局唯一的 `int64` 类型的 ID (基于 Snowflake 算法)。
 -   `GenerateString() string`: 生成一个全局唯一的字符串类型的 ID。
+
+---
+
+## 7. 已知问题和改进计划
+
+### 7.1 coord 模块当前问题
+
+基于审计结果，coord 模块存在以下需要改进的问题：
+
+1. **缺少 HotReloadable 接口实现**: 根据实现计划，coord 应该实现 `HotReloadable` 接口以支持配置热更新
+2. **文档与代码不一致**: API.md 文档缺少 CAS 操作（GetWithVersion 和 CompareAndSet）的说明
+3. **配置管理器生命周期**: 需要明确 Start/Stop 方法的使用，当前文档和示例存在不一致
+4. **错误类型未暴露**: 自定义错误类型在内部包中，用户无法正确处理特定错误条件
+
+### 7.2 改进优先级
+
+**高优先级（立即修复）**:
+- 实现 coord 模块的 HotReloadable 接口
+- 更新 API.md 文档，添加缺失的 CAS 操作说明
+- 统一配置管理器的生命周期管理文档
+
+**中优先级（后续版本）**:
+- 暴露错误类型，提供更好的错误处理能力
+- 增加连接池和健康检查功能
+- 添加 TLS 支持
+
+**低优先级（长期规划）**:
+- 实现 RBAC 集成
+- 添加性能优化和监控指标
+- 完善测试覆盖率
+
+### 7.3 使用建议
+
+在 coord 模块完成上述改进之前，建议：
+
+1. **使用默认配置**: 依赖 coord 的默认配置功能，确保在 etcd 不可用时服务仍可正常运行
+2. **监控 etcd 连接**: 在生产环境中监控 etcd 连接状态，及时发现连接问题
+3. **配置备份**: 为关键配置维护代码中的默认备份，避免单点故障
+4. **逐步迁移**: 对于现有系统，可以逐步迁移到新的配置管理模式，先在测试环境验证

@@ -34,10 +34,16 @@ func NewManager[T any](
 // 获取当前配置
 func (m *Manager[T]) GetCurrentConfig() *T
 
+// 启动配置管理器和监听器
+func (m *Manager[T]) Start()
+
+// 停止配置管理器和监听器
+func (m *Manager[T]) Stop()
+
 // 重新加载配置
 func (m *Manager[T]) ReloadConfig()
 
-// 关闭管理器
+// 关闭管理器（向后兼容，推荐使用 Stop）
 func (m *Manager[T]) Close()
 ```
 
@@ -54,14 +60,36 @@ type ConfigUpdater[T any] interface {
     OnConfigUpdate(oldConfig, newConfig *T) error
 }
 
-// 日志接口
-type Logger interface {
-    Debug(msg string, fields ...any)
-    Info(msg string, fields ...any)
-    Warn(msg string, fields ...any)
-    Error(msg string, fields ...any)
-}
+// 日志器 - 直接使用 clog.Logger
+// import "github.com/ceyewan/gochat/im-infra/clog"
+// logger := clog.Module("config")
 ```
+
+## 生命周期管理
+
+配置管理器支持明确的生命周期管理：
+
+```go
+// 创建配置管理器（不自动启动）
+manager := config.NewManager(configCenter, "dev", "app", "component", defaultConfig)
+
+// 显式启动（幂等操作，可安全多次调用）
+manager.Start()
+
+// 使用配置
+currentConfig := manager.GetCurrentConfig()
+
+// 停止管理器（幂等操作，可安全多次调用）
+manager.Stop()
+
+// 支持重新启动
+manager.Start()
+```
+
+**注意**：
+- `NewManager()` 创建的管理器需要手动调用 `Start()` 启动
+- 便捷工厂函数（`SimpleManager`, `ValidatedManager`, `FullManager`）会自动启动
+- `Start()` 和 `Stop()` 是幂等操作，支持重复调用和重新启动
 
 ## 使用方法
 

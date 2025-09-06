@@ -19,11 +19,11 @@ func main() {
 	fmt.Println("=== gRPC Resolver 动态服务发现演示 ===")
 
 	// 注意：此演示需要运行 etcd 服务
-	// 启动命令：etcd --listen-client-urls=http://localhost:23791 --advertise-client-urls=http://localhost:23791
+	// 启动命令：etcd --listen-client-urls=http://localhost:2379 --advertise-client-urls=http://localhost:2379
 
-	// 创建协调器，连接到 23791 端口的 etcd
+	// 创建协调器，连接到 2379 端口的 etcd
 	config := coord.DefaultConfig()
-	config.Endpoints = []string{"localhost:23791"}
+	config.Endpoints = []string{"localhost:2379"}
 	coordinator, err := coord.New(context.Background(), config)
 	if err != nil {
 		log.Fatalf("Failed to create coordinator: %v", err)

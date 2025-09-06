@@ -44,7 +44,7 @@ func main() {
 }
 
 // createCoordinator 创建协调器实例
-func createCoordinator() (coord.Provider, error) {
+func createCoordinator(ctx context.Context) (coord.Provider, error) {
 	config := coord.CoordinatorConfig{
 		Endpoints: endpoints,
 		Username:  username,
@@ -52,7 +52,7 @@ func createCoordinator() (coord.Provider, error) {
 		Timeout:   timeout,
 	}
 
-	return coord.New(config)
+	return coord.New(ctx, config)
 }
 
 // syncCmd 同步配置命令 - 核心功能
@@ -118,14 +118,14 @@ func syncCmd() *cobra.Command {
 			}
 
 			// 创建协调器连接
-			coordinator, err := createCoordinator()
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			coordinator, err := createCoordinator(ctx)
 			if err != nil {
 				return fmt.Errorf("创建协调器失败: %w", err)
 			}
 			defer coordinator.Close()
-
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
-			defer cancel()
 
 			// 批量写入配置
 			return writeConfigs(ctx, coordinator, configs)
