@@ -18,28 +18,74 @@ func configureSharding(db *gorm.DB, cfg *ShardingConfig) error {
 		clog.Int("numberOfShards", cfg.NumberOfShards),
 	)
 
-	// 创建分片配置
-	shardingConfig := sharding.Config{
+	// 创建gorm sharding库的配置
+	gormShardingConfig := sharding.Config{
 		ShardingKey:         cfg.ShardingKey,
 		NumberOfShards:      uint(cfg.NumberOfShards),
 		PrimaryKeyGenerator: sharding.PKSnowflake,
+		// 添加自定义分片算法，确保支持所有数据类型
+		ShardingAlgorithm: func(columnValue any) (suffix string, err error) {
+			var intValue int64
+			switch v := columnValue.(type) {
+			case int:
+				intValue = int64(v)
+			case int32:
+				intValue = int64(v)
+			case int64:
+				intValue = v
+			case uint:
+				intValue = int64(v)
+			case uint32:
+				intValue = int64(v)
+			case uint64:
+				intValue = int64(v)
+			case string:
+				// 对于字符串，可以尝试解析为数字
+				if parsed, parseErr := strconv.ParseInt(v, 10, 64); parseErr == nil {
+					intValue = parsed
+				} else {
+					// 如果不能解析为数字，使用哈希
+					hash := int64(0)
+					for _, c := range v {
+						hash = hash*31 + int64(c)
+					}
+					intValue = hash
+				}
+			default:
+				return "", fmt.Errorf("unsupported sharding key type: %T", columnValue)
+			}
+
+			if intValue < 0 {
+				intValue = -intValue
+			}
+
+			shardIndex := intValue % int64(cfg.NumberOfShards)
+			return fmt.Sprintf("_%02d", shardIndex), nil
+		},
 	}
 
-	// 根据 gorm.io/sharding 的实际 API，Register 函数接受配置和表名/结构体列表
+	// 根据 gorm.io/sharding 的实际 API，Register 函数接受配置和表名列表
 	var err error
 	if len(cfg.Tables) > 0 {
-		// 收集需要分片的表名
-		tables := make([]interface{}, 0, len(cfg.Tables))
+		// 收集需要分片的表名 - 注意：直接传递字符串，不要传递任何结构体
+		tables := make([]string, 0, len(cfg.Tables))
 		for tableName := range cfg.Tables {
 			tables = append(tables, tableName)
 			logger.Info("添加分片表",
 				clog.String("table", tableName),
 			)
 		}
-		err = db.Use(sharding.Register(shardingConfig, tables...))
+
+		// 将字符串切片转换为 interface{} 切片
+		tableInterfaces := make([]interface{}, len(tables))
+		for i, table := range tables {
+			tableInterfaces[i] = table
+		}
+
+		err = db.Use(sharding.Register(gormShardingConfig, tableInterfaces...))
 	} else {
 		// 如果没有指定表，则对所有表应用分片规则
-		err = db.Use(sharding.Register(shardingConfig))
+		err = db.Use(sharding.Register(gormShardingConfig))
 	}
 
 	if err != nil {

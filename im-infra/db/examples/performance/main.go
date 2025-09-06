@@ -214,7 +214,11 @@ func main() {
 			name: "简单ID查询",
 			query: func() error {
 				var product Product
-				return gormDB.WithContext(ctx).First(&product, 1000).Error
+				// 使用实际存在的ID进行查询
+				if len(productIDs) > 0 {
+					return gormDB.WithContext(ctx).First(&product, productIDs[0]).Error
+				}
+				return gormDB.WithContext(ctx).First(&product, 1).Error
 			},
 		},
 		{
@@ -251,7 +255,8 @@ func main() {
 					Where("status = ?", "active").
 					Group("category").
 					Order("count DESC").
-					First(&result).Error
+					Limit(1).
+					Scan(&result).Error
 			},
 		},
 	}

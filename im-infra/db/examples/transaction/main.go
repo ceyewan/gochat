@@ -43,7 +43,7 @@ func main() {
 	logger := clog.Module("db-transaction-example")
 
 	// 创建 MySQL 配置
-	cfg := db.MySQLConfig("root:mysql@tcp(localhost:3306)/gochat_transaction?charset=utf8mb4&parseTime=True&loc=Local")
+	cfg := db.MySQLConfig("gochat:gochat_pass_2024@tcp(localhost:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local")
 
 	// 使用 New 函数创建数据库实例，并注入 Logger
 	database, err := db.New(ctx, cfg, db.WithLogger(logger), db.WithComponentName("transaction-example"))
@@ -135,9 +135,11 @@ func main() {
 	fromAccountNo = "ACC002"
 	toAccountNo = "ACC003"
 
+	logger.Info("开始执行转账事务（预期失败场景）")
 	err = performTransfer(database, logger, fromAccountNo, toAccountNo, transferAmount)
 	if err != nil {
 		logger.Error("转账失败（预期失败）", clog.Err(err))
+		logger.Info("确认事务已回滚，检查账户余额是否恢复")
 	} else {
 		logger.Info("转账成功（不应该到这里）")
 	}
@@ -254,7 +256,15 @@ func performTransfer(database db.DB, logger clog.Logger, fromAccountNo, toAccoun
 		}
 
 		// 2. 检查余额
+		logger.Info("检查转出账户余额",
+			clog.String("accountNo", fromAccountNo),
+			clog.Int64("currentBalance", fromAccount.Balance),
+			clog.Int64("transferAmount", amount))
 		if fromAccount.Balance < amount {
+			logger.Warn("余额不足，事务将回滚",
+				clog.String("accountNo", fromAccountNo),
+				clog.Int64("currentBalance", fromAccount.Balance),
+				clog.Int64("transferAmount", amount))
 			return fmt.Errorf("余额不足，当前余额: %d, 转账金额: %d", fromAccount.Balance, amount)
 		}
 

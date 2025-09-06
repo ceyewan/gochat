@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
@@ -78,7 +79,28 @@ func (l *clogLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 	}
 
 	elapsed := time.Since(begin)
-	sql, rows := fc()
+
+	// 更强的防护性检查
+	if fc == nil {
+		clog.WithContext(ctx).Error("SQL执行函数为nil - 可能是分片库兼容性问题")
+		return
+	}
+
+	// 使用 defer 和 recover 来防止 panic
+	var sql string
+	var rows int64
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				clog.WithContext(ctx).Error("SQL执行函数调用时发生panic",
+					clog.String("panic", fmt.Sprintf("%v", r)),
+					clog.String("stack", string(debug.Stack())))
+				sql = "PANIC_IN_SQL_EXECUTION"
+				rows = 0
+			}
+		}()
+		sql, rows = fc()
+	}()
 
 	// 获取调用位置信息
 	fileWithLineNum := utils.FileWithLineNum()

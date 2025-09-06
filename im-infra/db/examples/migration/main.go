@@ -7,12 +7,13 @@ import (
 
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-infra/db"
+	"gorm.io/gorm"
 )
 
 // V1 模型 - 初始版本
 type UserV1 struct {
 	ID       uint   `gorm:"primaryKey"`
-	Username string `gorm:"uniqueIndex:idx_userv1_username;size:100;not null"`
+	Username string `gorm:"unique;size:100;not null"`
 	Email    string `gorm:"size:100"`
 }
 
@@ -24,7 +25,7 @@ func (UserV1) TableName() string {
 // V2 模型 - 添加字段
 type UserV2 struct {
 	ID        uint   `gorm:"primaryKey"`
-	Username  string `gorm:"uniqueIndex:idx_userv2_username;size:100;not null"`
+	Username  string `gorm:"unique;size:100;not null"`
 	Email     string `gorm:"size:100"`
 	Age       int    `gorm:"default:0"`
 	CreatedAt time.Time
@@ -39,7 +40,7 @@ func (UserV2) TableName() string {
 // V3 模型 - 添加更多字段
 type UserV3 struct {
 	ID        uint   `gorm:"primaryKey"`
-	Username  string `gorm:"uniqueIndex:idx_userv3_username;size:100;not null"`
+	Username  string `gorm:"unique;size:100;not null"`
 	Email     string `gorm:"size:100"`
 	Phone     string `gorm:"size:20"`
 	Age       int    `gorm:"default:0"`
@@ -57,10 +58,10 @@ func (UserV3) TableName() string {
 // Profile 关联表
 type ProfileV3 struct {
 	ID     uint   `gorm:"primaryKey"`
-	UserID uint   `gorm:"not null;index:idx_profile_user_id"`
+	UserID uint   `gorm:"index:idx_profile_user_id"`
 	Bio    string `gorm:"type:text"`
 	Avatar string `gorm:"size:500"`
-	User   UserV3 `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+	User   UserV3 `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 // TableName 指定 Profile 表名
@@ -84,7 +85,76 @@ func main() {
 	}
 	defer database.Close()
 
+	// 获取 GORM DB 实例用于调试
+	var gormDB *gorm.DB
+	gormDB = database.GetDB()
+
 	logger.Info("开始数据库迁移示例")
+
+	// === 清理遗留表（修复方案） ===
+	logger.Info("=== 清理遗留表以修复迁移问题 ===")
+
+	// 删除可能存在的遗留表
+	tablesToDrop := []string{"profiles_v3", "users_v3", "users_v2", "users_v1"}
+	for _, table := range tablesToDrop {
+		if err := gormDB.WithContext(ctx).Exec("DROP TABLE IF EXISTS " + table).Error; err != nil {
+			logger.Error("删除表失败", clog.String("table", table), clog.Err(err))
+		} else {
+			logger.Info("成功删除表", clog.String("table", table))
+		}
+	}
+
+	logger.Info("遗留表清理完成")
+
+	// === 调试：检查数据库初始状态 ===
+	logger.Info("=== 调试：检查数据库初始状态 ===")
+
+	// 检查是否已有相关表存在
+	var existingTables []string
+	if err := gormDB.WithContext(ctx).Raw("SHOW TABLES").Scan(&existingTables).Error; err != nil {
+		logger.Error("查询现有表失败", clog.Err(err))
+	} else {
+		logger.Info("数据库现有表", clog.Int("tableCount", len(existingTables)))
+		for _, table := range existingTables {
+			logger.Info("现有表", clog.String("tableName", table))
+		}
+	}
+
+	// 特别检查users_v1表
+	var v1TableName string
+	if err := gormDB.WithContext(ctx).Raw("SHOW TABLES LIKE 'users_v1'").Scan(&v1TableName).Error; err != nil {
+		logger.Error("检查users_v1表存在性失败", clog.Err(err))
+	} else if v1TableName != "" {
+		logger.Info("users_v1表已存在，检查其约束")
+
+		// 检查users_v1表的约束
+		type V1ConstraintInfo struct {
+			ConstraintName string `gorm:"column:CONSTRAINT_NAME"`
+			TableName      string `gorm:"column:TABLE_NAME"`
+			ColumnName     string `gorm:"column:COLUMN_NAME"`
+			ConstraintType string `gorm:"column:CONSTRAINT_TYPE"`
+		}
+
+		var v1Constraints []V1ConstraintInfo
+		if err := gormDB.WithContext(ctx).Raw(`
+			SELECT CONSTRAINT_NAME, TABLE_NAME, COLUMN_NAME, CONSTRAINT_TYPE
+			FROM information_schema.KEY_COLUMN_USAGE
+			WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users_v1'
+		`).Scan(&v1Constraints).Error; err != nil {
+			logger.Error("查询users_v1表约束失败", clog.Err(err))
+		} else {
+			logger.Info("users_v1表约束信息", clog.Int("constraintCount", len(v1Constraints)))
+			for _, constraint := range v1Constraints {
+				logger.Info("V1约束详情",
+					clog.String("constraintName", constraint.ConstraintName),
+					clog.String("tableName", constraint.TableName),
+					clog.String("columnName", constraint.ColumnName),
+					clog.String("constraintType", constraint.ConstraintType))
+			}
+		}
+	} else {
+		logger.Info("users_v1表不存在")
+	}
 
 	// === 第一次迁移：V1 模型 ===
 	logger.Info("执行 V1 迁移：创建基础用户表")
@@ -93,7 +163,7 @@ func main() {
 	}
 
 	// 插入一些 V1 数据
-	gormDB := database.GetDB()
+	gormDB = database.GetDB()
 	users := []UserV1{
 		{Username: "alice", Email: "alice@example.com"},
 		{Username: "bob", Email: "bob@example.com"},
@@ -175,6 +245,62 @@ func main() {
 		logger.Error("查询 V3 用户失败", clog.Err(err))
 	}
 
+	// === 调试：检查 users_v3 表的约束 ===
+	logger.Info("=== 调试：检查 users_v3 表结构 ===")
+
+	// 检查表是否存在
+	var tableName string
+	if err := gormDB.WithContext(ctx).Raw("SHOW TABLES LIKE 'users_v3'").Scan(&tableName).Error; err != nil {
+		logger.Error("检查表存在性失败", clog.Err(err))
+	} else if tableName != "" {
+		logger.Info("users_v3 表存在")
+	} else {
+		logger.Info("users_v3 表不存在")
+	}
+
+	// 检查表的约束
+	type ConstraintInfo struct {
+		ConstraintName      string `gorm:"column:CONSTRAINT_NAME"`
+		TableName           string `gorm:"column:TABLE_NAME"`
+		ColumnName          string `gorm:"column:COLUMN_NAME"`
+		ReferencedTableName string `gorm:"column:REFERENCED_TABLE_NAME"`
+	}
+
+	var constraints []ConstraintInfo
+	if err := gormDB.WithContext(ctx).Raw(`
+		SELECT CONSTRAINT_NAME, TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME
+		FROM information_schema.KEY_COLUMN_USAGE
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users_v3'
+	`).Scan(&constraints).Error; err != nil {
+		logger.Error("查询表约束失败", clog.Err(err))
+	} else {
+		logger.Info("users_v3 表约束信息", clog.Int("constraintCount", len(constraints)))
+		for _, constraint := range constraints {
+			logger.Info("约束详情",
+				clog.String("constraintName", constraint.ConstraintName),
+				clog.String("tableName", constraint.TableName),
+				clog.String("columnName", constraint.ColumnName),
+				clog.String("referencedTable", constraint.ReferencedTableName))
+		}
+	}
+
+	// 检查外键约束
+	var foreignKeys []ConstraintInfo
+	if err := gormDB.WithContext(ctx).Raw(`
+		SELECT CONSTRAINT_NAME, TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME
+		FROM information_schema.KEY_COLUMN_USAGE
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users_v3' AND REFERENCED_TABLE_NAME IS NOT NULL
+	`).Scan(&foreignKeys).Error; err != nil {
+		logger.Error("查询外键约束失败", clog.Err(err))
+	} else {
+		logger.Info("users_v3 表外键约束信息", clog.Int("foreignKeyCount", len(foreignKeys)))
+		for _, fk := range foreignKeys {
+			logger.Info("外键详情",
+				clog.String("constraintName", fk.ConstraintName),
+				clog.String("referencedTable", fk.ReferencedTableName))
+		}
+	}
+
 	// === 第四次迁移：添加关联表 ===
 	logger.Info("执行关联表迁移：创建 Profile 表")
 	if err := database.AutoMigrate(&ProfileV3{}); err != nil {
@@ -217,19 +343,19 @@ func main() {
 	logger.Info("V3 用户统计", clog.Int64("count", v3UsersCount))
 
 	// 查询带关联的用户数据
-	var usersWithProfiles []UserV3
-	if err := gormDB.WithContext(ctx).Preload("User").Table("profiles_v3").Find(&usersWithProfiles).Error; err != nil {
-		logger.Error("查询用户及档案失败", clog.Err(err))
+	var profilesWithUsers []ProfileV3
+	if err := gormDB.WithContext(ctx).Preload("User").Find(&profilesWithUsers).Error; err != nil {
+		logger.Error("查询档案及用户失败", clog.Err(err))
 	} else {
-		logger.Info("成功查询到用户及档案", clog.Int("count", len(usersWithProfiles)))
-		for _, user := range v3Users {
-			logger.Info("V3用户详细信息",
-				clog.Uint("id", user.ID),
-				clog.String("username", user.Username),
-				clog.String("email", user.Email),
-				clog.String("phone", user.Phone),
-				clog.Int("age", user.Age),
-				clog.Int("status", user.Status))
+		logger.Info("成功查询到档案及用户", clog.Int("count", len(profilesWithUsers)))
+		for _, profile := range profilesWithUsers {
+			logger.Info("档案及用户信息",
+				clog.Uint("profileID", profile.ID),
+				clog.Uint("userID", profile.UserID),
+				clog.String("username", profile.User.Username),
+				clog.String("email", profile.User.Email),
+				clog.String("phone", profile.User.Phone),
+				clog.String("bio", profile.Bio))
 		}
 	}
 
