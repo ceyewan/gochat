@@ -20,7 +20,7 @@ import (
 
 func main() {
 	// 初始化日志
-	logger, err := clog.New()
+	logger, err := clog.New(clog.DefaultConfig())
 	if err != nil {
 		panic(fmt.Sprintf("初始化日志失败: %v", err))
 	}

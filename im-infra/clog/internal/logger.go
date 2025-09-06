@@ -144,7 +144,7 @@ func (l *zapLogger) WithOptions(opts ...zap.Option) Logger {
 
 // Fatal 记录 Fatal 级别的日志并退出程序
 func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
-	l.Logger.Error(msg, fields...)
+	l.Logger.Fatal(msg, fields...)
 	os.Exit(1)
 }
 

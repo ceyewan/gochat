@@ -24,7 +24,7 @@ func main() {
 	// 创建协调器，连接到 23791 端口的 etcd
 	config := coord.DefaultConfig()
 	config.Endpoints = []string{"localhost:23791"}
-	coordinator, err := coord.New(config)
+	coordinator, err := coord.New(context.Background(), config)
 	if err != nil {
 		log.Fatalf("Failed to create coordinator: %v", err)
 	}

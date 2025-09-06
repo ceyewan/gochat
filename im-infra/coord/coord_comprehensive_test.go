@@ -25,7 +25,7 @@ func TestCoordComprehensive(t *testing.T) {
 		Endpoints: []string{"localhost:23791"},
 		Timeout:   5 * time.Second,
 	}
-	coordinator, err := New(config)
+	coordinator, err := New(context.Background(), config)
 	require.NoError(t, err)
 	defer coordinator.Close()
 
@@ -134,7 +134,7 @@ func TestCoordBasic(t *testing.T) {
 		Endpoints: []string{"localhost:23791"},
 		Timeout:   5 * time.Second,
 	}
-	coordinator, err := New(config)
+	coordinator, err := New(context.Background(), config)
 	require.NoError(t, err)
 	defer coordinator.Close()
 
@@ -163,7 +163,7 @@ func TestCoordErrors(t *testing.T) {
 		Endpoints: []string{"localhost:23791"},
 		Timeout:   5 * time.Second,
 	}
-	coordinator, err := New(config)
+	coordinator, err := New(context.Background(), config)
 	require.NoError(t, err)
 	defer coordinator.Close()
 
@@ -211,7 +211,7 @@ func TestCoordConcurrency(t *testing.T) {
 		Endpoints: []string{"localhost:23791"},
 		Timeout:   5 * time.Second,
 	}
-	coordinator, err := New(config)
+	coordinator, err := New(context.Background(), config)
 	require.NoError(t, err)
 	defer coordinator.Close()
 
@@ -257,7 +257,7 @@ func TestCoordPerformance(t *testing.T) {
 		Endpoints: []string{"localhost:23791"},
 		Timeout:   5 * time.Second,
 	}
-	coordinator, err := New(config)
+	coordinator, err := New(context.Background(), config)
 	require.NoError(t, err)
 	defer coordinator.Close()
 

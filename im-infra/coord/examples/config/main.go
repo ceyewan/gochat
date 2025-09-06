@@ -24,7 +24,8 @@ type AppConfig struct {
 
 func main() {
 	// clog 包是零配置的，不需要显式初始化
-	provider, err := coord.New()
+	cfg := coord.DefaultConfig()
+	provider, err := coord.New(context.Background(), cfg)
 	if err != nil {
 		clog.Error("failed to create coordinator", clog.Err(err))
 		os.Exit(1)

@@ -84,7 +84,7 @@ func TestConfigManager_DowngradeAndRecover(t *testing.T) {
 	onlineCfg := TestConfig{Version: 2, Name: "online"}
 
 	// 1. 启动一个真实的 coordinator，用于写入线上配置
-	writerCoord, err := New(CoordinatorConfig{Endpoints: validEndpoints, Timeout: 2 * time.Second})
+	writerCoord, err := New(context.Background(), CoordinatorConfig{Endpoints: validEndpoints, Timeout: 2 * time.Second})
 	require.NoError(t, err)
 	defer writerCoord.Close()
 
@@ -96,7 +96,7 @@ func TestConfigManager_DowngradeAndRecover(t *testing.T) {
 	require.NoError(t, err)
 
 	// 2. 创建一个使用无效地址的 coordinator，模拟启动时 etcd 不可用
-	invalidCoord, err := New(CoordinatorConfig{Endpoints: invalidEndpoints, Timeout: 1 * time.Second})
+	invalidCoord, err := New(context.Background(), CoordinatorConfig{Endpoints: invalidEndpoints, Timeout: 1 * time.Second})
 	// 这里我们预期会出错，但 coordinator 实例应该仍然被创建
 	require.Error(t, err)
 	require.NotNil(t, invalidCoord)
@@ -123,7 +123,7 @@ func TestConfigManager_DowngradeAndRecover(t *testing.T) {
 	// 5. 现在，我们神奇地“修复”etcd的连接
 	// 通过创建一个新的、可用的 coordinator 并替换 manager 内部的 configCenter 来模拟
 	// 注意：真实场景下不会这么做，这里是为了测试方便
-	validCoord, err := New(CoordinatorConfig{Endpoints: validEndpoints, Timeout: 2 * time.Second})
+	validCoord, err := New(context.Background(), CoordinatorConfig{Endpoints: validEndpoints, Timeout: 2 * time.Second})
 	require.NoError(t, err)
 	defer validCoord.Close()
 
@@ -153,7 +153,7 @@ func TestConfigManager_ValidationAndUpdater(t *testing.T) {
 	}
 
 	endpoints := []string{"localhost:23791"}
-	coord, err := New(CoordinatorConfig{Endpoints: endpoints, Timeout: 5 * time.Second})
+	coord, err := New(context.Background(), CoordinatorConfig{Endpoints: endpoints, Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer coord.Close()
 
@@ -255,7 +255,7 @@ func TestDistributedLock_LeaseExpiration(t *testing.T) {
 	ttl := 2 * time.Second // 使用一个较短的 TTL
 
 	// Client A: 获取锁，然后模拟其崩溃（不释放锁）
-	coordA, err := New(CoordinatorConfig{Endpoints: endpoints, Timeout: 5 * time.Second})
+	coordA, err := New(context.Background(), CoordinatorConfig{Endpoints: endpoints, Timeout: 5 * time.Second})
 	require.NoError(t, err)
 
 	ctxA, cancelA := context.WithTimeout(context.Background(), 10*time.Second)
@@ -271,7 +271,7 @@ func TestDistributedLock_LeaseExpiration(t *testing.T) {
 	t.Log("Client A 'crashed' (coordinator closed).")
 
 	// Client B: 尝试获取同一个锁
-	coordB, err := New(CoordinatorConfig{Endpoints: endpoints, Timeout: 5 * time.Second})
+	coordB, err := New(context.Background(), CoordinatorConfig{Endpoints: endpoints, Timeout: 5 * time.Second})
 	require.NoError(t, err)
 	defer coordB.Close()
 

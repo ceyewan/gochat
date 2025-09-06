@@ -98,20 +98,27 @@ func getDefaultLogger() internal.Logger {
 // New 根据传入的配置创建一个新的、独立的 Logger 实例。
 // 这个函数是创建 logger 的主要入口，推荐在需要日志记录的组件中通过依赖注入使用它返回的 logger。
 // 如果没有提供配置，使用 DefaultConfig。
-func New(config ...Config) (Logger, error) {
-	var cfg Config
-	if len(config) > 0 {
-		cfg = config[0]
-	} else {
-		cfg = DefaultConfig()
-	}
-
+func New(cfg Config) (Logger, error) {
 	logger, err := internal.NewLogger(cfg, internal.WithHook(traceIDHook))
 	if err != nil {
 		// 返回一个备用的 fallback logger 和原始错误
 		return internal.NewFallbackLogger(), err
 	}
 	return logger, nil
+}
+
+// Init 根据传入的配置重新初始化全局默认 logger。
+// 这个函数用于运行时重新配置全局 logger，通常在从配置中心获取到最终配置后调用。
+// Init 会原子性地替换全局 logger，所有后续的日志调用都会使用新的配置。
+func Init(cfg Config) error {
+	logger, err := internal.NewLogger(cfg, internal.WithHook(traceIDHook))
+	if err != nil {
+		// 返回错误，但不替换现有 logger，保持系统可用性
+		return err
+	}
+	// 原子替换全局 logger
+	defaultLogger.Store(logger)
+	return nil
 }
 
 // Module 返回模块化日志器
@@ -150,36 +157,8 @@ func Error(msg string, fields ...Field) {
 
 // Fatal 记录 Fatal 级别的日志并退出程序
 func Fatal(msg string, fields ...Field) {
-	getDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
+	getDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
 	os.Exit(1)
-}
-
-// Init 初始化或重新配置全局日志器。
-// 这个函数主要用于应用程序启动时设置全局日志。
-// 对于可测试和可维护的代码，推荐使用 New() 创建 logger 并通过依赖注入传递，而不是依赖此全局函数。
-func Init(config ...Config) error {
-	var cfg Config
-	if len(config) > 0 {
-		cfg = config[0]
-	} else {
-		cfg = DefaultConfig()
-	}
-
-	logger, err := New(cfg)
-	if err != nil {
-		return err
-	}
-
-	// 原子地替换全局日志器
-	defaultLogger.Store(logger)
-
-	// 清空模块日志器缓存，强制重新创建
-	moduleLoggers.Range(func(key, _ any) bool {
-		moduleLoggers.Delete(key)
-		return true
-	})
-
-	return nil
 }
 
 // C 返回一个带 context 的 logger，用于链式调用

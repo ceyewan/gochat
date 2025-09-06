@@ -20,13 +20,13 @@ type User struct {
 
 func main() {
 	// 1. 初始化 coord 实例
-	coordInstance, _ := coord.New(coord.Config{
+	coordInstance, _ := coord.New(context.Background(), coord.CoordinatorConfig{
 		Endpoints: []string{"localhost:2379"}, // etcd endpoints
 		Timeout:   5 * time.Second,
 	})
 
 	// 2. 获取配置中心
-	configCenter := coordInstance.ConfigCenter()
+	configCenter := coordInstance.Config()
 
 	// 3. 设置 db 配置中心（这会让 db 从配置中心获取配置）
 	db.SetupConfigCenterFromCoord(configCenter, "dev", "gochat", "db")

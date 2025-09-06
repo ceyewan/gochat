@@ -45,13 +45,7 @@ config := clog.Config{
     EnableColor: false,
 }
 
-// 初始化全局日志器
-err := clog.Init(config)
-if err != nil {
-    log.Fatal(err)
-}
-
-// 或创建独立的日志器
+// 创建独立的日志器
 logger, err := clog.New(config)
 if err != nil {
     log.Fatal(err)

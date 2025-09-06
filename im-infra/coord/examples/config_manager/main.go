@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -53,7 +54,7 @@ func main() {
 	log.Println("=== 通用配置管理器示例 ===")
 
 	// 1. 初始化 coord 实例
-	coordInstance, err := coord.New(coord.CoordinatorConfig{
+	coordInstance, err := coord.New(context.Background(), coord.CoordinatorConfig{
 		Endpoints: []string{"localhost:2379"}, // etcd endpoints
 		Timeout:   5 * time.Second,
 	})
