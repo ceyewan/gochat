@@ -13,7 +13,7 @@ type Config struct {
 	DSN string `json:"dsn" yaml:"dsn"`
 
 	// Driver 数据库驱动类型
-	// 支持: "mysql", "postgres", "sqlite"
+	// 仅支持: "mysql"
 	// 默认: "mysql"
 	Driver string `json:"driver" yaml:"driver"`
 
@@ -126,8 +126,8 @@ func (c *Config) Validate() error {
 		c.Driver = "mysql"
 	}
 
-	if c.Driver != "mysql" && c.Driver != "postgres" && c.Driver != "sqlite" {
-		return fmt.Errorf("unsupported driver: %s", c.Driver)
+	if c.Driver != "mysql" {
+		return fmt.Errorf("unsupported driver: %s, only mysql is supported", c.Driver)
 	}
 
 	if c.MaxOpenConns <= 0 {
