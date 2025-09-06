@@ -1,414 +1,171 @@
-# cache
+# Cache - 分布式缓存服务
 
-一个现代化、高性能的 Go Redis 缓存库，基于 Redis Go 客户端 v9 构建。cache 提供简洁、可组合的接口，支持字符串、哈希、集合操作、分布式锁、布隆过滤器等高级特性。
+`cache` 是一个基于 [go-redis](https://github.com/redis/go-redis) 的高级 Redis 操作包，为 GoChat 项目提供了统一、高性能且功能丰富的分布式缓存能力。它遵循 `im-infra` 的核心设计理念，提供了清晰的分层架构、类型安全的接口和灵活的配置选项。
 
-## 功能特色
+## 核心特性
 
-- 🚀 **基于 go-redis/v9**：充分利用最新的 Redis Go 客户端，性能与兼容性俱佳
-- 🎯 **接口驱动**：抽象清晰，封装合理
-- 🌟 **全局缓存方法**：支持 `cache.Get()` 等全局缓存方法，无需显式创建缓存实例
-- 📦 **自定义缓存实例**：`cache.New(config)` 创建自定义配置的缓存实例
-- 📝 **多数据结构支持**：支持字符串、哈希、集合等 Redis 数据结构
-- 🔒 **分布式锁**：Redis 基础的分布式锁，支持过期时间和续期
-- 🌸 **布隆过滤器**：Redis 基础的布隆过滤器，支持概率性成员测试
-- 🔄 **连接池管理**：内置连接池和错误恢复机制
-- 🏷️ **日志集成**：与 clog 日志库深度集成，提供详细的操作日志
-- ⚡ **高性能**：优化的序列化和网络操作
-- 🎨 **配置灵活**：丰富的配置选项和预设配置
-- 🔧 **零额外依赖**：仅依赖 go-redis 和 clog
+- 🏗️ **模块化架构**: 清晰的 `外部 API` -> `内部实现` 分层，职责分离。
+- 🔌 **面向接口编程**: 所有功能均通过 `cache.Cache` 接口暴露，易于测试和模拟 (mock)。
+- 🛡️ **类型安全**: 所有与时间相关的参数均使用 `time.Duration`，避免整数转换错误。
+- 📝 **功能完备**: 提供字符串、哈希、集合、分布式锁、布隆过滤器和 Lua 脚本执行等丰富操作。
+- ⚙️ **灵活配置**: 提供 `DefaultConfig()` 和 `Option` 函数（如 `WithLogger`），易于定制。
+- 📦 **封装设计**: 内部实现对用户透明，通过键前缀（`KeyPrefix`）支持命名空间隔离。
+- 📊 **日志集成**: 与 `im-infra/clog` 无缝集成，提供结构化的日志输出。
 
-## 安装
+## 快速开始
+
+### 安装
 
 ```bash
 go get github.com/ceyewan/gochat/im-infra/cache
 ```
 
-## 快速开始
+### 基础用法
 
-### 基本用法
-
-#### 全局缓存方法（推荐）
+下面的示例展示了如何初始化 `cache` 客户端并执行基本的 `Set` 和 `Get` 操作。
 
 ```go
 package main
 
 import (
-    "context"
-    "time"
-    "github.com/ceyewan/gochat/im-infra/cache"
+	"context"
+	"log"
+	"time"
+
+	"github.com/ceyewan/gochat/im-infra/cache"
+	"github.com/ceyewan/gochat/im-infra/clog"
 )
 
 func main() {
-    ctx := context.Background()
-    
-    // 字符串操作
-    err := cache.Set(ctx, "user:123", "John Doe", time.Hour)
-    if err != nil {
-        panic(err)
-    }
-    
-    value, err := cache.Get(ctx, "user:123")
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("User:", value)
-    
-    // 哈希操作
-    err = cache.HSet(ctx, "user:123:profile", "name", "John Doe")
-    err = cache.HSet(ctx, "user:123:profile", "email", "john@example.com")
-    
-    profile, err := cache.HGetAll(ctx, "user:123:profile")
-    fmt.Println("Profile:", profile)
-    
-    // 集合操作
-    err = cache.SAdd(ctx, "user:123:tags", "developer", "golang", "redis")
-    tags, err := cache.SMembers(ctx, "user:123:tags")
-    fmt.Println("Tags:", tags)
+	logger := clog.Module("cache-example")
+	ctx := context.Background()
+
+	// 使用默认配置，并指定 Redis 地址
+	cfg := cache.DefaultConfig()
+	cfg.Addr = "localhost:6379"
+
+	// 创建 Cache 实例
+	cacheClient, err := cache.New(ctx, cfg, cache.WithLogger(logger))
+	if err != nil {
+		log.Fatalf("无法创建缓存客户端: %v", err)
+	}
+	defer cacheClient.Close()
+
+	// 设置一个键值对，过期时间为 5 分钟
+	err = cacheClient.Set(ctx, "mykey", "hello world", 5*time.Minute)
+	if err != nil {
+		log.Fatalf("设置值失败: %v", err)
+	}
+
+	// 获取刚刚设置的值
+	value, err := cacheClient.Get(ctx, "mykey")
+	if err != nil {
+		log.Fatalf("获取值失败: %v", err)
+	}
+
+	log.Printf("成功获取值: %s", value)
 }
 ```
 
-#### 自定义缓存实例（推荐用于大型应用）
+## 架构设计
+
+`cache` 包遵循 `im-infra` 中定义的 **客户端包装型 (Client Wrapper)** 原型。
+
+- **公共 API 层 (`cache.go`, `interfaces.go`)**: 定义了所有用户可直接调用的公共接口和 `New` 工厂函数。
+- **内部实现层 (`internal/`)**: 包含所有接口的具体实现，通过不同的 `*_ops.go` 文件将功能模块化。
+- **依赖流向**: `cache.New()` -> `internal.NewCache()` -> 创建并组装所有操作模块（`stringOperations`, `lockOperations` 等）。
+
+### 目录结构
+
+```
+cache/
+├── cache.go              # 主入口，New 工厂函数
+├── interfaces.go         # 所有公共接口定义 (Cache, Lock, etc.)
+├── config.go             # 配置结构体 (Config)
+├── options.go            # Option 函数 (WithLogger, etc.)
+├── README.md             # 本文档
+├── examples/             # 使用示例
+│   ├── basic/main.go
+│   └── advanced/main.go
+└── internal/             # 内部实现
+    ├── client.go         # 核心客户端实现
+    ├── string_ops.go     # 字符串操作
+    ├── hash_ops.go       # 哈希操作
+    ├── set_ops.go        # 集合操作
+    ├── lock_ops.go       # 分布式锁操作
+    ├── bloom_ops.go      # 布隆过滤器操作
+    └── scripting_ops.go  # Lua 脚本操作
+```
+
+## API 参考
+
+### 主接口 (`cache.Cache`)
+
+`Cache` 接口是所有操作的入口，它组合了各种数据结构的操作接口。
 
 ```go
-package main
+type Cache interface {
+	StringOperations
+	HashOperations
+	SetOperations
+	LockOperations
+	BloomFilterOperations
+	ScriptingOperations
 
-import (
-    "context"
-    "time"
-    "github.com/ceyewan/gochat/im-infra/cache"
-)
-
-func main() {
-    ctx := context.Background()
-
-    // 创建自定义配置的缓存实例
-    userCfg := cache.NewConfigBuilder().
-        KeyPrefix("user").
-        PoolSize(10).
-        Build()
-    userCache, _ := cache.New(userCfg)
-
-    sessionCfg := cache.NewConfigBuilder().
-        KeyPrefix("session").
-        PoolSize(5).
-        Build()
-    sessionCache, _ := cache.New(sessionCfg)
-
-    // 用户缓存操作
-    err := userCache.Set(ctx, "123", userData, time.Hour)
-    user, err := userCache.Get(ctx, "123")
-
-    // 会话缓存操作
-    err = sessionCache.Set(ctx, "abc", sessionData, time.Minute*30)
-    session, err := sessionCache.Get(ctx, "abc")
+	Ping(ctx context.Context) error
+	Close() error
 }
 ```
 
-### 自定义配置
+### 配置选项 (`cache.Config`)
 
 ```go
-package main
-
-import (
-    "github.com/ceyewan/gochat/im-infra/cache"
-)
-
-func main() {
-    // 使用预设配置
-    cfg := cache.ProductionConfig()
-    
-    // 或者使用配置构建器
-    cfg = cache.NewConfigBuilder().
-        Addr("redis:6379").
-        Password("secret").
-        DB(0).
-        PoolSize(20).
-        KeyPrefix("myapp").
-        EnableTracing().
-        EnableMetrics().
-        Build()
-    
-    cacheInstance, err := cache.New(cfg)
-    if err != nil {
-        panic(err)
-    }
-    
-    // 使用自定义缓存实例
-    err = cacheInstance.Set(ctx, "key", "value", time.Hour)
+type Config struct {
+	Addr            string        `json:"addr"`
+	Password        string        `json:"password"`
+	DB              int           `json:"db"`
+	PoolSize        int           `json:"poolSize"`
+	DialTimeout     time.Duration `json:"dialTimeout"`
+	ReadTimeout     time.Duration `json:"readTimeout"`
+	WriteTimeout    time.Duration `json:"writeTimeout"`
+	KeyPrefix       string        `json:"keyPrefix"`
+	// ... 更多选项
 }
 ```
 
-## 核心功能
+### 操作接口
 
-### 字符串操作
+#### 字符串 (`StringOperations`)
+- `Set(ctx, key, value, expiration)`
+- `Get(ctx, key)`
+- `Incr(ctx, key)` / `Decr(ctx, key)`
+- `Del(ctx, keys...)`
 
-```go
-ctx := context.Background()
+#### 哈希 (`HashOperations`)
+- `HSet(ctx, key, field, value)`
+- `HGet(ctx, key, field)`
+- `HGetAll(ctx, key)`
 
-// 基本操作
-cache.Set(ctx, "key", "value", time.Hour)
-value, _ := cache.Get(ctx, "key")
+#### 集合 (`SetOperations`)
+- `SAdd(ctx, key, members...)`
+- `SIsMember(ctx, key, member)`
+- `SMembers(ctx, key)`
 
-// 数值操作
-cache.Set(ctx, "counter", 0, time.Hour)
-newValue, _ := cache.Incr(ctx, "counter")  // 1
-newValue, _ := cache.Decr(ctx, "counter")  // 0
+#### 分布式锁 (`LockOperations`)
+- `Lock(ctx, key, expiration)`: 获取一个锁实例。
+- `lock.Unlock(ctx)`: 释放锁。
+- `lock.Refresh(ctx, expiration)`: 为锁续期。
 
-// 过期时间
-cache.Expire(ctx, "key", time.Minute*30)
-ttl, _ := cache.TTL(ctx, "key")
+#### 布隆过滤器 (`BloomFilterOperations`)
+- `BFInit(ctx, key, errorRate, capacity)`: 初始化过滤器。
+- `BFAdd(ctx, key, item)`: 添加元素。
+- `BFExists(ctx, key, item)`: 检查元素是否存在。
 
-// 删除和检查
-cache.Del(ctx, "key1", "key2")
-count, _ := cache.Exists(ctx, "key1", "key2")
-```
+## 示例代码
 
-### 哈希操作
+- **基础用法**: [examples/basic/main.go](./examples/basic/main.go)
+- **高级用法** (分布式锁, 布隆过滤器): [examples/advanced/main.go](./examples/advanced/main.go)
 
-```go
-ctx := context.Background()
+## 贡献
 
-// 设置和获取字段
-cache.HSet(ctx, "user:123", "name", "John")
-cache.HSet(ctx, "user:123", "email", "john@example.com")
-name, _ := cache.HGet(ctx, "user:123", "name")
-
-// 获取所有字段
-fields, _ := cache.HGetAll(ctx, "user:123")
-
-// 删除字段
-cache.HDel(ctx, "user:123", "email")
-
-// 检查字段存在
-exists, _ := cache.HExists(ctx, "user:123", "name")
-
-// 获取字段数量
-count, _ := cache.HLen(ctx, "user:123")
-```
-
-### 集合操作
-
-```go
-ctx := context.Background()
-
-// 添加成员
-cache.SAdd(ctx, "tags", "golang", "redis", "cache")
-
-// 检查成员
-isMember, _ := cache.SIsMember(ctx, "tags", "golang")
-
-// 获取所有成员
-members, _ := cache.SMembers(ctx, "tags")
-
-// 移除成员
-cache.SRem(ctx, "tags", "cache")
-
-// 获取成员数量
-count, _ := cache.SCard(ctx, "tags")
-```
-
-### 分布式锁
-
-```go
-ctx := context.Background()
-
-// 获取锁
-lock, err := cache.Lock(ctx, "resource:123", time.Minute*5)
-if err != nil {
-    // 锁已被占用或其他错误
-    return
-}
-
-// 执行临界区代码
-defer lock.Unlock(ctx)
-
-// 续期锁
-err = lock.Refresh(ctx, time.Minute*10)
-
-// 检查锁状态
-isLocked, _ := lock.IsLocked(ctx)
-```
-
-### 布隆过滤器
-
-```go
-ctx := context.Background()
-
-// 初始化布隆过滤器
-err := cache.BloomInit(ctx, "users", 1000000, 0.01)
-
-// 添加元素
-cache.BloomAdd(ctx, "users", "user123")
-cache.BloomAdd(ctx, "users", "user456")
-
-// 检查元素是否存在
-exists, _ := cache.BloomExists(ctx, "users", "user123")  // true
-exists, _ = cache.BloomExists(ctx, "users", "user999")   // false (可能)
-```
-
-## 配置选项
-
-### 预设配置
-
-```go
-// 开发环境
-cfg := cache.DevelopmentConfig()
-
-// 生产环境
-cfg := cache.ProductionConfig()
-
-// 测试环境
-cfg := cache.TestConfig()
-
-// 高性能场景
-cfg := cache.HighPerformanceConfig()
-```
-
-### 配置构建器
-
-```go
-cfg := cache.NewConfigBuilder().
-    Addr("localhost:6379").
-    Password("secret").
-    DB(0).
-    PoolSize(20).
-    IdleConns(5, 15).
-    Timeouts(5*time.Second, 3*time.Second, 3*time.Second, 4*time.Second).
-    Retries(3, 8*time.Millisecond, 512*time.Millisecond).
-    KeyPrefix("myapp").
-    Serializer("json").
-    EnableTracing().
-    EnableMetrics().
-    EnableCompression().
-    Build()
-```
-
-## 最佳实践
-
-### 1. 选择合适的缓存方法
-
-```go
-// ✅ 简单场景：使用全局方法
-cache.Set(ctx, "key", "value", time.Hour)
-
-// ✅ 复杂配置：使用自定义缓存实例
-cacheInstance, _ := cache.New(customConfig)
-cacheInstance.Set(ctx, "key", "value", time.Hour)
-
-// ✅ 模块化场景：创建专用缓存实例
-userCfg := cache.NewConfigBuilder().KeyPrefix("user").Build()
-userCache, _ := cache.New(userCfg)
-userCache.Set(ctx, "123", userData, time.Hour)
-```
-
-### 2. 性能优化
-
-```go
-// ✅ 缓存自定义缓存实例
-var (
-    userCache    Cache
-    sessionCache Cache
-)
-
-func init() {
-    userCfg := cache.NewConfigBuilder().KeyPrefix("user").Build()
-    userCache, _ = cache.New(userCfg)
-
-    sessionCfg := cache.NewConfigBuilder().KeyPrefix("session").Build()
-    sessionCache, _ = cache.New(sessionCfg)
-}
-
-func handleRequest() {
-    userCache.Get(ctx, "123")    // 使用预创建的实例
-    sessionCache.Get(ctx, "abc") // 使用预创建的实例
-}
-
-// ❌ 避免重复创建实例
-func handleRequest() {
-    userCfg := cache.NewConfigBuilder().KeyPrefix("user").Build()
-    userCache, _ := cache.New(userCfg) // 有额外开销
-    userCache.Get(ctx, "123")
-}
-```
-
-### 3. 错误处理
-
-```go
-value, err := cache.Get(ctx, "key")
-if err != nil {
-    if cache.IsKeyNotFoundError(err) {
-        // 键不存在，执行相应逻辑
-        return defaultValue, nil
-    }
-    // 其他错误，记录日志并返回
-    return "", fmt.Errorf("cache get failed: %w", err)
-}
-```
-
-### 4. 上下文使用
-
-```go
-// ✅ 使用带超时的上下文
-ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-defer cancel()
-
-value, err := cache.Get(ctx, "key")
-```
-
-## 日志集成
-
-cache 与 clog 日志库深度集成，提供详细的操作日志：
-
-```go
-// 缓存操作会自动记录日志
-cache.Set(ctx, "key", "value", time.Hour)
-// 日志输出: level=DEBUG msg="缓存操作成功" operation=SET key=key duration=2ms
-
-// 慢操作会记录警告日志
-// 日志输出: level=WARN msg="检测到慢缓存操作" operation=GET key=key duration=150ms threshold=100ms
-
-// 错误会记录错误日志
-// 日志输出: level=ERROR msg="缓存操作失败" operation=GET key=key duration=5ms error="connection refused"
-```
-
-## 监控和指标
-
-启用指标收集后，cache 会收集以下指标：
-
-- 操作延迟
-- 操作成功/失败率
-- 连接池状态
-- 慢操作统计
-
-## 常见问题
-
-### Q: 全局方法和自定义缓存实例的区别？
-A: 全局方法适用于简单场景，自定义缓存实例适用于需要不同配置或命名空间隔离的场景。自定义实例可以有独立的配置和键前缀。
-
-### Q: 如何处理连接失败？
-A: cache 内置了重试机制和连接池管理，会自动处理临时连接失败。持续失败会记录错误日志。
-
-### Q: 分布式锁是否支持续期？
-A: 是的，可以使用 `lock.Refresh()` 方法续期锁的过期时间。
-
-### Q: 布隆过滤器的误判率如何控制？
-A: 通过调整容量和错误率参数来控制。容量越大、错误率越小，所需的内存和哈希函数就越多。
-
-### Q: 如何选择序列化器？
-A: 默认使用 JSON 序列化器，适用于大多数场景。未来会支持 msgpack 和 gob 等更高效的序列化器。
-
-## 性能基准
-
-cache 在各种场景下都有优异的性能表现：
-
-```
-BenchmarkGet-8          1000000    1200 ns/op    128 B/op    3 allocs/op
-BenchmarkSet-8           800000    1500 ns/op    256 B/op    5 allocs/op
-BenchmarkHGet-8          900000    1300 ns/op    160 B/op    4 allocs/op
-BenchmarkSAdd-8          700000    1800 ns/op    320 B/op    6 allocs/op
-BenchmarkLock-8          500000    2500 ns/op    512 B/op    8 allocs/op
-```
-
-## 许可证
-
-MIT License
+欢迎通过提交 Issue 和 Pull Request 来改进此包。
