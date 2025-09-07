@@ -23,7 +23,7 @@ func NewDatabase(cfg *config.Config) (*Database, error) {
 	logger := clog.Module("database")
 
 	// 创建数据库连接
-	database, err := db.New(cfg.Database)
+	database, err := db.New(context.Background(), cfg.Database, db.WithLogger(logger))
 	if err != nil {
 		logger.Error("创建数据库连接失败", clog.Err(err))
 		return nil, fmt.Errorf("创建数据库连接失败: %w", err)

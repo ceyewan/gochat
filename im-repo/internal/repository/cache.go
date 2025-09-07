@@ -23,7 +23,7 @@ func NewCacheManager(cfg *config.Config) (*CacheManager, error) {
 	logger := clog.Module("cache-manager")
 
 	// 创建缓存连接
-	cacheClient, err := cache.New(cfg.Cache)
+	cacheClient, err := cache.New(context.Background(), cfg.Cache, cache.WithLogger(logger))
 	if err != nil {
 		logger.Error("创建缓存连接失败", clog.Err(err))
 		return nil, fmt.Errorf("创建缓存连接失败: %w", err)
