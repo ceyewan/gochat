@@ -31,10 +31,9 @@
 ## 3. 添加新的 gRPC 方法
 
 1.  **在 `.proto` 中定义**: 将新的 RPC 方法添加到 `api/proto/` 中相关 `.proto` 文件中的适当服务定义中。
-2.  **生成代码**: 从 `api/` 目录运行 `buf generate` 以生成更新的 Go 接口和客户端/服务器代码。
+2.  **生成代码**: 运行 `make proto` 命令来自动生成所有 Protobuf 代码。
     ```bash
-    cd api
-    buf generate
+    make proto
     ```
 3.  **在仓储中实现（如果需要）**: 如果新方法需要数据访问，请将相应的函数添加到 `im-repo/internal/repository/` 中的适当仓储文件中。
 4.  **在服务中实现**: 在相应的服务文件中实现新的 gRPC 方法（例如 `im-logic/internal/service/user_service.go`）。这是业务逻辑所在的位置。
@@ -46,13 +45,13 @@
     -   为依赖项使用模拟（例如，在测试服务时模拟仓储）。
     -   测试文件应命名为 `_test.go`。
 -   **集成测试**: 对于更复杂的功能，可以添加集成测试以测试服务之间的交互。这些测试通常针对通过 Docker 启动的真实数据库和其他基础设施组件运行。
--   **运行测试**:
+-   **运行测试**: 使用 `make test` 命令来运行项目中所有的单元测试，并自动启用竞态分析。
     ```bash
-    # 运行特定包的测试
-    go test ./im-repo/internal/service
-
-    # 运行项目中的所有测试
-    go test ./...
+    make test
+    ```
+    - 如果你想运行所有检查（格式化、静态分析和测试），可以直接使用 `make all`。
+    ```bash
+    make all
     ```
 
 ## 5. 依赖管理

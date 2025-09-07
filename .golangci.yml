@@ -1,0 +1,92 @@
+# .golangci.yml
+# GoChat 项目的 golangci-lint 配置文件
+
+run:
+  # 默认情况下，golangci-lint 不会检查测试文件。
+  # 我们启用它以确保测试代码的质量。
+  tests: true
+  # 设置超时时间，防止 linter 运行时间过长。
+  timeout: 5m
+  # 在分析代码时使用的 Go 版本。
+  go: '1.2'
+
+linters-settings:
+  govet:
+    # 检查 struct tag 是否符合规范。
+    check-shadowing: true
+  gocyclo:
+    # 设置函数/方法的圈复杂度阈值。
+    # 保持较低的复杂度有助于代码的可读性和可维护性。
+    min-complexity: 15
+  maligned:
+    # 建议对 struct 字段进行重新排序以优化内存对齐。
+    suggest-new: true
+  goconst:
+    # 查找重复的字符串，建议将它们提取为常量。
+    min-len: 2
+    min-occurrences: 3
+  misspell:
+    # 修正常见的英文拼写错误。
+    locale: US
+  goimports:
+    # 强制使用 goimports 而不是 gofmt，它会自动格式化并管理 imports。
+    local-prefixes: github.com/ceyewan/gochat
+  gocritic:
+    # 启用所有 gocritic 检查器。
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      # 禁用一些可能过于主观或与项目风格冲突的检查。
+      - whyNoLint
+      - wrapperFunc
+  funlen:
+    # 检查函数长度。
+    lines: 100 # 函数不应超过 100 行
+    statements: 50 # 函数不应超过 50 个语句
+
+linters:
+  # 禁用所有默认的 linter，然后显式启用我们需要的。
+  # 这样可以更好地控制我们的代码质量标准。
+  disable-all: true
+  enable:
+    # --- 核心检查器 ---
+    - gofmt         # 检查代码是否已用 gofmt 格式化。
+    - goimports     # 检查 imports 是否已排序和分组。
+    - govet         # 分析 Go 源代码并报告可疑构造。
+    - staticcheck   # 一套强大的静态分析检查器。
+    - unused        # 检查未使用的代码。
+
+    # --- 风格和复杂度 ---
+    - gocyclo       # 计算函数/方法的圈复杂度。
+    - funlen        # 检查函数长度。
+    - gocritic      # 提供额外的代码风格和性能建议。
+    - goconst       # 查找可以用常量替换的重复字符串。
+
+    # --- Bug 发现 ---
+    - errcheck      # 检查未处理的错误。
+    - ineffassign   # 检测无效的赋值。
+    - typecheck     # 确保代码可以通过 Go 编译器类型检查。
+
+    # --- 其他 ---
+    - misspell      # 修正常见的拼写错误。
+    - prealloc      # 查找可以预分配内存以提高性能的切片。
+    - revive        # 类似于 golint，但可配置性更高。
+
+issues:
+  # 设置排除规则。
+  exclude-rules:
+    # 排除在测试文件中 errcheck 报告的错误。
+    # 在测试中，我们有时会故意忽略错误以简化测试代码。
+    - path: _test\.go
+      linters:
+        - errcheck
+
+    # 排除生成的代码。
+    - path: gen/
+      linters:
+        - stylecheck
+        - unused
