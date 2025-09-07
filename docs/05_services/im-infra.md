@@ -35,6 +35,8 @@
 - **[可观测性 (metrics)](../../docs/08_infra/metrics.md)**: 基于 OpenTelemetry 实现 Metrics 和 Tracing 的零侵入收集。
 - **[幂等操作 (once)](../../docs/08_infra/once.md)**: 基于 Redis 实现的分布式幂等操作保证。
 - **[分布式限流 (ratelimit)](../../docs/08_infra/ratelimit.md)**: 基于令牌桶算法的分布式限流解决方案。
+- **[优雅重试 (retry)](../../docs/08_infra/retry.md)**: 提供策略驱动的、统一的错误重试机制。
+- **[熔断器 (breaker)](../../docs/08_infra/breaker.md)**: 提供服务保护，防止雪崩效应。
 
 ## 4. 使用方式
 

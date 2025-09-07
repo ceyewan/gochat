@@ -76,3 +76,5 @@
 - **[可观测性 (metrics)](./metrics.md)**
 - **[幂等操作 (once)](./once.md)**
 - **[分布式限流 (ratelimit)](./ratelimit.md)**
+- **[优雅重试 (retry)](./retry.md)**
+- **[熔断器 (breaker)](./breaker.md)**
