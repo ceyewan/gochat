@@ -2,79 +2,189 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-task/internal/config"
+	"github.com/ceyewan/gochat/im-task/internal/server/grpc"
+	"github.com/ceyewan/gochat/im-task/internal/server/kafka"
+	"github.com/ceyewan/gochat/im-task/internal/service"
+	"github.com/ceyewan/gochat/pkg/log"
+	"github.com/ceyewan/gochat/pkg/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Server 定义 im-task 服务器接口
-type Server interface {
-	// StartTaskProcessor 启动任务处理器
-	StartTaskProcessor() error
-
-	// Shutdown 优雅关闭服务器
-	Shutdown(ctx context.Context) error
+type Server struct {
+	config        *config.Config
+	logger        *log.Logger
+	grpcClient    *grpc.Client
+	kafkaProducer *kafka.Producer
+	kafkaConsumer *kafka.Consumer
+	services      *service.Services
+	httpServer    *http.Server
 }
 
-// server 服务器实现
-type server struct {
-	config *config.Config
-	logger clog.Logger
-
-	// TODO: 添加其他组件
-	// repoClient   *grpc.ClientConn
-	// mqConsumer   mq.Consumer
-	// mqProducer   mq.Producer
-	// dispatcher   *dispatcher.TaskDispatcher
-	// processors   map[string]processor.TaskProcessor
-}
-
-// New 创建新的服务器实例
-func New(cfg *config.Config) (Server, error) {
-	logger := clog.Module("task-server")
-
-	s := &server{
+func NewServer(cfg *config.Config, logger *log.Logger) (*Server, error) {
+	s := &Server{
 		config: cfg,
 		logger: logger,
 	}
 
-	// TODO: 初始化组件
-	// 1. 初始化 gRPC 客户端（im-repo）
-	// 2. 初始化 Kafka 消费者和生产者
-	// 3. 创建任务分发器
-	// 4. 注册任务处理器
-	// 5. 初始化外部服务客户端
-	// 6. 服务注册
+	if err := s.initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize server: %w", err)
+	}
 
-	logger.Info("im-task 服务器创建成功")
 	return s, nil
 }
 
-// StartTaskProcessor 启动任务处理器
-func (s *server) StartTaskProcessor() error {
-	s.logger.Info("启动任务处理器...")
+func (s *Server) initialize() error {
+	if err := s.initGRPCClient(); err != nil {
+		return fmt.Errorf("failed to initialize gRPC client: %w", err)
+	}
 
-	// TODO: 启动任务处理逻辑
-	// 1. 启动 Kafka 消费者
-	// 2. 启动工作协程池
-	// 3. 启动任务分发器
-	// 4. 启动监控和指标收集
+	if err := s.initKafka(); err != nil {
+		return fmt.Errorf("failed to initialize Kafka: %w", err)
+	}
 
-	s.logger.Info("任务处理器启动成功")
+	s.initServices()
+	s.initHTTPServer()
+
 	return nil
 }
 
-// Shutdown 优雅关闭服务器
-func (s *server) Shutdown(ctx context.Context) error {
-	s.logger.Info("正在关闭 im-task 服务器...")
+func (s *Server) initGRPCClient() error {
+	grpcClient, err := grpc.NewClient(s.config, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create gRPC client: %w", err)
+	}
 
-	// TODO: 关闭各个组件
-	// 1. 停止任务处理器
-	// 2. 停止 Kafka 消费者
-	// 3. 关闭 gRPC 客户端连接
-	// 4. 关闭外部服务连接
-	// 5. 服务注销
-
-	s.logger.Info("im-task 服务器已关闭")
+	s.grpcClient = grpcClient
 	return nil
+}
+
+func (s *Server) initKafka() error {
+	kafkaProducer, err := kafka.NewProducer(s.config, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create Kafka producer: %w", err)
+	}
+
+	s.kafkaProducer = kafkaProducer
+
+	s.services = service.NewServices(s.config, s.logger, s.grpcClient, kafkaProducer)
+
+	kafkaConsumer, err := kafka.NewConsumer(s.config, s.logger, s.services.TaskService, s.services.PersistenceService)
+	if err != nil {
+		return fmt.Errorf("failed to create Kafka consumer: %w", err)
+	}
+
+	s.kafkaConsumer = kafkaConsumer
+	return nil
+}
+
+func (s *Server) initServices() {
+}
+
+func (s *Server) initHTTPServer() {
+	mux := http.NewServeMux()
+
+	if s.config.Metrics.Enabled {
+		mux.Handle(s.config.Metrics.Path, promhttp.Handler())
+	}
+
+	if s.config.Health.Enabled {
+		mux.HandleFunc(s.config.Health.Path, s.healthHandler)
+	}
+
+	s.httpServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.config.Metrics.Port),
+		Handler: middleware.Logging(s.logger)(mux),
+	}
+}
+
+func (s *Server) Start(ctx context.Context) error {
+	s.logger.Info("Starting im-task server",
+		"version", s.config.Server.Version,
+		"port", s.config.Server.Port,
+	)
+
+	if err := s.kafkaConsumer.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start Kafka consumer: %w", err)
+	}
+
+	go func() {
+		s.logger.Info("Starting HTTP server", "port", s.config.Metrics.Port)
+		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			s.logger.Error("HTTP server error", "error", err)
+		}
+	}()
+
+	s.logger.Info("im-task server started successfully")
+	return nil
+}
+
+func (s *Server) Stop(ctx context.Context) error {
+	s.logger.Info("Stopping im-task server")
+
+	if err := s.kafkaConsumer.Close(); err != nil {
+		s.logger.Error("Failed to close Kafka consumer", "error", err)
+	}
+
+	if err := s.kafkaProducer.Close(); err != nil {
+		s.logger.Error("Failed to close Kafka producer", "error", err)
+	}
+
+	if err := s.grpcClient.Close(); err != nil {
+		s.logger.Error("Failed to close gRPC client", "error", err)
+	}
+
+	if s.httpServer != nil {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
+			s.logger.Error("Failed to shutdown HTTP server", "error", err)
+		}
+	}
+
+	s.logger.Info("im-task server stopped")
+	return nil
+}
+
+func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
+	health := map[string]interface{}{
+		"status":    "healthy",
+		"server":    s.config.Server.Name,
+		"version":   s.config.Server.Version,
+		"timestamp": time.Now().Unix(),
+	}
+
+	if s.grpcClient != nil {
+		health["grpc_client"] = map[string]interface{}{
+			"connected": s.grpcClient.HealthCheck(),
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(health)
+}
+
+func (s *Server) WaitForShutdown() {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	s.logger.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := s.Stop(ctx); err != nil {
+		s.logger.Error("Server shutdown error", "error", err)
+	}
 }

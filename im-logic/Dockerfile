@@ -1,13 +1,11 @@
-# im-logic 服务 Dockerfile
-
 # 构建阶段
 FROM golang:1.21-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
 
-# 安装必要的包
-RUN apk add --no-cache git ca-certificates tzdata
+# 安装必要的工具
+RUN apk add --no-cache git
 
 # 复制 go mod 文件
 COPY go.mod go.sum ./
@@ -19,32 +17,26 @@ RUN go mod download
 COPY . .
 
 # 构建应用
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o bin/im-logic ./im-logic/cmd/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
 
 # 运行阶段
 FROM alpine:latest
 
-# 安装必要的包
+# 安装 ca-certificates 用于 HTTPS 请求
 RUN apk --no-cache add ca-certificates tzdata
 
+# 设置时区
+ENV TZ=Asia/Shanghai
+
 # 设置工作目录
-WORKDIR /app
+WORKDIR /root/
 
 # 从构建阶段复制二进制文件
-COPY --from=builder /app/bin/im-logic .
-
-# 创建非 root 用户
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
-
-# 更改文件所有者
-RUN chown -R appuser:appgroup /app
-
-# 切换到非 root 用户
-USER appuser
+COPY --from=builder /app/main .
+COPY --from=builder /app/configs ./configs
 
 # 暴露端口
-EXPOSE 9001 8001
+EXPOSE 9001 9002 9003
 
-# 启动应用
-CMD ["./im-logic"]
+# 运行应用
+CMD ["./main"]

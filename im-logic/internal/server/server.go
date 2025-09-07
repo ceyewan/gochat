@@ -1,23 +1,27 @@
 package server
 
 import (
-	"context"
+	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-logic/internal/config"
-	"google.golang.org/grpc"
+	"github.com/ceyewan/gochat/im-logic/internal/server/grpc"
+	"github.com/ceyewan/gochat/im-logic/internal/server/kafka"
+	"github.com/ceyewan/gochat/im-logic/internal/service"
 )
 
-// Server 定义 im-logic 服务器接口
+// Server 服务器接口
 type Server interface {
-	// RegisterServices 注册 gRPC 服务
-	RegisterServices(grpcServer *grpc.Server)
+	// Start 启动服务器
+	Start() error
 
-	// StartMessageConsumer 启动消息消费者
-	StartMessageConsumer() error
+	// Stop 停止服务器
+	Stop() error
 
-	// Shutdown 优雅关闭服务器
-	Shutdown(ctx context.Context) error
+	// IsHealthy 检查服务器健康状态
+	IsHealthy() bool
 }
 
 // server 服务器实现
@@ -25,13 +29,16 @@ type server struct {
 	config *config.Config
 	logger clog.Logger
 
-	// TODO: 添加其他组件
-	// repoClient *grpc.ClientConn
-	// mqConsumer mq.Consumer
-	// mqProducer mq.Producer
-	// authService *service.AuthService
-	// conversationService *service.ConversationService
-	// groupService *service.GroupService
+	// 组件
+	grpcClient    *grpc.Client
+	grpcServer    *grpc.Server
+	kafkaProducer *kafka.Producer
+	kafkaConsumer *kafka.Consumer
+	services      *service.Services
+	handler       *service.MessageHandler
+
+	// 健康检查
+	healthCheck *HealthChecker
 }
 
 // New 创建新的服务器实例
@@ -39,55 +46,172 @@ func New(cfg *config.Config) (Server, error) {
 	logger := clog.Module("logic-server")
 
 	s := &server{
-		config: cfg,
-		logger: logger,
+		config:      cfg,
+		logger:      logger,
+		healthCheck: NewHealthChecker(),
 	}
 
-	// TODO: 初始化组件
-	// - gRPC 客户端（im-repo）
-	// - Kafka 生产者和消费者
-	// - 业务服务实例
-	// - 服务注册
+	// 1. 创建 gRPC 客户端
+	logger.Info("创建 gRPC 客户端...")
+	grpcClient, err := grpc.NewClient(cfg)
+	if err != nil {
+		logger.Error("创建 gRPC 客户端失败", clog.Err(err))
+		return nil, fmt.Errorf("创建 gRPC 客户端失败: %w", err)
+	}
+	s.grpcClient = grpcClient
+
+	// 2. 创建业务服务
+	logger.Info("创建业务服务...")
+	s.services = service.NewServices(cfg, grpcClient)
+
+	// 3. 创建 Kafka 生产者
+	logger.Info("创建 Kafka 生产者...")
+	kafkaProducer, err := kafka.NewProducer(cfg)
+	if err != nil {
+		logger.Error("创建 Kafka 生产者失败", clog.Err(err))
+		return nil, fmt.Errorf("创建 Kafka 生产者失败: %w", err)
+	}
+	s.kafkaProducer = kafkaProducer
+
+	// 4. 创建消息处理器
+	logger.Info("创建消息处理器...")
+	s.handler = service.NewMessageHandler(cfg, grpcClient, kafkaProducer, s.services)
+
+	// 5. 创建 Kafka 消费者
+	logger.Info("创建 Kafka 消费者...")
+	kafkaConsumer, err := kafka.NewConsumer(cfg, s.handler)
+	if err != nil {
+		logger.Error("创建 Kafka 消费者失败", clog.Err(err))
+		return nil, fmt.Errorf("创建 Kafka 消费者失败: %w", err)
+	}
+	s.kafkaConsumer = kafkaConsumer
+
+	// 6. 创建 gRPC 服务器
+	logger.Info("创建 gRPC 服务器...")
+	grpcServer, err := grpc.New(cfg, s.services)
+	if err != nil {
+		logger.Error("创建 gRPC 服务器失败", clog.Err(err))
+		return nil, fmt.Errorf("创建 gRPC 服务器失败: %w", err)
+	}
+	s.grpcServer = grpcServer
+
+	// 7. 注册健康检查
+	s.healthCheck.RegisterComponent("grpc_client", s.grpcClient)
+	s.healthCheck.RegisterComponent("kafka_producer", s.kafkaProducer)
+	s.healthCheck.RegisterComponent("kafka_consumer", s.kafkaConsumer)
 
 	logger.Info("im-logic 服务器创建成功")
 	return s, nil
 }
 
-// RegisterServices 注册 gRPC 服务
-func (s *server) RegisterServices(grpcServer *grpc.Server) {
-	s.logger.Info("注册 gRPC 服务...")
+// Start 启动服务器
+func (s *server) Start() error {
+	s.logger.Info("启动 im-logic 服务器...")
 
-	// TODO: 注册具体的 gRPC 服务
-	// logicv1.RegisterAuthServiceServer(grpcServer, s.authService)
-	// logicv1.RegisterConversationServiceServer(grpcServer, s.conversationService)
-	// logicv1.RegisterGroupServiceServer(grpcServer, s.groupService)
+	// 1. 启动 Kafka 消费者
+	s.logger.Info("启动 Kafka 消费者...")
+	if err := s.kafkaConsumer.Start(); err != nil {
+		s.logger.Error("启动 Kafka 消费者失败", clog.Err(err))
+		return fmt.Errorf("启动 Kafka 消费者失败: %w", err)
+	}
 
-	s.logger.Info("gRPC 服务注册完成")
-}
+	// 2. 启动 gRPC 服务器
+	s.logger.Info("启动 gRPC 服务器...")
+	go func() {
+		if err := s.grpcServer.Start(); err != nil {
+			s.logger.Error("gRPC 服务器启动失败", clog.Err(err))
+		}
+	}()
 
-// StartMessageConsumer 启动消息消费者
-func (s *server) StartMessageConsumer() error {
-	s.logger.Info("启动消息消费者...")
+	// 3. 启动 HTTP 健康检查服务
+	s.logger.Info("启动 HTTP 健康检查服务...")
+	go s.startHTTPServer()
 
-	// TODO: 启动 Kafka 消费者
-	// 1. 创建消费者实例
-	// 2. 订阅上行消息 Topic
-	// 3. 启动消费循环
+	// 等待服务器启动完成
+	time.Sleep(1 * time.Second)
 
-	s.logger.Info("消息消费者启动成功")
+	s.logger.Info("im-logic 服务器启动成功")
 	return nil
 }
 
-// Shutdown 优雅关闭服务器
-func (s *server) Shutdown(ctx context.Context) error {
-	s.logger.Info("正在关闭 im-logic 服务器...")
+// Stop 停止服务器
+func (s *server) Stop() error {
+	s.logger.Info("停止 im-logic 服务器...")
 
-	// TODO: 关闭各个组件
-	// 1. 停止消息消费者
-	// 2. 关闭 gRPC 客户端连接
-	// 3. 关闭 Kafka 连接
-	// 4. 服务注销
+	// 1. 停止 gRPC 服务器
+	if s.grpcServer != nil {
+		s.grpcServer.Stop()
+	}
 
-	s.logger.Info("im-logic 服务器已关闭")
+	// 2. 停止 Kafka 消费者
+	if s.kafkaConsumer != nil {
+		s.kafkaConsumer.Close()
+	}
+
+	// 3. 停止 Kafka 生产者
+	if s.kafkaProducer != nil {
+		s.kafkaProducer.Close()
+	}
+
+	// 4. 停止 gRPC 客户端
+	if s.grpcClient != nil {
+		s.grpcClient.Close()
+	}
+
+	s.logger.Info("im-logic 服务器已停止")
 	return nil
+}
+
+// IsHealthy 检查服务器健康状态
+func (s *server) IsHealthy() bool {
+	return s.healthCheck.IsHealthy()
+}
+
+// startHTTPServer 启动 HTTP 健康检查服务
+func (s *server) startHTTPServer() {
+	mux := http.NewServeMux()
+
+	// 健康检查端点
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if s.IsHealthy() {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "OK")
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprint(w, "Service Unhealthy")
+		}
+	})
+
+	// 就绪检查端点
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		if s.IsHealthy() {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "Ready")
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprint(w, "Not Ready")
+		}
+	})
+
+	// 存活检查端点
+	mux.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Alive")
+	})
+
+	// 指标端点（如果启用）
+	if s.config.Monitoring.MetricsEnabled {
+		mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+			// TODO: 实现 Prometheus 指标收集
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "# TODO: Implement Prometheus metrics")
+		})
+	}
+
+	addr := s.config.GetHTTPAddr()
+	s.logger.Info("HTTP 健康检查服务启动", clog.String("addr", addr))
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		s.logger.Error("HTTP 健康检查服务启动失败", clog.Err(err))
+	}
 }

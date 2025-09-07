@@ -1,0 +1,84 @@
+server:
+  name: "im-task"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 9003
+  mode: "dev"
+
+grpc:
+  server:
+    port: 9003
+    timeout: "30s"
+  client:
+    timeout: "10s"
+    retry:
+      max_attempts: 3
+      backoff: "100ms"
+      max_backoff: "1s"
+
+kafka:
+  brokers:
+    - "localhost:9092"
+  task_topic: "im-task-topic"
+  persistence_topic: "im-persistence-topic"
+  consumer_group: "im-task-group"
+  persistence_group: "im-persistence-group"
+  session_timeout: "30s"
+  heartbeat_interval: "3s"
+  rebalance_timeout: "60s"
+  batch_size: 100
+  batch_timeout: "1s"
+  start_offset: "newest"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+  min_idle_conns: 5
+  dial_timeout: "5s"
+  read_timeout: "3s"
+  write_timeout: "3s"
+
+repo_service:
+  name: "im-repo"
+  host: "localhost"
+  port: 9002
+  timeout: "10s"
+
+tracing:
+  enabled: true
+  jaeger:
+    endpoint: "localhost:14268"
+    service_name: "im-task"
+    sampler_type: "const"
+    sampler_param: 1
+
+log:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  filename: ""
+  max_size: 100
+  max_backups: 10
+  max_age: 30
+  compress: true
+  caller_skip: 2
+
+metrics:
+  enabled: true
+  port: 9093
+  path: "/metrics"
+
+health:
+  enabled: true
+  path: "/health"
+
+task:
+  large_group_threshold: 100
+  fanout_batch_size: 50
+  push_notification_enabled: true
+  offline_push_timeout: "5s"
+  message_retry_attempts: 3
+  message_retry_backoff: "1s"

@@ -1,0 +1,227 @@
+# im-logic 服务配置
+
+server:
+  # gRPC 服务器配置
+  grpc:
+    host: "0.0.0.0"
+    port: 9001
+    # 最大连接数
+    max_conn: 1000
+    # 消息大小限制（MB）
+    max_msg_size: 10
+    # 连接超时时间（秒）
+    timeout: 30
+
+  # HTTP 健康检查配置
+  http:
+    host: "0.0.0.0"
+    port: 9002
+    # 请求超时时间（秒）
+    timeout: 10
+
+# 日志配置
+logging:
+  # 日志级别 (debug, info, warn, error)
+  level: "info"
+  # 日志格式 (json, text)
+  format: "json"
+  # 日志文件路径（可选）
+  file_path: ""
+  # 最大日志文件大小（MB）
+  max_size: 100
+  # 最大保留天数
+  max_age: 30
+  # 最大备份数量
+  max_backups: 10
+  # 是否压缩日志文件
+  compress: true
+
+# 数据库配置
+database:
+  # 数据库类型 (mysql, postgresql, sqlite)
+  type: "mysql"
+  # 连接地址
+  host: "localhost"
+  # 端口
+  port: 3306
+  # 数据库名
+  name: "gochat"
+  # 用户名
+  username: "root"
+  # 密码
+  password: "password"
+  # 最大连接数
+  max_conn: 100
+  # 最大空闲连接数
+  max_idle_conn: 20
+  # 连接最大存活时间（小时）
+  conn_max_lifetime: 1
+  # 连接最大空闲时间（分钟）
+  conn_max_idle_time: 10
+
+# Redis 配置
+redis:
+  # 地址
+  addr: "localhost:6379"
+  # 密码
+  password: ""
+  # 数据库索引
+  db: 0
+  # 连接池大小
+  pool_size: 20
+  # 最小空闲连接数
+  min_idle_conns: 5
+  # 连接超时时间（秒）
+  dial_timeout: 5
+  # 读取超时时间（秒）
+  read_timeout: 3
+  # 写入超时时间（秒）
+  write_timeout: 3
+
+# Kafka 配置
+kafka:
+  # 服务器地址
+  brokers:
+    - "localhost:9092"
+  # 上行消息 Topic
+  upstream_topic: "im-upstream-topic"
+  # 下行消息 Topic 前缀
+  downstream_topic_prefix: "im-downstream-topic-"
+  # 任务消息 Topic
+  task_topic: "im-task-topic"
+  # 消费者组
+  consumer_group: "im-logic-group"
+  # 批量消费大小
+  batch_size: 100
+  # 批量消费超时时间（毫秒）
+  batch_timeout: 100
+  # 会话超时时间（秒）
+  session_timeout: 30
+  # 心跳间隔（秒）
+  heartbeat_interval: 3
+  # 重试策略
+  retry:
+    # 最大重试次数
+    max_retries: 3
+    # 重试间隔（秒）
+    retry_interval: 5
+    # 指数退避因子
+    backoff_factor: 2
+  # 生产者配置
+  producer:
+    # 确认级别 (0, 1, all)
+    acks: "all"
+    # 重试次数
+    retries: 3
+    # 重试间隔（毫秒）
+    retry_backoff: 100
+    # 批量大小（字节）
+    batch_size: 1048576
+    # 批量超时时间（毫秒）
+    batch_timeout: 10
+    # 压缩类型 (none, gzip, snappy, lz4)
+    compression: "gzip"
+
+# JWT 配置
+jwt:
+  # 密钥
+  secret: "your-secret-key-here"
+  # 访问令牌过期时间（小时）
+  access_token_expire: 24
+  # 刷新令牌过期时间（天）
+  refresh_token_expire: 7
+  # 签名算法
+  signing_method: "HS256"
+
+# im-repo 服务配置
+repo:
+  # gRPC 连接配置
+  grpc:
+    # 服务地址
+    address: "localhost:9002"
+    # 连接超时时间（秒）
+    timeout: 10
+    # 最大重试次数
+    max_retries: 3
+    # 重试间隔（秒）
+    retry_interval: 1
+    # 启用 TLS
+    enable_tls: false
+    # CA 证书路径
+    ca_cert: ""
+    # 客户端证书路径
+    client_cert: ""
+    # 客户端密钥路径
+    client_key: ""
+
+# 消息处理配置
+message:
+  # 最大消息长度（字符）
+  max_length: 5000
+  # 消息类型限制
+  allowed_types:
+    - 1  # 文本消息
+    - 2  # 图片消息
+    - 3  # 文件消息
+    - 4  # 系统消息
+    - 5  # 语音消息
+    - 6  # 视频消息
+  # 敏感词过滤
+  sensitive_words:
+    enabled: true
+    # 敏感词文件路径
+    words_file: "configs/sensitive_words.txt"
+    # 替换字符
+    replace_char: "*"
+  # 消息限流
+  rate_limit:
+    # 是否启用
+    enabled: true
+    # 每秒最大消息数
+    max_per_second: 10
+    # 每分钟最大消息数
+    max_per_minute: 100
+    # 每小时最大消息数
+    max_per_hour: 1000
+
+# 群组配置
+group:
+  # 最大群组成员数
+  max_members: 500
+  # 默认群组名称
+  default_name: "未命名群组"
+  # 群组创建权限
+  create_permission: true
+  # 群组加入审核
+  join_approval: false
+
+# 监控配置
+monitoring:
+  # 是否启用指标收集
+  metrics_enabled: true
+  # 指标收集端口
+  metrics_port: 9003
+  # 是否启用追踪
+  tracing_enabled: true
+  # 追踪服务地址
+  tracing_address: "localhost:14268"
+  # 服务名称
+  service_name: "im-logic"
+
+# 服务发现配置
+discovery:
+  # 注册中心类型 (etcd, consul)
+  type: "etcd"
+  # 注册中心地址
+  endpoints:
+    - "localhost:2379"
+  # 服务名称
+  service_name: "im-logic"
+  # 服务地址
+  service_address: "localhost:9001"
+  # 注册间隔（秒）
+  register_interval: 10
+  # 心跳间隔（秒）
+  heartbeat_interval: 5
+  # 租约过期时间（秒）
+  lease_ttl: 30

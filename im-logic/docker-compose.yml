@@ -1,0 +1,231 @@
+version: '3.8'
+
+services:
+  im-logic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: im-logic
+    ports:
+      - "9001:9001"   # gRPC 端口
+      - "9002:9002"   # HTTP 健康检查端口
+      - "9003:9003"   # 监控指标端口
+    environment:
+      # 服务器配置
+      - SERVER_GRPC_HOST=0.0.0.0
+      - SERVER_GRPC_PORT=9001
+      - SERVER_HTTP_PORT=9002
+
+      # 日志配置
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+
+      # 数据库配置
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=gochat
+      - DB_USERNAME=root
+      - DB_PASSWORD=password
+
+      # Redis 配置
+      - REDIS_ADDR=redis:6379
+      - REDIS_DB=0
+
+      # Kafka 配置
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_UPSTREAM_TOPIC=im-upstream-topic
+      - KAFKA_DOWNSTREAM_TOPIC_PREFIX=im-downstream-topic-
+      - KAFKA_TASK_TOPIC=im-task-topic
+      - KAFKA_CONSUMER_GROUP=im-logic-group
+
+      # JWT 配置
+      - JWT_SECRET=your-secret-key-here
+
+      # 数据仓储配置
+      - REPO_GRPC_ADDRESS=im-repo:9002
+
+      # 监控配置
+      - MONITORING_METRICS_ENABLED=true
+      - MONITORING_TRACING_ENABLED=true
+
+      # 服务发现配置
+      - DISCOVERY_TYPE=etcd
+      - DISCOVERY_ENDPOINTS=etcd:2379
+      - DISCOVERY_SERVICE_NAME=im-logic
+      - DISCOVERY_SERVICE_ADDRESS=im-logic:9001
+
+    volumes:
+      - ./configs:/root/configs
+    networks:
+      - gochat-network
+    depends_on:
+      - mysql
+      - redis
+      - kafka
+      - im-repo
+      - etcd
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 依赖服务
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=gochat
+      - MYSQL_USER=gochat
+      - MYSQL_PASSWORD=gochat
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - gochat-network
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gochat-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - gochat-network
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - gochat-network
+    restart: unless-stopped
+
+  im-repo:
+    image: gochat/im-repo:latest
+    container_name: im-repo
+    ports:
+      - "9004:9002"   # 避免端口冲突
+    environment:
+      - SERVER_GRPC_PORT=9002
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=gochat
+      - DB_USERNAME=root
+      - DB_PASSWORD=password
+      - REDIS_ADDR=redis:6379
+      - REDIS_DB=0
+    networks:
+      - gochat-network
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.9
+    container_name: etcd
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    environment:
+      - ETCDCTL_API=3
+      - ETCD_NAME=etcd0
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:2380
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_INITIAL_CLUSTER=etcd0=http://etcd:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-1
+    volumes:
+      - etcd_data:/etcd-data
+    networks:
+      - gochat-network
+    restart: unless-stopped
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - gochat-network
+    restart: unless-stopped
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - gochat-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  mysql_data:
+  redis_data:
+  kafka_data:
+  zookeeper_data:
+  etcd_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  gochat-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

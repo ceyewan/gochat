@@ -1,0 +1,96 @@
+# im-gateway 服务配置
+
+# 服务器配置
+server:
+  http_addr: ":8080"
+  ws_path: "/ws"
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 60s
+
+  # WebSocket 配置
+  websocket:
+    read_buffer_size: 1024
+    write_buffer_size: 1024
+    ping_interval: 30s
+    pong_timeout: 10s
+    write_timeout: 10s
+    max_message_size: 1048576  # 1MB
+
+# JWT 认证配置
+jwt:
+  secret: "your-secret-key-change-in-production"
+  access_token_expire: 24h
+  refresh_token_expire: 168h  # 7天
+  issuer: "gochat-gateway"
+
+# gRPC 客户端配置
+grpc:
+  # im-logic 服务配置
+  logic:
+    service_name: "im-logic"
+    direct_addr: "localhost:9001"
+
+  # 连接配置
+  conn_timeout: 5s
+  request_timeout: 10s
+
+  # 重试配置
+  retry:
+    max_retries: 3
+    initial_delay: 100ms
+    max_delay: 5s
+    backoff_factor: 2.0
+
+# Kafka 配置
+kafka:
+  brokers:
+    - "localhost:9092"
+
+  # 生产者配置
+  producer:
+    acks: "all"
+    retries: 3
+    max_message_bytes: 1048576  # 1MB
+    linger_ms: 10
+    batch_size: 16384
+    compression: "gzip"
+
+  # 消费者配置
+  consumer:
+    group_id: "im-gateway"
+    auto_offset_reset: "latest"
+    enable_auto_commit: false
+    session_timeout_ms: 30000
+    heartbeat_interval_ms: 3000
+    fetch_min_bytes: 1
+    fetch_max_bytes: 1048576  # 1MB
+    fetch_max_wait_ms: 100
+    max_poll_records: 500
+    max_poll_interval_ms: 300000
+
+# 服务发现配置
+coordinator:
+  endpoints:
+    - "localhost:2379"
+  username: ""
+  password: ""
+  timeout: 5s
+  retry_config:
+    max_retries: 3
+    initial_delay: 100ms
+    max_delay: 5s
+    backoff_factor: 2.0
+
+# 日志配置
+log:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  file_path: ""
+
+# 监控配置
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"
