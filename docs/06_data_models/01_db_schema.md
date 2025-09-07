@@ -84,3 +84,36 @@
 | `conversation_id`| `VARCHAR(64)` | `UNIQUE(user_id, conversation_id)` | 会话的 ID。               |
 | `last_read_seq_id`| `BIGINT`      | `NOT NULL`                   | 最后读取消息的序列 ID。 |
 | `updated_at`    | `DATETIME`    | `NOT NULL`                   | 最后更新的时间戳。             |
+
+## 7. 持久化与数据拉取策略
+
+### 7.1 消息持久化流程
+
+根据系统架构，消息的持久化遵循以下流程：
+
+1.  **生产者**: `im-logic` 服务在完成业务逻辑后，将下行消息生产到 Kafka 的 `gochat.downstream.topic` 主题。
+2.  **消费者**: `im-task` 服务作为持久化任务的唯一消费者，订阅 `gochat.downstream.topic`。
+3.  **执行者**: `im-task` 收到消息后，调用 `im-repo` 服务的 `SaveMessage` gRPC 接口。
+4.  **存储**: `im-repo` 服务负责将消息数据写入 `MySQL` 数据库，并可能会更新 `Redis` 中的相关缓存（如会话的最后一条消息）。
+
+### 7.2 会话列表拉取
+
+-   **触发**: 客户端在登录或重新连接后，调用 `GET /conversations` 接口。
+-   **逻辑**:
+    1.  `im-logic` 调用 `im-repo` 的 `GetUserConversations` 接口。
+    2.  `im-repo` 首先尝试从 `Redis` 缓存中获取该用户的会话列表。
+    3.  如果缓存未命中，`im-repo` 从 `MySQL` 中查询 `conversations` 和 `user_read_pointers` 表，计算每个会话的未读数 (`unread_count`) 和最后一条消息 (`last_message`)。
+    4.  查询结果被缓存到 `Redis` 中并返回给 `im-logic`。
+-   **数据模型**: 返回的会话对象应包含 `id`, `type`, `name`, `avatar`, `last_message`, `unread_count`, `updated_at` 等关键信息。
+
+### 7.3 历史消息拉取
+
+-   **触发**: 用户在会话内向上滚动时，客户端调用 `GET /conversations/{conversationId}/messages` 接口。
+-   **分页策略**: 采用基于游标（Cursor-based）的分页策略，以获得更好的性能和一致性。
+    -   **接口**: `GET /conversations/{conversationId}/messages?cursor={last_message_seq_id}&limit=50`
+    -   `cursor`: 上一页返回的最后一条消息的 `seq_id`。首次请求时为空。
+    -   `limit`: 每次拉取的消息数量，默认为 50。
+-   **逻辑**:
+    1.  `im-logic` 调用 `im-repo` 的 `GetMessages` 接口，并传递 `conversation_id`, `cursor`, `limit`。
+    2.  `im-repo` 执行类似 `SELECT * FROM messages WHERE conversation_id = ? AND seq_id < ? ORDER BY seq_id DESC LIMIT ?` 的查询。
+    3.  返回消息列表和下一页的 `cursor`。

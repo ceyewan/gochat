@@ -41,17 +41,56 @@
 -   **复杂逻辑**: 添加注释来解释代码的复杂或不明显的部分。解释"为什么"，而不是"什么"。
 -   **TODO 注释**: 使用 `// TODO:` 标记需要未来工作的区域。包括需要完成的简短描述。
 
-## 4. 日志记录
+## 4. 日志记录规范
 
--   **库**: 我们使用位于 `im-infra/clog` 的自定义 `clog` 库。
--   **结构化日志**: 所有日志**必须**是结构化日志。使用键值对添加上下文。
-    -   示例：`logger.Info("用户已创建", clog.String("username", user.Username), clog.Uint64("user_id", user.ID))`
--   **日志级别**:
-    -   `Debug`: 用于详细的、冗长的信息，对调试有用。
-    -   `Info`: 用于正常的应用程序行为（例如，启动服务、处理请求）。
-    -   `Warn`: 用于不阻止应用程序运行的潜在问题。
-    -   `Error`: 用于发生但已处理的错误（例如，数据库查询失败但已重试）。
-    -   `Fatal`: 用于导致应用程序崩溃的错误。
+为了实现高效的日志聚合、查询和基于日志的分布式追踪，所有服务都**必须**遵循以下日志记录规范。
+
+-   **库**: 统一使用 `im-infra/clog` 库进行日志记录。
+-   **结构化日志**: 所有日志**必须**是结构化的 JSON 格式。
+
+### 强制性日志字段
+
+每一条日志记录都**必须**包含以下两个字段，`clog` 库应提供机制来自动注入它们：
+
+1.  **`service` (string)**:
+    -   **值**: 当前服务的名称（例如, `"im-logic"`, `"im-gateway"`）。
+    -   **注入**: 此字段应在服务启动时，通过 `clog` 的全局配置进行设置。
+
+2.  **`trace_id` (string)**:
+    -   **值**: 标志单个请求链路的唯一标识符。
+    -   **生成**: 在请求入口处（如 `im-gateway` 的 HTTP 处理器）生成。如果上游请求已包含 `trace_id`，则直接使用。
+    -   **传递**: **必须**通过 `context.Context` 在整个调用链中（包括 gRPC 调用和 Kafka 消息）进行传递。
+    -   **注入**: `clog` 库应能自动从 `context.Context` 中提取 `trace_id` 并添加到日志中。
+
+### 日志级别
+
+-   `Debug`: 用于开发过程中的调试信息。
+-   `Info`: 用于记录关键的业务流程节点（如“用户登录成功”）。
+-   `Warn`: 用于可预期的、非关键的错误（如“缓存未命中”）。
+-   `Error`: 用于需要关注的、影响功能的错误（如“数据库连接失败”）。
+
+### 代码示例
+
+```go
+// main.go: 初始化 clog，设置全局 service 字段
+logger := clog.New(clog.WithService("im-logic"))
+
+// ---
+
+// gateway: 生成 trace_id 并存入 context
+ctx := context.Background()
+traceID := newTraceID() // 生成唯一ID
+ctx = clog.SetTraceID(ctx, traceID)
+
+// ---
+
+// logic (gRPC handler): 从 context 中获取 logger
+// clog 库应提供一个从 context 获取 logger 的方法，该 logger 自动包含 trace_id
+logger := clog.FromContext(ctx)
+
+// 记录日志，trace_id 和 service 会被自动添加
+logger.Info("开始处理业务", clog.String("param", "value"))
+```
 
 ## 5. API 和接口定义
 

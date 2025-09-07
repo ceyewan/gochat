@@ -41,30 +41,25 @@ sequenceDiagram
     participant GatewayA as Gateway (A所在)
     participant Kafka as Kafka
     participant Logic as im-logic
-    participant Repo as im-repo
     participant GatewayB as Gateway (B所在)
     participant ClientB as 客户端 B
+    participant Task as im-task
+    participant Repo as im-repo
 
-    ClientA->>+GatewayA: 1. WebSocket 发送消息 (send-message)
-    GatewayA->>+Kafka: 2. 生产上行消息 (im-upstream-topic)
-    Kafka-->>-GatewayA: (Ack)
-    GatewayA-->>-ClientA: (可选) 发送成功
+    ClientA->>+GatewayA: 1. WebSocket 发送消息
+    GatewayA->>+Kafka: 2. 生产上行消息 (gochat.messages.upstream)
 
     Kafka->>+Logic: 3. 消费上行消息
-    Logic->>+Repo: 4. 检查幂等性, 生成 message_id, seq_id
-    Repo-->>-Logic: 5. 返回ID
-    Logic->>+Repo: 6. 持久化消息 (MySQL + Redis)
-    Repo-->>-Logic: 7. 持久化成功
-    Logic->>+Repo: 8. 查询B的在线网关 (GetUserSession)
-    Repo-->>-Logic: 9. 返回 GatewayB 的 ID
-    Logic->>+Kafka: 10. 生产下行消息 (im-downstream-topic-gatewayB)
-    Kafka-->>-Logic: (Ack)
-    Logic-->>-Kafka: (关闭)
-
-    Kafka->>+GatewayB: 11. 消费下行消息
-    GatewayB->>+ClientB: 12. WebSocket 推送新消息 (new-message)
-    ClientB-->>-GatewayB: (Ack)
-    GatewayB-->>-Kafka: (关闭)
+    Logic->>Logic: 4. 业务处理, 生成 message_id, 查询B所在网关
+    Logic->>+Kafka: 5. 生产下行消息 (gochat.messages.downstream.{gatewayB_id})
+    
+    note right of Kafka: 并发消费阶段
+    Kafka->>+GatewayB: 6. 消费下行消息
+    GatewayB->>+ClientB: 7. WebSocket 推送新消息
+    
+    Kafka->>+Task: 8. 消费下行消息 (订阅 gochat.messages.downstream.*)
+    Task->>+Repo: 9. gRPC 调用 (SaveMessage)
+    Repo-->>-Task: 10. 持久化成功
 ```
 
 ### 3. 群聊消息发送流程 (中小群)
@@ -78,24 +73,17 @@ sequenceDiagram
     participant Kafka as Kafka
     participant Logic as im-logic
     participant Repo as im-repo
-    participant Redis as Redis
 
     Client->>+Gateway: 1. WebSocket 发送群聊消息
-    Gateway->>+Kafka: 2. 生产上行消息 (im-upstream-topic)
+    Gateway->>+Kafka: 2. 生产上行消息 (gochat.messages.upstream)
 
     Kafka->>+Logic: 3. 消费上行消息
-    Logic->>+Repo: 4. 持久化消息 (MySQL + Redis)
-    Repo-->>-Logic: 5. 持久化成功
-
-    Logic->>+Repo: 6. 获取群成员列表 (GetGroupMembers)
-    Repo->>+Redis: 7. (缓存命中) 读 group_members:{group_id}
-    Redis-->>-Repo: 8. 返回成员列表
-    Repo-->>-Logic: 9. 返回成员列表
-
-    Logic->>+Repo: 10. 批量查询在线成员的网关 (GetUsersSession)
-    Repo-->>-Logic: 11. 返回在线成员与网关映射
-
-    Logic->>+Kafka: 12. **循环/批量**生产下行消息到多个网关Topic
+    Logic->>+Repo: 4. 获取群成员列表及在线状态
+    Repo-->>-Logic: 5. 返回在线成员与网关映射
+    
+    Logic->>+Kafka: 6. **循环/批量**生产下行消息到多个网关Topic (gochat.messages.downstream.{gateway_id})
+    
+    note right of Logic: Task服务会通过通配符订阅消费这些消息并持久化
 ```
 
 ### 4. 群聊消息发送流程 (超大群)
@@ -112,20 +100,18 @@ sequenceDiagram
     participant Repo as im-repo
 
     Client->>+Gateway: 1. WebSocket 发送群聊消息
-    Gateway->>+Kafka: 2. 生产上行消息 (im-upstream-topic)
+    Gateway->>+Kafka: 2. 生产上行消息 (gochat.messages.upstream)
 
     Kafka->>+Logic: 3. 消费上行消息
-    Logic->>+Repo: 4. 持久化消息
-    Repo-->>-Logic: 5. 持久化成功
+    Logic->>Logic: 4. 业务处理, 生成 message_id
+    par 并行流程
+        Logic->>+Kafka: 5a. 生产持久化消息 (gochat.messages.persist)
+        Kafka->>+Task: 6a. 消费并调用 repo 持久化 (仅一次)
 
-    Logic->>Logic: 6. 判断为超大群
-    Logic->>+Kafka: 7. 生产异步任务 (im-task-large-group-fanout-topic)
-
-    Kafka->>+Task: 8. 消费异步任务
-    Task->>+Repo: 9. 分批获取群成员列表
-    Repo-->>-Task: 10. 返回一批成员
-    Task->>+Repo: 11. 查询该批成员的在线网关
-    Repo-->>-Task: 12. 返回在线信息
-    Task->>+Kafka: 13. 循环/批量生产下行消息到多个网关Topic
-    Note right of Task: 重复9-13步直到所有成员处理完毕
+    and
+        Logic->>+Kafka: 5b. 生产异步扇出任务 (gochat.tasks.fanout)
+        Kafka->>+Task: 6b. 消费扇出任务
+        Task->>+Repo: 7b. 分批获取群成员
+        Task->>+Kafka: 8b. **循环/批量**生产下行消息到多个网关Topic
+    end
 ```

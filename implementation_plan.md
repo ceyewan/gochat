@@ -1,82 +1,82 @@
-# Implementation Plan
+# 实施计划
 
-[Overview]
-This document outlines the plan to refactor the GoChat IM system by establishing a clear code architecture and creating comprehensive, developer-friendly documentation to guide implementation. The primary goal is to create a robust, scalable, and maintainable backend for the existing frontend. The architecture will be based on the confirmed microservice roles: `im-gateway` for client-facing connections, `im-logic` for business logic, `im-repo` for data persistence, and `im-task` for asynchronous background jobs. Documentation will be created in Markdown format within the `new_docs/` directory.
+[概述]  
+本文档概述了通过建立清晰的代码架构和创建全面、开发者友好的文档来重构GoChat IM系统的计划。主要目标是为现有前端创建健壮、可扩展和可维护的后端。架构将基于确认的微服务角色：`im-gateway` 用于客户端连接，`im-logic` 用于业务逻辑，`im-repo` 用于数据持久化，`im-task` 用于异步后台作业。文档将在 `docs/` 目录中以Markdown格式创建。
 
-[Types]
-Core data structures will be defined as Go structs within each microservice's `internal/model` or `internal/types` package, and as Protobuf messages for RPC communication.
+[类型]  
+核心数据结构将在每个微服务的 `internal/model` 或 `internal/types` 包中定义为Go结构体，并作为Protobuf消息用于RPC通信。
 
--   **User**: `(id, username, password_hash, avatar, created_at, updated_at)`
--   **Message**: `(id, conversation_id, sender_id, content, type, seq, created_at)`
--   **Conversation**: `(id, type, last_message_id, created_at, updated_at)`
--   **ConversationMember**: `(conversation_id, user_id, unread_count, read_seq, role)`
--   **Group**: `(id, name, avatar, owner_id, member_count, created_at, updated_at)` (Note: The World Chatroom will be a special instance of a group).
+-   **User**：`(id, username, password_hash, avatar, created_at, updated_at)`
+-   **Message**：`(id, conversation_id, sender_id, content, type, seq, created_at)`
+-   **Conversation**：`(id, type, last_message_id, created_at, updated_at)`
+-   **ConversationMember**：`(conversation_id, user_id, unread_count, read_seq, role)`
+-   **Group**：`(id, name, avatar, owner_id, member_count, created_at, updated_at)`（注意：世界聊天室将是群组的一个特殊实例）。
 
-[Files]
-New documentation will be created in the `new_docs/` directory, and existing microservice code will be refactored for clarity and consistency.
+[文件]
+新文档将在 `docs/` 目录中创建，现有的微服务代码将被重构以提高清晰度和一致性。
 
--   **New Files to be Created**:
-    -   `new_docs/01_overview.md`: High-level architecture overview.
-    -   `new_docs/02_http_api.md`: Describes the RESTful and WebSocket APIs exposed by `im-gateway`.
-    -   `new_docs/03_rpc_services.md`: Documents the internal gRPC services, with links to `.proto` files.
-    -   `new_docs/04_mq_topics.md`: Defines the Kafka topics and message formats used for asynchronous communication.
-    -   `new_docs/05_data_models.md`: Details the database schema and data models.
--   **Existing Files to be Modified**:
-    -   `api/proto/im_logic/logic.proto`: Define services for auth, user, conversation, group, and message logic.
-    -   `api/proto/im_repo/repo.proto`: Define services for data access operations.
-    -   `im-gateway/internal/server/http.go`: Implement HTTP handlers based on `new_docs/02_http_api.md`.
-    -   `im-gateway/internal/server/ws.go`: Implement WebSocket connection handling.
-    -   `im-logic/internal/service/*.go`: Implement business logic for each gRPC service.
-    -   `im-repo/internal/repository/*.go`: Implement data access logic using GORM and Redis.
-    -   `im-task/internal/processor/fanout.go`: Implement message fan-out logic based on Kafka messages.
--   **Files to be Deleted**:
-    -   `docs/`: The entire old documentation directory will be replaced by `new_docs/`.
+-   **要创建的新文件**：
+    -   `docs/01_overview.md`：高层架构概述。
+    -   `docs/02_http_api.md`：描述 `im-gateway` 暴露的RESTful和WebSocket API。
+    -   `docs/03_rpc_services.md`：记录内部gRPC服务，并链接到 `.proto` 文件。
+    -   `docs/04_mq_topics.md`：定义用于异步通信的Kafka主题和消息格式。
+    -   `docs/05_data_models.md`：详细说明数据库模式和数据模型。
+-   **要修改的现有文件**：
+    -   `api/proto/im_logic/logic.proto`：定义认证、用户、对话、群组和消息逻辑的服务。
+    -   `api/proto/im_repo/repo.proto`：定义数据访问操作的服务。
+    -   `im-gateway/internal/server/http.go`：基于 `docs/02_http_api.md` 实现HTTP处理器。
+    -   `im-gateway/internal/server/ws.go`：实现WebSocket连接处理。
+    -   `im-logic/internal/service/*.go`：为每个gRPC服务实现业务逻辑。
+    -   `im-repo/internal/repository/*.go`：使用GORM和Redis实现数据访问逻辑。
+    -   `im-task/internal/processor/fanout.go`：基于Kafka消息实现消息扇出逻辑。
+-   **要删除的文件**：
+    -   `docs/`：整个旧文档目录将被 `docs/` 替换。
 
-[Functions]
-Functions will be organized into services and repositories within their respective microservices.
+[函数]  
+函数将在各自微服务中的服务和存储库中组织。
 
--   **New Functions**:
-    -   `im-logic/internal/service/auth_service.go`: `Register()`, `Login()`, `GenerateToken()`, `ParseToken()`.
-    -   `im-logic/internal/service/message_service.go`: `SendMessage()`, `GetMessages()`.
-    -   `im-repo/internal/repository/conversation_repo.go`: `CreateConversation()`, `GetConversations()`.
--   **Modified Functions**:
-    -   All existing functions in `im-repo/internal/service/*.go` will be refactored to align with the new gRPC interfaces defined in `repo.proto`.
-    -   `im-gateway/cmd/main.go`: Will be updated to initialize and run both HTTP and WebSocket servers.
+-   **新函数**：
+    -   `im-logic/internal/service/auth_service.go`：`Register()`、`Login()`、`GenerateToken()`、`ParseToken()`。
+    -   `im-logic/internal/service/message_service.go`：`SendMessage()`、`GetMessages()`。
+    -   `im-repo/internal/repository/conversation_repo.go`：`CreateConversation()`、`GetConversations()`。
+-   **修改函数**：
+    -   `im-repo/internal/service/*.go` 中的所有现有函数将被重构以与 `repo.proto` 中定义的新gRPC接口对齐。
+    -   `im-gateway/cmd/main.go`：将被更新以初始化和运行HTTP和WebSocket服务器。
 
-[Classes]
-Go does not have classes, but structs will be used to define services and repositories.
+[类]  
+Go没有类，但结构体将用于定义服务和存储库。
 
--   **New Structs**:
-    -   `im-logic/internal/service/AuthService`: Implements the authentication gRPC service.
-    -   `im-logic/internal/service/MessageService`: Implements the messaging gRPC service.
-    -   `im-repo/internal/repository/UserRepository`: Implements user data access logic.
--   **Modified Structs**:
-    -   Existing service and repository structs will be updated to implement the new gRPC interfaces and align with the refactored architecture.
+-   **新结构体**：
+    -   `im-logic/internal/service/AuthService`：实现认证gRPC服务。
+    -   `im-logic/internal/service/MessageService`：实现消息gRPC服务。
+    -   `im-repo/internal/repository/UserRepository`：实现用户数据访问逻辑。
+-   **修改结构体**：
+    -   现有的服务和存储库结构体将被更新以实现新的gRPC接口，并与重构的架构对齐。
 
-[Dependencies]
-The primary dependencies (`gin`, `gorm`, `grpc`, `kafka-go`, `redis`) are already present in `go.mod`. No major new dependencies are required.
+[依赖项]  
+主要依赖项（`gin`、`gorm`、`grpc`、`kafka-go`、`redis`）已在 `go.mod` 中存在。不需要主要的新依赖项。
 
--   We will ensure all microservices use consistent versions of shared dependencies like `gRPC` and `Protobuf`.
+-   我们将确保所有微服务使用共享依赖项（如 `gRPC` 和 `Protobuf`）的一致版本。
 
-[Testing]
-Each microservice will have its own set of unit and integration tests.
+[测试]  
+每个微服务将有自己的单元和集成测试套件。
 
--   **Test File Requirements**:
-    -   Unit tests will be created for each service and repository (e.g., `im-logic/internal/service/auth_service_test.go`).
-    -   Integration tests will be added to verify the interaction between services (e.g., `im-gateway` calling `im-logic`).
--   **Validation Strategies**:
-    -   Use mock implementations for dependencies in unit tests.
-    -   Use `docker-compose` to spin up dependent services (DB, Kafka, Redis) for integration tests.
+-   **测试文件要求**：
+    -   将为每个服务和存储库创建单元测试（例如，`im-logic/internal/service/auth_service_test.go`）。
+    -   将添加集成测试以验证服务之间的交互（例如，`im-gateway` 调用 `im-logic`）。
+-   **验证策略**：
+    -   在单元测试中使用依赖项的模拟实现。
+    -   使用 `docker-compose` 为集成测试启动依赖服务（DB、Kafka、Redis）。
 
-[Implementation Order]
-The implementation will proceed in a logical sequence, starting from the data layer and moving up to the API gateway.
+[实施顺序]  
+实施将按逻辑顺序进行，从数据层开始向上到API网关。
 
-1.  **Define Contracts**: Finalize all `.proto` files for gRPC services (`im_logic.proto`, `im_repo.proto`).
-2.  **Generate Code**: Generate gRPC server and client code from the `.proto` files.
-3.  **Implement `im-repo`**: Implement the data access logic and gRPC services in the `im-repo` microservice.
-4.  **Implement `im-logic`**: Implement the core business logic and gRPC services in the `im-logic` microservice, which calls `im-repo`.
-5.  **Implement `im-task`**: Implement the Kafka consumer in `im-task` to handle asynchronous message processing.
-6.  **Implement `im-gateway`**: Implement the HTTP/WebSocket handlers in `im-gateway`, which call `im-logic`.
-7.  **Create Documentation**: Write the Markdown documentation in the `new_docs/` directory.
-8.  **Update Deployment**: Update `docker-compose.yml` files to reflect any configuration changes.
-9.  **Testing**: Write and run unit and integration tests for all components.
+1.  **定义合约**：完成所有 `.proto` 文件以用于gRPC服务（`im_logic.proto`、`im_repo.proto`）。
+2.  **生成代码**：从 `.proto` 文件生成gRPC服务器和客户端代码。
+3.  **实施 `im-repo`**：在 `im-repo` 微服务中实施数据访问逻辑和gRPC服务。
+4.  **实施 `im-logic`**：在 `im-logic` 微服务中实施核心业务逻辑和gRPC服务，该服务调用 `im-repo`。
+5.  **实施 `im-task`**：在 `im-task` 中实施Kafka消费者以处理异步消息处理。
+6.  **实施 `im-gateway`**：在 `im-gateway` 中实施HTTP/WebSocket处理器，该处理器调用 `im-logic`。
+7.  **创建文档**：在 `docs/` 目录中编写Markdown文档。
+8.  **更新部署**：更新 `docker-compose.yml` 文件以反映任何配置更改。
+9.  **测试**：为所有组件编写和运行单元和集成测试。

@@ -146,19 +146,21 @@
 
 ### 消息类型（客户端 -> 服务器）
 
--   **发送消息**:
-    ```json
-    {
-      "type": "send-message",
-      "data": {
-        "conversationId": "string",
-        "content": "string",
-        "messageType": "text",
-        "tempMessageId": "string" // 客户端生成的临时 ID
-      }
+客户端通过 WebSocket 发送的事件都应有明确的 Go struct 定义。
+
+-   **发送消息 (`send-message`)**:
+    ```go
+    // 示例: im-gateway/internal/ws/models.go
+    type SendMessagePayload struct {
+        ConversationID string `json:"conversationId"`
+        Content        string `json:"content"`
+        MessageType    string `json:"messageType"`
+        TempMessageID  string `json:"tempMessageId"` // 客户端生成的临时ID
     }
     ```
--   **心跳**:
+    *当 `im-gateway` 收到此事件后，它会调用 `im-logic` 的 `SendMessage` gRPC 方法，而**不是**直接生产到 Kafka。*
+
+-   **心跳 (`ping`)**:
     ```json
     { "type": "ping" }
     ```

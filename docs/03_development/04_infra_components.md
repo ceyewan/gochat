@@ -83,4 +83,35 @@
     // ... 执行关键部分工作 ...
     ```
 
+### 实例 ID 管理 (`instanceID`)
+
+`coord` 组件提供了一个关键功能：为每个微服务实例分配一个在集群中唯一的、自增的 `instanceID`。这个 ID 对于实现分布式唯一 ID 生成（如雪花算法）至关重要。
+
+-   **实现原理**:
+    -   服务启动时，通过 `coord` 向 etcd 申请一个 `instanceID`。
+    -   `coord` 在 etcd 的特定路径下（如 `/gochat/instances/{service_name}/`）创建一个带**租约（Lease）**的**顺序键（Sequential Key）**。
+    -   etcd 返回的顺序号即被用作 `instanceID`。
+    -   服务在运行期间，`coord` 客户端会自动对租约进行**续约（KeepAlive）**。
+    -   如果服务实例崩溃或正常下线，租约会自动过期或被撤销，etcd 会自动清理对应的键，从而回收 `instanceID`。
+
+-   **获取 `instanceID`**:
+    ```go
+    // coordinator 在 main.go 中初始化
+    
+    // 获取实例ID管理器
+    instanceManager, err := coordinator.Instance(ctx, "im-logic")
+    if err != nil {
+        // 处理错误
+    }
+    
+    // 获取本实例的唯一ID
+    instanceID, err := instanceManager.GetInstanceID()
+    if err != nil {
+        // 处理错误
+    }
+    
+    // 将 instanceID 用于雪花算法节点ID等场景
+    // ...
+    ```
+
 有关 `coord` 模块的设计和功能的更多详细信息，请参阅其[设计文档](../../../im-infra/coord/DESIGN.md)和[README](../../../im-infra/coord/README.md)。
