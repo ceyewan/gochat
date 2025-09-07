@@ -33,7 +33,7 @@ sequenceDiagram
 
 ### 2. 单聊消息发送与接收流程
 
-此图描述了用户A发送一条单聊消息给用户B的完整生命周期。
+此流程描述了单聊消息的生命周期。核心原则是**持久化先行，推送解耦**。
 
 ```mermaid
 sequenceDiagram
@@ -50,21 +50,22 @@ sequenceDiagram
     GatewayA->>+Kafka: 2. 生产上行消息 (gochat.messages.upstream)
 
     Kafka->>+Logic: 3. 消费上行消息
-    Logic->>Logic: 4. 业务处理, 生成 message_id, 查询B所在网关
-    Logic->>+Kafka: 5. 生产下行消息 (gochat.messages.downstream.{gatewayB_id})
+    Logic->>Logic: 4. 业务处理, 生成 message_id
     
-    note right of Kafka: 并发消费阶段
-    Kafka->>+GatewayB: 6. 消费下行消息
-    GatewayB->>+ClientB: 7. WebSocket 推送新消息
+    Logic->>+Kafka: 5. **生产持久化消息 (gochat.messages.persist)**
     
-    Kafka->>+Task: 8. 消费下行消息 (订阅 gochat.messages.downstream.*)
-    Task->>+Repo: 9. gRPC 调用 (SaveMessage)
-    Repo-->>-Task: 10. 持久化成功
+    par 并行流程
+        Kafka->>+Task: 6a. 消费并调用 repo 持久化 (仅一次)
+        
+    and
+        Logic->>+Kafka: 6b. 生产下行消息 (gochat.messages.downstream.{gatewayB_id})
+        Kafka->>+GatewayB: 7b. 消费并推送给客户端
+    end
 ```
 
 ### 3. 群聊消息发送流程 (中小群)
 
-此图描述了在一个成员数小于阈值（如500人）的群聊中，消息被实时扩散的流程。
+此图描述了中小群的消息流程。`im-logic` 在确保消息被持久化后，负责计算和分发推送。
 
 ```mermaid
 sequenceDiagram
@@ -73,22 +74,29 @@ sequenceDiagram
     participant Kafka as Kafka
     participant Logic as im-logic
     participant Repo as im-repo
+    participant Task as im-task
 
     Client->>+Gateway: 1. WebSocket 发送群聊消息
     Gateway->>+Kafka: 2. 生产上行消息 (gochat.messages.upstream)
 
     Kafka->>+Logic: 3. 消费上行消息
-    Logic->>+Repo: 4. 获取群成员列表及在线状态
-    Repo-->>-Logic: 5. 返回在线成员与网关映射
+    Logic->>Logic: 4. 业务处理, 生成 message_id
     
-    Logic->>+Kafka: 6. **循环/批量**生产下行消息到多个网关Topic (gochat.messages.downstream.{gateway_id})
+    Logic->>+Kafka: 5. **生产持久化消息 (gochat.messages.persist)**
     
-    note right of Logic: Task服务会通过通配符订阅消费这些消息并持久化
+    par 并行流程
+        Kafka->>+Task: 6a. 消费并调用 repo 持久化 (仅一次)
+        
+    and
+        Logic->>+Repo: 6b. 获取群成员在线状态
+        Repo-->>-Logic: 7b. 返回网关映射
+        Logic->>+Kafka: 8b. **循环/批量**生产下行消息到多个网关Topic
+    end
 ```
 
 ### 4. 群聊消息发送流程 (超大群)
 
-此图描述了在一个成员数超过阈值的群聊中，消息扩散任务被异步处理的流程。
+此图描述了超大群的消息流程。`im-logic` 将持久化任务和扇出任务同时交由 Kafka，实现了自身的快速响应。
 
 ```mermaid
 sequenceDiagram
@@ -104,14 +112,15 @@ sequenceDiagram
 
     Kafka->>+Logic: 3. 消费上行消息
     Logic->>Logic: 4. 业务处理, 生成 message_id
+    
+    Logic->>+Kafka: 5. **生产持久化消息 (gochat.messages.persist)**
+    
     par 并行流程
-        Logic->>+Kafka: 5a. 生产持久化消息 (gochat.messages.persist)
         Kafka->>+Task: 6a. 消费并调用 repo 持久化 (仅一次)
 
     and
-        Logic->>+Kafka: 5b. 生产异步扇出任务 (gochat.tasks.fanout)
-        Kafka->>+Task: 6b. 消费扇出任务
-        Task->>+Repo: 7b. 分批获取群成员
-        Task->>+Kafka: 8b. **循环/批量**生产下行消息到多个网关Topic
+        Logic->>+Kafka: 6b. 生产异步扇出任务 (gochat.tasks.fanout)
+        Kafka->>+Task: 7b. 消费扇出任务
+        Task->>+Repo: 8b. 分批获取群成员
+        Task->>+Kafka: 9b. **循环/批量**生产下行消息到多个网关Topic
     end
-```
