@@ -1,69 +1,78 @@
-# 基础设施层 (im-infra)
+# 基础设施层 (im-infra) 开发核心规范
 
-`im-infra` 是 GoChat 项目的基石，它提供了一系列高质量、生产级别的基础组件。这些组件旨在解决分布式系统中的通用问题，如日志、配置、服务发现、数据库访问、消息队列、缓存、度量、唯一ID生成、幂等性和限流等。
+`im-infra` 是 GoChat 项目的基石，它提供了一系列高质量、生产级别的基础组件。为了保证整个基础设施层的一致性、可维护性和健壮性，所有组件的设计和实现都必须严格遵守以下核心规范。
 
-通过将这些通用能力下沉到 `im-infra` 层，业务服务（如 `im-logic`, `im-gateway`）可以更专注于实现核心业务逻辑，从而提高开发效率、代码质量和系统的整体稳定性。
+## 1. 统一接口设计规范
 
-## 1. 核心设计原则
+这是所有组件交互的“契约法”。
 
-`im-infra` 库中的所有组件都遵循一套统一的设计原则，以确保它们之间的高度一致性和组合性。
+### 1.1 构造函数 (`New`)
 
-### 依赖注入 (Dependency Injection)
+- **标准签名**: 所有需要实例化、有配置或有依赖的组件，其构造函数**必须**遵循以下签名：
+  ```go
+  New(ctx context.Context, config *Config, opts ...Option) (Interface, error)
+  ```
+- **`config` 职责**: `config` 结构体负责传递组件自身的核心、静态配置（例如 `ratelimit` 的规则路径 `RulesPath`）。配置信息应由调用方提供，组件内部不应有拼接或猜测逻辑。
+- **`opts` 职责**: `opts ...Option` 负责以选项模式传递所有**外部依赖**（例如 `clog.Logger`, `coord.Provider`, `cache.Provider`）。
+- **例外情况**: 对于完全无状态、无依赖的纯工具包（如 `uid/uuid`），可以直接提供包级函数，无需 `New`。
 
-所有组件都通过构造函数或选项模式来接收其依赖项（如 `clog.Logger`, `cache.Provider`），而不是在内部创建。这使得上层服务可以完全控制组件的依赖关系，极大地增强了代码的可测试性和灵活性。
+### 1.2 接口方法
 
-### 选项模式 (Options Pattern)
+- **Context-Aware**: 所有可能发生 I/O、阻塞或需要传递追踪信息的接口方法，**必须**接受 `context.Context` 作为其第一个参数。
+- **KISS 原则**: 接口应保持最小化。只暴露真正需要被外部调用的核心功能。避免提供只是为了方便内部实现的公共方法。
 
-对于拥有多个配置项的组件，我们广泛采用选项模式。通过 `WithXXX` 形式的函数，可以链式地、清晰地构建组件的配置，同时保持构造函数的简洁。
+## 2. 统一配置管理规范
 
-```go
-// 示例：创建一个复杂的 ratelimit 组件
-limiter, err := ratelimit.New(
-    ctx,
-    "my-service",
-    ratelimit.WithCacheClient(cacheClient),
-    ratelimit.WithCoordinationClient(coordClient),
-    ratelimit.WithDefaultRules(rules),
-    ratelimit.WithFailurePolicy(ratelimit.FailurePolicyAllow),
-)
-```
+这是保证系统动态性和可运维性的“行政法”。
 
-### 接口抽象与内部实现分离
+### 2.1 声明式配置
 
-每个组件都通过 Go 的接口（Interface）来暴露其公共 API。所有具体的实现细节都被封装在 `internal` 包中。这种做法为使用者提供了清晰、稳定的“契约”，同时保留了内部实现未来迭代和优化的自由。
+- 所有可变的配置（如日志级别、限流规则）都应通过 `coord` 在配置中心进行**声明式**管理。
+- 组件**严禁**提供命令式的配置修改 API（如 `SetLogLevel`, `AddRule`）。系统的状态应由配置中心这个“唯一真实来源”驱动。
 
-## 2. 架构模式: 配置热重载
+### 2.2 “组件自治”的动态配置
 
-**动态配置**是现代分布式系统的核心要求之一。`im-infra` 通过一个统一的架构模式——`HotReloadable` 接口，将动态配置能力融入到了需要它的组件中。
+- **标准模式**: 需要支持配置热更新的组件，必须采用“组件自治”模式。
+- **实现方式**: 在组件的 `New` 函数中，自行使用注入的 `coord.Provider` 的 `Watch` 功能来监听自身的配置变更，并以线程安全的方式更新内部状态。
+- **废弃 `HotReloadable`**: `base.HotReloadable` 接口及其代表的“集中式回调”模式被废弃。
 
-```go
-// im-infra/base/hotreload.go
+### 2.3 `coord.Watch` 接口能力
 
-// HotReloadable 定义了支持配置热更新的组件必须实现的接口。
-type HotReloadable interface {
-	// HotReload 在检测到配置变更时被触发。
-	// 它接收新的配置对象，并应以平滑、无中断的方式应用新配置。
-	HotReload(ctx context.Context, newConfig any) error
-}
-```
+- `coord` 组件的 `ConfigCenter.Watch` 接口**必须**支持前缀监听。
+- **约定**: 当 `Watch` 方法接收的 `key` 参数以 `/` 结尾时，它应自动启用对该前缀下所有键的监听（`WatchPrefix` 行为）。如果 `key` 不以 `/` 结尾，则只监听单个键。
 
-这个简单的接口是一个强大的约定。它由 `coord` 组件中的配置管理器（ConfigManager）驱动。当 `coord` 监听到配置中心（如 etcd）的变更时，它会检查对应的组件是否实现了 `HotReloadable` 接口。如果实现了，`coord` 就会调用其 `HotReload` 方法，将新的配置注入进去。
+## 3. 统一代码与文档规范
 
-这种模式的优势在于：
-- **统一性**: 所有支持动态配置的组件都遵循相同的机制。
-- **解耦**: `coord` 作为配置中心适配器，不关心组件如何处理配置；组件则不关心配置来自何处。
-- **高可用**: 它促使组件开发者必须思考如何“平滑地”应用新配置，例如，`ratelimit` 组件在更新规则时不会丢失现有的令牌桶状态。
+这是确保项目可读性和可维护性的“组织法”。
 
-## 3. 核心组件列表
+### 3.1 代码组织风格
 
-以下是 `im-infra` 库提供的核心组件及其文档链接。
+- **标准目录结构**:
+  ```
+  [component]/
+  ├── [component].go  # 公开接口, Config, New()
+  ├── options.go      # Option 模式实现
+  ├── internal/       # 所有内部实现细节
+  │   └── client.go   # 接口的具体实现结构体及方法
+  ├── README.md       # 快速上手指南 (给开发者)
+  └── DESIGN.md       # (可选) 深入的设计决策 (给架构师/面试官)
+  ```
 
-- **[日志 (clog)](./clog.md)**: 提供高性能的结构化日志记录能力。
-- **[分布式协调 (coord)](./coord.md)**: 基于 etcd 实现服务发现、分布式锁和动态配置管理。
-- **[缓存 (cache)](./cache.md)**: 提供统一的分布式缓存接口，默认基于 Redis 实现。
-- **[数据库 (db)](./db.md)**: 封装了 GORM，提供便捷的数据库操作和分片支持。
-- **[消息队列 (mq)](./mq.md)**: 提供了消息生产和消费的统一接口，支持 Kafka。
-- **[唯一ID (uid)](./uid.md)**: 提供分布式唯一ID生成方案，包括 Snowflake 和 UUID v7。
-- **[可观测性 (metrics)](./metrics.md)**: 基于 OpenTelemetry 实现 Metrics 和 Tracing 的零侵入收集。
-- **[幂等操作 (once)](./once.md)**: 基于 Redis 实现的分布式幂等操作保证。
-- **[分布式限流 (ratelimit)](./ratelimit.md)**: 基于令牌桶算法的分布式限流解决方案。
+### 3.2 文档结构
+
+- **`docs/08_infra/[component].md`**: 每个组件的**官方“契约”文档**。这是组件功能、API 和设计理念的最终、唯一真实来源。所有 `im-infra` 的使用者都应首先阅读此文档。
+- **`docs/07_todo_task/`**: **予以保留**。作为所有重构任务的“历史任务书”和“设计蓝图”，为未来的维护和回顾提供宝贵的上下文。
+
+## 4. 核心组件列表
+
+以下是 `im-infra` 库提供的核心组件及其官方契约文档链接。
+
+- **[日志 (clog)](./clog.md)**
+- **[分布式协调 (coord)](./coord.md)**
+- **[缓存 (cache)](./cache.md)**
+- **[数据库 (db)](./db.md)**
+- **[消息队列 (mq)](./mq.md)**
+- **[唯一ID (uid)](./uid.md)**
+- **[可观测性 (metrics)](./metrics.md)**
+- **[幂等操作 (once)](./once.md)**
+- **[分布式限流 (ratelimit)](./ratelimit.md)**

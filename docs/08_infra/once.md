@@ -1,8 +1,8 @@
-# 幂等操作 (once)
-
-`once` 组件是一个基于 Redis 的、高性能的分布式幂等库。它旨在为分布式系统中的各种操作提供“执行一次”的语义保证，有效防止因网络重试、消息重复等原因导致的操作重复执行。
+# 基础设施: once 幂等操作
 
 ## 1. 设计理念
+
+`once` 组件是一个基于 Redis 的、高性能的分布式幂等库。它旨在为分布式系统中的各种操作提供“执行一次”的语义保证，有效防止因网络重试、消息重复等原因导致的操作重复执行。
 
 遵循 **KISS (Keep It Simple, Stupid)** 原则，`once` 组件提供了一个极简但功能强大的 API，专注于解决幂等性这一个核心问题。
 
@@ -17,7 +17,21 @@
 
 `once` 组件的公开 API 被精简为以下核心部分：
 
-### 接口定义
+### 2.1 构造函数
+
+```go
+// Config 是 once 组件的配置结构体。
+type Config struct {
+    // CacheProvider 用于指定要连接的 Redis 实例。
+    // 通常，这个 Provider 是从 cache.New() 创建的。
+    CacheProvider cache.Provider
+}
+
+// New 创建一个新的、可定制的 Idempotent 客户端实例。
+func New(ctx context.Context, config *Config, opts ...Option) (Idempotent, error)
+```
+
+### 2.2 Idempotent 接口
 
 ```go
 // Idempotent 定义了幂等操作的核心接口。
@@ -35,13 +49,11 @@ type Idempotent interface {
 }
 ```
 
-### 全局方法 (推荐使用)
+### 2.3 全局方法 (推荐使用)
 
-为了最大化易用性，`once` 包提供了直接可用的全局方法。
+为了最大化易用性，`once` 包提供了直接可用的全局方法，它们在内部使用一个默认的 `cache.Provider`。
 
 ```go
-package once
-
 // Do 使用全局默认客户端执行一个幂等操作。
 // key: 全局唯一的幂等键，如 "payment:order-123"。
 // ttl: 幂等键的有效期。
@@ -53,25 +65,7 @@ func Do(ctx context.Context, key string, ttl time.Duration, f func() error) erro
 func Execute(ctx context.Context, key string, ttl time.Duration, callback func() (any, error)) (any, error)
 ```
 
-### 构造函数 (用于自定义)
-
-当需要连接到特定的 Redis 实例或进行更精细的配置时，可以使用 `New` 函数。
-
-```go
-// Config once 组件的配置结构体
-type Config struct {
-    // CacheConfig 用于指定要连接的 Redis 实例。
-    CacheConfig cache.Config
-}
-
-// New 创建一个新的、可定制的 Idempotent 客户端实例。
-// serviceName 用于日志和监控。
-// config 用于提供 Redis 连接信息。
-// opts 用于传递如自定义 logger 等选项。
-func New(ctx context.Context, serviceName string, config *Config, opts ...Option) (Idempotent, error)
-```
-
-## 3. 使用场景
+## 3. 标准用法
 
 ### 场景 1: 保证消息队列消费者幂等性 (使用 `Do`)
 
@@ -79,7 +73,7 @@ func New(ctx context.Context, serviceName string, config *Config, opts ...Option
 import "github.com/ceyewan/gochat/im-infra/once"
 
 // Kafka 消费者逻辑
-func (c *Consumer) HandlePaymentMessage(ctx context.Context, msg *kafka.Message) {
+func (c *Consumer) HandlePaymentMessage(ctx context.Context, msg *mq.Message) error {
     // 使用消息的唯一ID（或业务ID）作为幂等键
     messageID := string(msg.Key)
     
@@ -94,13 +88,13 @@ func (c *Consumer) HandlePaymentMessage(ctx context.Context, msg *kafka.Message)
     })
 
     if err != nil {
-        log.Printf("Failed to process message %s: %v", messageID, err)
-        // 不 ack 消息，以便 Kafka 重试
-        return
+        // 记录错误，但不 ack 消息，以便 Kafka 重试
+        clog.C(ctx).Error("处理支付消息失败", clog.Err(err), clog.String("messageID", messageID))
+        return err
     }
     
     // 无论是否首次执行，都安全地 ack 消息
-    c.kafkaReader.CommitMessages(ctx, *msg)
+    return c.kafkaReader.CommitMessages(ctx, *msg)
 }
 ```
 

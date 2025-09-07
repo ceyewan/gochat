@@ -1,160 +1,133 @@
 # 基础设施: clog 结构化日志
 
-## 1. 设计哲学
+## 1. 设计理念
 
-`clog` 是 `gochat` 项目的官方结构化日志库，基于 `uber-go/zap` 构建。它旨在提供一个**简洁、高性能、易于使用**的日志解决方案，同时强制执行结构化日志记录的最佳实践。
+`clog` 是 `gochat` 项目的官方结构化日志库，基于 `uber-go/zap` 构建。它旨在提供一个**简洁、高性能、上下文感知**的日志解决方案，并强制执行结构化日志记录的最佳实践。
 
-- **简洁优先**: API 设计简单直观，学习成本低。
-- **性能至上**: 基于 `zap` 的零内存分配日志记录。
-- **上下文感知**: 自动从 `context.Context` 提取 `trace_id`，简化链路追踪。
-- **模块化支持**: 轻松为不同服务或模块创建专用的、带 `module` 字段的日志器。
+- **简洁易用**: API 设计简单直观，提供了方便的全局方法，极大降低了使用门槛。
+- **高性能**: 基于 `zap` 的零内存分配日志记录引擎，对业务性能影响降至最低。
+- **上下文感知**: 能够自动从 `context.Context` 中提取 `trace_id`，将分散的日志条目串联成完整的请求链路，是实现微服务可观测性的关键。
+- **模块化**: 支持为不同的服务或业务模块创建专用的、带 `module` 字段的日志器，便于日志的分类和筛选。
 
-## 2. 核心用法
+## 2. 核心 API 契约
 
-### 2.1 全局日志
+`clog` 的 API 设计兼顾了易用性（全局方法）和灵活性（可实例化的 Logger）。
 
-最简单的使用方式，直接调用全局方法。
+### 2.1 构造函数与初始化
+
+`clog` 支持两种初始化方式：全局初始化和独立实例创建。
 
 ```go
-import "github.com/ceyewan/gochat/im-infra/clog"
+// Config 是 clog 组件的配置结构体。
+type Config struct {
+	// Level 日志级别: "debug", "info", "warn", "error", "fatal"
+	Level string `json:"level"`
+	// Format 输出格式: "json" (生产环境推荐) 或 "console" (开发环境推荐)
+	Format string `json:"format"`
+	// Output 输出目标: "stdout", "stderr", 或文件路径
+	Output string `json:"output"`
+    // ... 其他配置如 AddSource, EnableColor, Rotation 等
+}
 
-// 直接使用全局日志器
-clog.Info("用户登录成功", clog.String("user_id", "12345"))
-clog.Warn("连接超时", clog.Int("timeout_ms", 3000))
+// Init 初始化全局默认的日志器。
+// 这是最常用的方式，通常在服务的 main 函数中调用一次。
+func Init(config *Config) error
 
-// 记录错误
-if err != nil {
-    clog.Error("数据库连接失败", clog.Err(err))
+// New 创建一个独立的、可自定义的 Logger 实例。
+// 这在需要将日志输出到不同位置或使用不同格式的特殊场景下很有用。
+func New(config *Config) (Logger, error)
+```
+
+### 2.2 Logger 接口
+
+`Logger` 接口定义了日志记录的核心操作。全局方法和 `Module()`、`C()` 返回的实例都实现了此接口。
+
+```go
+// Logger 定义了日志记录器的核心接口。
+type Logger interface {
+	Debug(msg string, fields ...Field)
+	Info(msg string, fields ...Field)
+	Warn(msg string, fields ...Field)
+	Error(msg string, fields ...Field)
+	Fatal(msg string, fields ...Field) // 会导致程序退出
+}
+
+// Field 是一个强类型的键值对，用于结构化日志。
+// clog 直接暴露了 zap.Field 的所有构造函数，如 clog.String, clog.Int, clog.Err 等。
+type Field = zap.Field
+```
+
+### 2.3 上下文与模块化
+
+```go
+// C 从 context 中获取一个 Logger 实例。
+// 如果 ctx 中包含 trace_id，返回的 Logger 会自动在每条日志中添加 "trace_id" 字段。
+// 这是在处理请求的函数中进行日志记录的【首选方式】。
+func C(ctx context.Context) Logger
+
+// Module 创建一个带有 "module" 字段的 Logger 实例。
+// 这对于区分不同业务模块或分层的日志非常有用。
+func Module(name string) Logger
+```
+
+## 3. 标准用法
+
+### 场景 1: 在服务启动时初始化全局 Logger
+
+```go
+// 在 main.go 中
+func main() {
+    // 假设 config 是从 coord 或本地文件加载的
+    var clogConfig clog.Config
+    // ... 加载配置 ...
+
+    if err := clog.Init(&clogConfig); err != nil {
+        log.Fatalf("初始化 clog 失败: %v", err)
+    }
+
+    clog.Info("服务启动成功", clog.String("service", "im-gateway"))
+    // ...
 }
 ```
 
-### 2.2 模块化日志
-
-为不同的服务或业务模块创建专用的日志器，会自动添加 `module` 字段。
+### 场景 2: 在 gRPC 拦截器中处理 Trace ID
 
 ```go
-// 在包级别或初始化时创建模块日志器
-var userLogger = clog.Module("user-service")
-var authLogger = clog.Module("auth-service")
+// 在一个 gRPC 拦截器中
+func TraceIDInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+    // 1. 从 gRPC metadata 中提取或生成一个新的 trace_id
+    traceID := getTraceIDFromMetadata(ctx)
+    if traceID == "" {
+        traceID = uuid.NewV7()
+    }
 
-func handleUserCreation() {
-    userLogger.Info("开始创建用户", clog.String("username", "test"))
-    // ...
-}
+    // 2. 将 trace_id 注入到 context 中
+    ctx = clog.SetTraceID(ctx, traceID)
 
-func handleLogin() {
-    authLogger.Warn("登录失败", clog.String("reason", "密码错误"))
-    // ...
+    // 3. 调用下一个 handler
+    return handler(ctx, req)
 }
 ```
 
-### 2.3 上下文日志 (Context Logger)
-
-这是**强烈推荐**在处理请求的函数中使用的方式。它会自动从 `context` 中提取 `trace_id` 并添加到日志中。
+### 场景 3: 在业务逻辑中使用上下文日志
 
 ```go
-func handleRequest(ctx context.Context) {
-    // ctx 中应包含 "trace_id"
-    // clog.C(ctx) 会返回一个带有 "trace_id" 字段的日志器
+// 在一个业务处理函数中
+func (s *MessageService) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
+    // 使用 clog.C(ctx) 获取带有 trace_id 的 logger
     logger := clog.C(ctx)
 
-    logger.Info("处理请求开始")
+    logger.Info("开始处理发送消息请求",
+        clog.String("sender_id", req.SenderID),
+        clog.String("receiver_id", req.ReceiverID),
+    )
+
     // ... 业务逻辑 ...
-    logger.Info("处理请求完成")
+    if err != nil {
+        logger.Error("发送消息失败", clog.Err(err))
+        return nil, err
+    }
+
+    logger.Info("成功发送消息")
+    return &pb.SendMessageResponse{}, nil
 }
-```
-
-## 3. API 参考
-
-### 3.1 日志级别
-
-```go
-clog.Debug(msg string, fields ...clog.Field)
-clog.Info(msg string, fields ...clog.Field)
-clog.Warn(msg string, fields ...clog.Field)
-clog.Error(msg string, fields ...clog.Field)
-clog.Fatal(msg string, fields ...clog.Field) // 会导致程序退出
-```
-
-### 3.2 常用字段类型
-
-`clog` 直接暴露了 `zap` 的强类型字段构造函数，以实现零性能开销。
-
-```go
-clog.String(key string, value string)
-clog.Int(key string, value int)
-clog.Int64(key string, value int64)
-clog.Bool(key string, value bool)
-clog.Float64(key string, value float64)
-clog.Duration(key string, value time.Duration)
-clog.Time(key string, value time.Time)
-clog.Err(err error) // 特别推荐，会正确处理 nil error
-clog.Any(key string, value interface{}) // 性能较低，谨慎使用
-```
-
-### 3.3 初始化与配置
-
-通常，服务在启动时会调用 `clog.Init()` 来应用从配置中心加载的配置。
-
-```go
-// Init 初始化全局日志器，通常在 main 函数中调用
-func Init(cfg Config) error
-
-// New 创建一个独立的日志器实例，而不是修改全局实例
-func New(cfg Config) (Logger, error)
-```
-
-## 4. 配置
-
-`clog` 的配置通过一个 `Config` 结构体定义，通常由 `coord` 配置中心管理。
-
-### 4.1 配置结构
-
-```go
-type Config struct {
-    // Level 日志级别: "debug", "info", "warn", "error", "fatal"
-	Level string `json:"level" yaml:"level"`
-    // Format 输出格式: "json" (生产环境推荐) 或 "console" (开发环境推荐)
-	Format string `json:"format" yaml:"format"`
-    // Output 输出目标: "stdout", "stderr", 或文件路径
-	Output string `json:"output" yaml:"output"`
-    // AddSource 是否在日志中包含源码文件名和行号
-	AddSource bool `json:"addSource" yaml:"addSource"`
-    // EnableColor 是否为 console 格式启用颜色
-	EnableColor bool `json:"enableColor" yaml:"enableColor"`
-    // Rotation 日志轮转配置 (可选)
-	Rotation *RotationConfig `json:"rotation,omitempty" yaml:"rotation,omitempty"`
-}
-
-type RotationConfig struct {
-    MaxSize    int  // 单个日志文件最大尺寸(MB)
-	MaxBackups int  // 最多保留的旧文件个数
-	MaxAge     int  // 日志保留天数
-	Compress   bool // 是否压缩旧文件
-}
-```
-
-### 4.2 生产环境推荐配置
-
-```yaml
-# 示例: clog.yaml
-level: "info"
-format: "json"
-output: "/var/log/gochat/app.log" # 或 stdout/stderr
-addSource: false
-rotation:
-  maxSize: 100    # 100 MB
-  maxBackups: 5
-  maxAge: 7       # 7 天
-  compress: true
-```
-
-### 4.3 开发环境推荐配置
-
-```yaml
-# 示例: clog.yaml
-level: "debug"
-format: "console"
-output: "stdout"
-addSource: true
-enableColor: true

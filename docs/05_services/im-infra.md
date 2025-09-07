@@ -1,125 +1,62 @@
-# `im-infra`: 共享基础设施组件库
+# 服务文档: `im-infra` 共享基础设施
 
-`im-infra` 是 GoChat 项目的基石，它为所有微服务提供了一套统一、标准化的基础设施组件。其核心目标是封装复杂性、统一技术栈、提高开发效率和系统的可维护性。
+## 1. 概述
 
-## 1. 核心设计原则
+`im-infra` 是 GoChat 项目的共享基础设施层，它以内部库的形式存在，为所有上层微服务（如 `im-gateway`, `im-logic` 等）提供了一系列标准、统一、生产就绪的基础组件。
 
--   **高内聚，低耦合**: 每个组件专注于一个特定问题，对外提供简洁、稳定的接口。
--   **面向接口编程**: 业务代码应依赖于 `im-infra` 定义的抽象接口，而非具体实现。
--   **统一配置**: 所有组件都应能通过 `coord` 服务从配置中心加载配置，并支持优雅降级。
--   **生产就绪**: 所有组件都应内置日志、指标、错误处理和优雅关闭等生产级功能。
+其核心目标是：
+- **封装复杂性**: 将与分布式系统相关的通用问题（如服务发现、配置管理、消息队列、分布式锁等）进行封装，让业务开发更简单。
+- **统一技术栈**: 为所有服务提供一套标准的技术解决方案，避免重复造轮子，降低维护成本。
+- **提升开发效率**: 提供简洁、稳定、文档齐全的 API，让业务开发者可以快速构建可靠的服务。
+- **保证系统健壮性**: 内置日志、监控、错误处理、优雅关闭等生产级特性，从基础上保证整个系统的稳定性和可观测性。
 
----
+## 2. 核心设计与开发规范
 
-## 2. 核心组件 API 设计
+`im-infra` 的所有组件都遵循一套严格的设计和开发规范，这套规范是保证其质量和一致性的基石。
 
-本节详细定义了 `im-infra` 中各个核心组件的职责和关键接口。
+> **[info] 唯一真实来源 (Single Source of Truth)**
+>
+> 关于 `im-infra` 库的完整设计理念、统一接口规范、代码组织风格和所有组件的详细“契约”文档，请参阅：
+>
+> **[im-infra 开发核心规范](../../docs/08_infra/README.md)**
 
-### 2.1 `clog` - 上下文日志服务
+所有 `im-infra` 的使用者和贡献者都应首先阅读并理解上述核心规范文档。
 
--   **职责**: 提供全系统统一的、上下文感知的结构化日志记录方案。
--   **核心功能**:
-    -   自动注入 `service` 名称和从 `context.Context` 中获取的 `trace_id`。
-    -   所有日志以 JSON 格式输出到标准输出。
--   **关键接口**:
-    ```go
-    // Logger 定义了日志记录器的接口
-    type Logger interface {
-        Info(msg string, fields ...Field)
-        Error(msg string, fields ...Field)
-        // ... 其他级别
-    }
+## 3. 组件列表
 
-    // 从上下文中获取一个预置了 trace_id 的 Logger
-    func FromContext(ctx context.Context) Logger
+`im-infra` 库由以下核心组件构成。每个组件的详细设计和用法，请点击链接查阅其官方契约文档。
 
-    // 将 trace_id 注入到上下文中
-    func SetTraceID(ctx context.Context, traceID string) context.Context
-    ```
+- **[日志 (clog)](../../docs/08_infra/clog.md)**: 提供高性能的结构化日志记录能力。
+- **[分布式协调 (coord)](../../docs/08_infra/coord.md)**: 基于 etcd 实现服务发现、分布式锁和动态配置管理。
+- **[缓存 (cache)](../../docs/08_infra/cache.md)**: 提供统一的分布式缓存接口，默认基于 Redis 实现。
+- **[数据库 (db)](../../docs/08_infra/db.md)**: 封装了 GORM，提供便捷的数据库操作和分片支持。
+- **[消息队列 (mq)](../../docs/08_infra/mq.md)**: 提供了消息生产和消费的统一接口，支持 Kafka。
+- **[唯一ID (uid)](../../docs/08_infra/uid.md)**: 提供分布式唯一ID生成方案，包括 Snowflake 和 UUID v7。
+- **[可观测性 (metrics)](../../docs/08_infra/metrics.md)**: 基于 OpenTelemetry 实现 Metrics 和 Tracing 的零侵入收集。
+- **[幂等操作 (once)](../../docs/08_infra/once.md)**: 基于 Redis 实现的分布式幂等操作保证。
+- **[分布式限流 (ratelimit)](../../docs/08_infra/ratelimit.md)**: 基于令牌桶算法的分布式限流解决方案。
 
-### 2.2 `coord` - 分布式协调服务
+## 4. 使用方式
 
--   **职责**: 基于 etcd 提供服务发现、配置管理、分布式锁和实例 ID 分配。
--   **关键接口**:
-    ```go
-    // Provider 是 coord 服务的总入口
-    type Provider interface {
-        Registry() ServiceRegistry // 服务注册与发现
-        Config() ConfigManager   // 配置管理
-        Lock() Locker            // 分布式锁
-        Instance() Instancer     // 实例ID管理器
-        Close() error
-    }
+所有上层服务通过 Go Modules 直接依赖 `im-infra` 库。在服务启动时，根据需要初始化相应的组件，并通过依赖注入的方式将其传递给业务逻辑层。
 
-    // Instancer 定义了实例ID分配器的接口
-    type Instancer interface {
-        // 获取当前服务实例的唯一ID，该ID在服务重启后会改变
-        GetInstanceID() (int64, error)
-    }
-    ```
-
-### 2.3 `db` - 数据库访问层
-
--   **职责**: 封装 GORM，提供统一的数据库连接和事务管理。
--   **关键接口**:
-    ```go
-    // Provider 提供了访问数据库的能力
-    type Provider interface {
-        // 获取一个 gorm.DB 实例用于执行查询
-        DB() *gorm.DB
-        // 开始一个事务
-        BeginTx(ctx context.Context) (Transaction, error)
-    }
-
-    // Transaction 定义了事务的接口
-    type Transaction interface {
-        DB() *gorm.DB // 在事务中执行操作
-        Commit() error
-        Rollback() error
-    }
-    ```
-
-### 2.4 `mq` - 消息队列服务
-
--   **职责**: 封装 Kafka 生产者和消费者的通用逻辑，简化消息收发。
--   **关键接口**:
-    ```go
-    // Producer 定义了消息生产者的接口
-    type Producer interface {
-        // Publish 方法将 trace_id 从 context 中提取并注入到消息头
-        Publish(ctx context.Context, topic string, message Message) error
-    }
-
-    // Consumer 定义了消息消费者的接口
-    type Consumer interface {
-        // Subscribe 的 handler 回调函数收到的 context 中已包含 trace_id
-        Subscribe(ctx context.Context, topic string, handler func(ctx context.Context, msg Message) error)
-    }
-    ```
-
-### 2.5 `uid` - 分布式唯一 ID 生成器
-
--   **职责**: 基于雪花算法（Snowflake）生成全局唯一的64位 ID。
--   **核心功能**: 在初始化时必须接收由 `coord.Instance()` 分配的 `instanceID` 作为 worker ID。
--   **关键接口**:
-    ```go
-    // Generator 定义了唯一ID生成器的接口
-    type Generator interface {
-        NextID() int64
-    }
-
-    // NewGenerator 创建一个新的ID生成器
-    func NewGenerator(instanceID int64) (Generator, error)
-    ```
-
-### 2.6 `cache` - 分布式缓存服务
-
--   **职责**: 提供对 Redis 的标准化、统一的访问接口。
--   **关键接口**:
-    ```go
-    // Cache 定义了缓存操作的接口
-    type Cache interface {
-        Get(ctx context.Context, key string) (string, error)
-        Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
-        Del(ctx context.Context, keys ...string) error
-    }
+```go
+// 示例：一个服务的典型初始化流程
+func main() {
+    // 1. 初始化核心依赖
+    clog.Init(...)
+    coordProvider, _ := coord.New(...)
+    cacheProvider, _ := cache.New(...)
+    dbProvider, _ := db.New(...)
+    
+    // 2. 初始化业务需要的 infra 组件
+    // 注意：组件的配置应从 coordProvider 获取
+    mqProducer, _ := mq.NewProducer(...)
+    
+    // 3. 将 infra 组件注入到业务服务中
+    userService := user.NewService(dbProvider, cacheProvider)
+    authService := auth.NewService(userService, mqProducer)
+    
+    // 4. 启动服务
+    // ...
+}

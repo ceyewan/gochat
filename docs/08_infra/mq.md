@@ -1,29 +1,39 @@
 # 基础设施: MQ 消息队列
 
-## 1. 设计哲学
+## 1. 设计理念
 
-`mq` 组件是 `gochat` 项目中用于与 Kafka 交互的唯一标准库。其设计核心是 **“极简与约定”**。
+`mq` 组件是 `gochat` 项目中用于与 `Kafka` 交互的唯一标准库。其设计核心是 **“极简与约定”**。
 
-- **极简 (Simplicity)**: 提供一个极小化的 API 集合，只包含生产者和消费者的核心功能。目标是让业务开发者在不阅读 Kafka 文档的情况下，也能轻松收发消息。
-- **约定 (Convention)**: 组件将遵循 `gochat` 项目的最佳实践。
-    - **配置中心驱动**: 所有配置均从 `coord` 获取，业务代码不直接接触配置结构体。
-    - **自动偏移量管理**: 消费者自动处理 offset 提交，业务逻辑只需关注消息处理本身。
-    - **内置可观测性**: 自动与 `clog` 集成，并预留 `trace_id` 的传递机制。
+- **极简 (Simplicity)**: 提供一个极小化的 API 集合，只包含生产者和消费者的核心功能。目标是让业务开发者在不阅读 Kafka 文档的情况下，也能轻松、可靠地收发消息。
+- **约定 (Convention)**: 组件将遵循 `im-infra` 的核心规范。
+    - **配置驱动**: 所有 Kafka 的连接信息和行为配置均从 `coord` 获取，业务代码不直接接触配置。
+    - **自动偏移量管理**: `Consumer` 自动处理 offset 提交，业务逻辑只需关注消息处理本身，极大降低了消费者的实现复杂性。
+    - **内置可观测性**: 自动与 `clog` 集成，并实现了 `trace_id` 在消息 `Headers` 中的自动传递，保证了跨服务的调用链完整性。
 
-本文档是开发者使用 `mq` 组件的“契约”和唯一参考。
+## 2. 核心 API 契约
 
-## 2. 核心接口
+### 2.1 构造函数
 
 ```go
-package mq
+// Config 是 mq 组件的配置结构体。
+// 注意：此 Config 通常由 coord 自动获取和填充，业务代码很少直接创建。
+type Config struct {
+    Brokers []string `json:"brokers"`
+    // ... 其他 Kafka 相关配置，如 SASL, TLS 等
+}
 
-import (
-	"context"
-)
+// NewProducer 创建一个新的消息生产者实例。
+func NewProducer(ctx context.Context, config *Config, opts ...Option) (Producer, error)
 
+// NewConsumer 创建一个新的消息消费者实例。
+// groupID 是 Kafka 的消费者组ID，用于实现负载均衡和故障转移。
+func NewConsumer(ctx context.Context, config *Config, groupID string, opts ...Option) (Consumer, error)
+```
+
+### 2.2 核心接口与数据结构
+
+```go
 // Message 是跨服务的标准消息结构。
-// Key 用于分区，确保同一 Key 的消息进入同一分区。
-// Headers 用于传递元数据，如 trace_id。
 type Message struct {
 	Topic   string
 	Key     []byte
@@ -33,13 +43,11 @@ type Message struct {
 
 // Producer 是一个线程安全的消息生产者接口。
 type Producer interface {
-	// Send 异步发送消息。
-	// 此方法立即返回，并通过回调函数处理发送结果。
+	// Send 异步发送消息。此方法立即返回，并通过回调函数处理发送结果。
 	// 这是推荐的、性能最高的方式。
 	Send(ctx context.Context, msg *Message, callback func(error))
 
-	// SendSync 同步发送消息。
-	// 此方法将阻塞直到消息发送成功或失败。
+	// SendSync 同步发送消息。此方法将阻塞直到消息发送成功或失败。
 	// 适用于需要强一致性保证的场景。
 	SendSync(ctx context.Context, msg *Message) error
 
@@ -63,94 +71,76 @@ type Consumer interface {
 }
 ```
 
-## 3. 使用指南
+## 3. 标准用法
 
-### 3.1 初始化
-
-组件的实例化将完全依赖 `im-infra` 的标准模式：通过 `Option` 注入依赖，通过 `coord` 获取配置。
+### 场景 1: 生产者发送消息
 
 ```go
-package mq
-
-import (
-	"context"
-	"github.com/ceyewan/gochat/im-infra/clog"
-)
-
-// NewProducer 创建一个新的生产者实例。
-// serviceName 用于从配置中心获取对应的 Kafka 配置。
-func NewProducer(ctx context.Context, serviceName string, opts ...Option) (Producer, error)
-
-// NewConsumer 创建一个新的消费者实例。
-// serviceName 和 groupID 用于从配置中心获取配置并标识消费者组。
-func NewConsumer(ctx context.Context, serviceName, groupID string, opts ...Option) (Consumer, error)
-
-// Option 是用于配置组件的可选参数。
-type Option func(*options)
-
-// WithLogger 注入一个自定义的 logger。
-func WithLogger(logger clog.Logger) Option
-```
-
-### 3.2 生产者示例
-
-```go
-// 1. 初始化
-// serviceName "im-gateway" 将用于从 coord 加载配置
-producer, err := mq.NewProducer(context.Background(), "im-gateway", mq.WithLogger(logger))
+// 1. 在服务启动时初始化 Producer
+var mqConfig mq.Config
+// ... 从 coord 加载配置 ...
+producer, err := mq.NewProducer(context.Background(), &mqConfig)
 if err != nil {
     log.Fatal(err)
 }
 defer producer.Close()
 
-// 2. 准备消息
-msg := &mq.Message{
-    Topic:   "gochat.messages.upstream",
-    Key:     []byte(userID),
-    Value:   data,
-    Headers: map[string][]byte{"trace_id": []byte(traceID)},
-}
+// 2. 在业务逻辑中发送消息
+func (s *UserService) Register(ctx context.Context, user *User) error {
+    // ... 创建用户的业务逻辑 ...
 
-// 3. 异步发送 (推荐)
-producer.Send(context.Background(), msg, func(err error) {
-    if err != nil {
-        logger.Error("failed to send message", "error", err)
+    eventData, _ := json.Marshal(user)
+    msg := &mq.Message{
+        Topic: "user.events.registered",
+        Key:   []byte(user.ID),
+        Value: eventData,
     }
-})
 
-// 4. 或同步发送
-if err := producer.SendSync(context.Background(), msg); err != nil {
-    logger.Error("failed to send message sync", "error", err)
+    // 使用异步发送，并记录可能的错误
+    // trace_id 会自动从 ctx 中提取并注入到消息头
+    producer.Send(ctx, msg, func(err error) {
+        if err != nil {
+            clog.C(ctx).Error("发送用户注册事件失败", clog.Err(err))
+        }
+    })
+    
+    return nil
 }
 ```
 
-### 3.3 消费者示例
+### 场景 2: 消费者处理消息
 
 ```go
-// 1. 初始化
-// serviceName "im-logic" 和 groupID "im-logic-group" 将用于从 coord 加载配置和标识消费者组
-consumer, err := mq.NewConsumer(context.Background(), "im-logic", "im-logic-group", mq.WithLogger(logger))
+// 1. 在服务启动时初始化 Consumer
+var mqConfig mq.Config
+// ... 从 coord 加载配置 ...
+consumer, err := mq.NewConsumer(context.Background(), &mqConfig, "notification-service-group")
 if err != nil {
     log.Fatal(err)
 }
 defer consumer.Close()
 
-// 2. 定义处理逻辑
+// 2. 定义消息处理逻辑
 handler := func(ctx context.Context, msg *mq.Message) error {
-    traceID := string(msg.Headers["trace_id"])
-    logger.Info("message received", "topic", msg.Topic, "key", string(msg.Key), "trace_id", traceID)
-    // ... 业务处理 ...
+    // trace_id 已被自动从消息头提取并注入到 ctx 中
+    logger := clog.C(ctx)
+    logger.Info("收到新用户注册事件", clog.String("key", string(msg.Key)))
+    
+    var user User
+    if err := json.Unmarshal(msg.Value, &user); err != nil {
+        logger.Error("反序列化用户事件失败", clog.Err(err))
+        return err // 返回错误，但不会中断消费
+    }
+
+    // ... 发送欢迎邮件等业务逻辑 ...
     return nil
 }
 
-// 3. 开始订阅 (阻塞)
-topics := []string{"gochat.messages.upstream"}
-if err := consumer.Subscribe(context.Background(), topics, handler); err != nil {
-    // Subscribe 只有在不可恢复的错误下才会返回 error
-    logger.Fatal("consumer subscribe failed", "error", err)
-}
-```
-
-## 4. 配置
-
-`mq` 组件的所有配置均由 `coord` 配置中心管理。标准的配置文件路径为 `kafka.yaml`。详细的配置结构和字段说明，请参考 **[配置契约](../../config/dev/kafka.md)**。
+// 3. 启动订阅（此方法会阻塞）
+go func() {
+    topics := []string{"user.events.registered"}
+    if err := consumer.Subscribe(context.Background(), topics, handler); err != nil {
+        // Subscribe 只有在不可恢复的错误下才会返回 error
+        clog.Fatal("消费者订阅失败", clog.Err(err))
+    }
+}()

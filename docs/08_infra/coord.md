@@ -1,204 +1,164 @@
 # 基础设施: Coord 分布式协调
 
-## 1. 概述
+## 1. 设计理念
 
-`coord` 是 `gochat` 项目的分布式协调核心，基于 `etcd` 构建。它为整个系统提供三大基础能力：
+`coord` 是 `gochat` 项目的分布式协调核心，基于 `etcd` 构建。它为整个微服务集群提供了一个统一的、可靠的协调层，封装了服务发现、分布式锁和动态配置管理等复杂性。
 
-1.  **分布式锁 (Distributed Lock)**: 保证在分布式环境下对共享资源的互斥访问。
-2.  **服务注册与发现 (Service Registry & Discovery)**: 让各个微服务能够动态地找到彼此。
-3.  **配置中心 (Configuration Center)**: 提供一个统一的地方来管理和分发服务配置。
+`coord` 的设计严格遵循 `im-infra` 的核心规范，旨在成为一个稳定、可预测且易于依赖的基础服务。
 
-`coord` 组件设计精良，实现健壮，是支撑 `gochat` 微服务架构的基石。
+## 2. 核心 API 契约
 
-## 2. 核心用法
+`coord` 通过一个统一的 `Provider` 接口暴露其所有能力。
 
-### 2.1 初始化
-
-所有 `coord` 的功能都通过一个统一的 `Provider` 接口暴露。
+### 2.1 构造函数
 
 ```go
-import "github.com/ceyewan/gochat/im-infra/coord"
-
-// 创建协调器，连接到默认的 etcd 地址
-// 在真实场景中，应通过 Option 注入日志器
-coordinator, err := coord.New(context.Background(), coord.DefaultConfig(), coord.WithLogger(logger))
-if err != nil {
-    log.Fatal(err)
+// Config 是 coord 组件的配置结构体。
+type Config struct {
+    // Endpoints 是 etcd 集群的地址列表。
+    Endpoints []string `json:"endpoints"`
+    // DialTimeout 是连接 etcd 的超时时间。
+    DialTimeout time.Duration `json:"dialTimeout"`
+    // ... 其他 etcd 相关配置
 }
-defer coordinator.Close()
+
+// New 创建一个新的 coord Provider 实例。
+// 这是与 coord 组件交互的唯一入口。
+func New(ctx context.Context, config *Config, opts ...Option) (Provider, error)
 ```
 
-### 2.2 分布式锁
+### 2.2 Provider 接口
 
-用于需要保证操作唯一性的场景，例如定时任务、资源初始化等。
-
-```go
-// 获取分布式锁服务
-lockService := coordinator.Lock()
-
-// 1. 阻塞式获取锁，最长等待 ctx 的超时时间
-// "my-unique-task" 是锁的名称，30s 是锁的租期 (TTL)
-lock, err := lockService.Acquire(ctx, "my-unique-task", 30*time.Second)
-if err != nil {
-    // 获取锁失败
-    return
-}
-// 确保在操作完成后释放锁
-defer lock.Unlock(ctx)
-
-// --- 在这里执行你的临界区代码 ---
-
-// 2. 非阻塞式获取锁
-// 如果锁已被占用，会立即返回错误
-lock, err = lockService.TryAcquire(ctx, "another-task", 30*time.Second)
-if err != nil {
-    logger.Info("获取锁失败，可能已有其他实例在执行任务")
-    return
-}
-defer lock.Unlock(ctx)
-```
-
-### 2.3 服务注册与发现
-
-每个微服务在启动时，都需要向 `coord` 注册自己，并在关闭时注销。
+`Provider` 接口是所有协调服务的总入口，它通过功能将不同的职责分离到独立的子接口中。
 
 ```go
-// 获取服务注册发现服务
-registryService := coordinator.Registry()
-
-// 1. 注册服务
-serviceInfo := registry.ServiceInfo{
-    ID:       "im-logic-instance-01", // 服务实例的唯一ID
-    Name:     "im-logic",             // 服务名
-    Address:  "10.0.1.10",            // 实例地址
-    Port:     8080,
-    Metadata: map[string]string{"region": "us-east-1"},
-}
-// 注册并设置 30s 的租期，服务需要在此期间保持心跳（由coord自动处理）
-err := registryService.Register(ctx, serviceInfo, 30*time.Second)
-
-// 2. 发现服务
-// 客户端可以通过服务名发现所有可用的实例
-instances, err := registryService.Discover(ctx, "im-logic")
-for _, inst := range instances {
-    fmt.Printf("发现服务实例: %s -> %s:%d\n", inst.ID, inst.Address, inst.Port)
-}
-
-// 3. gRPC 客户端直连 (推荐)
-// coord 提供了 gRPC resolver，可以透明地处理服务发现和负载均衡
-conn, err := registryService.GetConnection(ctx, "im-logic")
-if err != nil {
-    // ...
-}
-logicClient := im_logic_v1.NewMessageServiceClient(conn)
-```
-
-### 2.4 配置中心
-
-用于动态获取服务的配置。
-
-```go
-// 获取配置中心服务
-configService := coordinator.Config()
-
-// 1. 获取配置
-var mqConfig mq.Config
-// "common/mq" 是配置在 etcd 中的 key
-err := configService.Get(ctx, "common/mq", &mqConfig)
-if err != nil {
-    // ...
-}
-
-// 2. 监听配置变更
-watcher, err := configService.Watch(ctx, "common/mq", &mqConfig)
-go func() {
-    defer watcher.Close()
-    for event := range watcher.Chan() {
-        // 配置已自动更新到 mqConfig 变量中
-        logger.Info("MQ 配置已更新", clog.Any("new_config", event.Value))
-    }
-}()
-```
-
-## 3. API 参考
-
-`coord` 提供的核心接口如下：
-
-```go
-// Provider 是 coord 的主入口
+// Provider 定义了 coord 组件提供的所有能力。
 type Provider interface {
-	Lock() lock.DistributedLock
-	Registry() registry.ServiceRegistry
-	Config() config.ConfigCenter
-    // InstanceIDAllocator 获取一个服务实例ID分配器
+	// Registry 返回服务注册与发现的客户端。
+	Registry() ServiceRegistry
+	// Config 返回配置中心的客户端。
+	Config() ConfigCenter
+	// Lock 返回分布式锁的客户端。
+	Lock() DistributedLock
+    // InstanceIDAllocator 获取一个服务实例ID分配器。
     InstanceIDAllocator(serviceName string, maxID int) (InstanceIDAllocator, error)
+
+	// Close 关闭与 etcd 的连接并释放所有资源。
 	Close() error
 }
+```
 
-// InstanceIDAllocator 为一类服务的实例分配唯一的、可自动回收的ID。
-// 例如 im-gateway, im-logic 等都需要唯一的 workerID/instanceID。
-type InstanceIDAllocator interface {
-    // AcquireID 获取一个唯一的实例ID。此方法会阻塞直到成功获取或上下文超时。
-    // ID的范围是 [1, maxID)。
-    AcquireID(ctx context.Context) (int, error)
-    // GetID 返回当前实例已获取的ID。如果还未获取，返回0。
-    GetID() int
-    // ReleaseID 释放当前实例持有的ID。通常在服务正常关闭时调用。
-    ReleaseID(ctx context.Context) error
+### 2.3 `ConfigCenter` 接口 (重点)
+
+`ConfigCenter` 提供了对配置的读、写和监听能力。
+
+```go
+// ConfigCenter 定义了配置中心的核心操作。
+type ConfigCenter interface {
+	// Get 获取指定 key 的配置，并将其反序列化到 v 中。
+	Get(ctx context.Context, key string, v interface{}) error
+
+	// List 返回指定前缀下的所有 key。
+	List(ctx context.Context, prefix string) ([]string, error)
+
+	// Set 将 v 序列化为 JSON 并写入指定的 key。
+	Set(ctx context.Context, key string, v interface{}) error
+
+	// Watch 监听一个键或一个前缀的变更。
+	//
+	// 行为约定:
+	// - 如果 key 不以 "/" 结尾，则只监听该单个键的变更。
+	// - 如果 key 以 "/" 结尾，则监听该前缀下的所有键的变更 (WatchPrefix 行为)。
+	//
+	// 返回的 Watcher 会在后台自动处理重连和错误。
+	Watch(ctx context.Context, key string) (Watcher, error)
 }
 
-// DistributedLock 分布式锁接口
-type DistributedLock interface {
-	Acquire(ctx context.Context, key string, ttl time.Duration) (Lock, error)
-	TryAcquire(ctx context.Context, key string, ttl time.Duration) (Lock, error)
+// Watcher 定义了配置监听器。
+type Watcher interface {
+    // Chan 返回一个只读通道，用于接收配置变更事件。
+    Chan() <-chan Event
+    // Close 关闭监听器。
+    Close()
 }
 
-// ServiceRegistry 服务注册发现接口
+// Event 代表一次配置变更。
+type Event struct {
+    Type EventType // PUT 或 DELETE
+    Key  string
+    // Value 是变更后的值，已反序列化。
+    // 对于 DELETE 事件，Value 为 nil。
+    Value []byte
+}
+```
+
+### 2.4 其他核心接口
+
+```go
+// ServiceRegistry 定义了服务注册与发现的操作。
 type ServiceRegistry interface {
 	Register(ctx context.Context, service ServiceInfo, ttl time.Duration) error
 	Discover(ctx context.Context, serviceName string) ([]ServiceInfo, error)
-	Watch(ctx context.Context, serviceName string) (<-chan ServiceEvent, error)
-	GetConnection(ctx context.Context, serviceName string) (*grpc.ClientConn, error)
+	// ...
 }
 
-// ConfigCenter 配置中心接口
-type ConfigCenter interface {
-	Get(ctx context.Context, key string, v interface{}) error
-	Set(ctx context.Context, key string, value interface{}) error
-	Watch(ctx context.Context, key string, v interface{}) (Watcher[any], error)
+// DistributedLock 定义了分布式锁的操作。
+type DistributedLock interface {
+	Acquire(ctx context.Context, key string, ttl time.Duration) (Locker, error)
+	// ...
+}
+
+// InstanceIDAllocator 为一类服务的实例分配唯一的、可自动回收的ID。
+type InstanceIDAllocator interface {
+    AcquireID(ctx context.Context) (int, error)
+    ReleaseID(ctx context.Context) error
+    // ...
 }
 ```
 
-### 3.1 `InstanceIDAllocator` 使用示例
+## 3. 标准用法
 
-任何需要唯一 WorkerID 的服务（如 `im-gateway` 或 `im-logic`）都应在启动时使用此功能。
+### 场景：实现 `ratelimit` 的动态配置
+
+`ratelimit` 组件在其 `New` 函数中，将使用 `coord.Config()` 来实现其“组件自治”的动态配置。
 
 ```go
-// 1. 获取特定服务的ID分配器
-// "im-gateway" 是服务名，1023 是ID上限
-idAllocator, err := coordinator.InstanceIDAllocator("im-gateway", 1023)
-if err != nil {
-    log.Fatalf("无法创建ID分配器: %v", err)
-}
+// 在 ratelimit 的 New 函数内部
+func New(ctx context.Context, config *Config, opts ...Option) (RateLimiter, error) {
+    // ... 初始化 limiter 实例，并从 opts 中获取 coord.Provider ...
 
-// 2. 获取唯一ID
-// 此过程是阻塞和自动重试的，直到成功获取ID
-instanceID, err := idAllocator.AcquireID(context.Background())
-if err != nil {
-    log.Fatalf("无法获取实例ID: %v", err)
-}
-logger.Info("成功获取实例ID", clog.Int("instanceID", instanceID))
-
-// 3. 在服务关闭时，确保释放ID
-defer func() {
-    if err := idAllocator.ReleaseID(context.Background()); err != nil {
-        logger.Error("释放实例ID失败", clog.Err(err))
+    // 1. 初始加载全量规则
+    keys, err := coordProvider.Config().List(ctx, config.RulesPath)
+    if err != nil {
+        // ... handle error
     }
-}()
+    for _, key := range keys {
+        // ... coordProvider.Config().Get(ctx, key, &rule) ...
+    }
 
-// 4. 使用获取到的 instanceID
-// 例如，构建 Kafka Topic
-kafkaTopic := fmt.Sprintf("gochat.messages.downstream.%d", instanceID)
-// 或者，初始化雪花算法生成器
-snowflakeNode, err := snowflake.NewNode(int64(instanceID))
-```
+    // 2. 启动后台 goroutine 监听配置变更
+    go func() {
+        // config.RulesPath 必须以 "/" 结尾，例如 "/config/dev/myservice/ratelimit/"
+        watcher, err := coordProvider.Config().Watch(ctx, config.RulesPath)
+        if err != nil {
+            limiter.logger.Error("无法监听配置变更", clog.Err(err))
+            return
+        }
+        defer watcher.Close()
+
+        for {
+            select {
+            case <-ctx.Done():
+                return
+            case event := <-watcher.Chan():
+                // 检测到变更，重新全量加载所有规则
+                limiter.logger.Info("检测到规则变更，重新加载...", clog.String("key", event.Key))
+                if err := limiter.reloadAllRules(); err != nil {
+                    limiter.logger.Error("重新加载规则失败", clog.Err(err))
+                }
+            }
+        }
+    }()
+
+    return limiter, nil
+}
