@@ -34,7 +34,9 @@ type CreateUserRequest struct {
 	// 昵称
 	Nickname string `protobuf:"bytes,3,opt,name=nickname,proto3" json:"nickname,omitempty"`
 	// 头像 URL
-	AvatarUrl     string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	AvatarUrl string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// 是否为游客
+	IsGuest       bool `protobuf:"varint,5,opt,name=is_guest,json=isGuest,proto3" json:"is_guest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -95,6 +97,13 @@ func (x *CreateUserRequest) GetAvatarUrl() string {
 		return x.AvatarUrl
 	}
 	return ""
+}
+
+func (x *CreateUserRequest) GetIsGuest() bool {
+	if x != nil {
+		return x.IsGuest
+	}
+	return false
 }
 
 // CreateUserResponse 创建用户响应
@@ -671,7 +680,9 @@ type User struct {
 	// 创建时间（Unix 时间戳）
 	CreatedAt int64 `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// 更新时间（Unix 时间戳）
-	UpdatedAt     int64 `protobuf:"varint,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt int64 `protobuf:"varint,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// 是否为游客
+	IsGuest       bool `protobuf:"varint,7,opt,name=is_guest,json=isGuest,proto3" json:"is_guest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -748,18 +759,26 @@ func (x *User) GetUpdatedAt() int64 {
 	return 0
 }
 
+func (x *User) GetIsGuest() bool {
+	if x != nil {
+		return x.IsGuest
+	}
+	return false
+}
+
 var File_im_repo_v1_user_proto protoreflect.FileDescriptor
 
 const file_im_repo_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"\x15im_repo/v1/user.proto\x12\n" +
-	"im.repo.v1\"\x8f\x01\n" +
+	"im.repo.v1\"\xaa\x01\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12#\n" +
 	"\rpassword_hash\x18\x02 \x01(\tR\fpasswordHash\x12\x1a\n" +
 	"\bnickname\x18\x03 \x01(\tR\bnickname\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\":\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x19\n" +
+	"\bis_guest\x18\x05 \x01(\bR\aisGuest\":\n" +
 	"\x12CreateUserResponse\x12$\n" +
 	"\x04user\x18\x01 \x01(\v2\x10.im.repo.v1.UserR\x04user\")\n" +
 	"\x0eGetUserRequest\x12\x17\n" +
@@ -790,7 +809,7 @@ const file_im_repo_v1_user_proto_rawDesc = "" +
 	"\x18GetUserByUsernameRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\"A\n" +
 	"\x19GetUserByUsernameResponse\x12$\n" +
-	"\x04user\x18\x01 \x01(\v2\x10.im.repo.v1.UserR\x04user\"\xab\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\x10.im.repo.v1.UserR\x04user\"\xc6\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1a\n" +
@@ -800,7 +819,8 @@ const file_im_repo_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\x03R\tupdatedAt2\xed\x03\n" +
+	"updated_at\x18\x06 \x01(\x03R\tupdatedAt\x12\x19\n" +
+	"\bis_guest\x18\a \x01(\bR\aisGuest2\xed\x03\n" +
 	"\vUserService\x12K\n" +
 	"\n" +
 	"CreateUser\x12\x1d.im.repo.v1.CreateUserRequest\x1a\x1e.im.repo.v1.CreateUserResponse\x12B\n" +

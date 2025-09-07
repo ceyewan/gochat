@@ -656,6 +656,107 @@ func (x *ReadPointer) GetUpdatedAt() int64 {
 	return 0
 }
 
+// CreateConversationRequest 创建会话请求
+type CreateConversationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 会话类型
+	Type int32 `protobuf:"varint,1,opt,name=type,proto3" json:"type,omitempty"`
+	// 成员用户 ID 列表
+	MemberIds     []string `protobuf:"bytes,2,rep,name=member_ids,json=memberIds,proto3" json:"member_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateConversationRequest) Reset() {
+	*x = CreateConversationRequest{}
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateConversationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateConversationRequest) ProtoMessage() {}
+
+func (x *CreateConversationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateConversationRequest.ProtoReflect.Descriptor instead.
+func (*CreateConversationRequest) Descriptor() ([]byte, []int) {
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CreateConversationRequest) GetType() int32 {
+	if x != nil {
+		return x.Type
+	}
+	return 0
+}
+
+func (x *CreateConversationRequest) GetMemberIds() []string {
+	if x != nil {
+		return x.MemberIds
+	}
+	return nil
+}
+
+// CreateConversationResponse 创建会话响应
+type CreateConversationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 会话 ID
+	ConversationId string `protobuf:"bytes,1,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateConversationResponse) Reset() {
+	*x = CreateConversationResponse{}
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateConversationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateConversationResponse) ProtoMessage() {}
+
+func (x *CreateConversationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateConversationResponse.ProtoReflect.Descriptor instead.
+func (*CreateConversationResponse) Descriptor() ([]byte, []int) {
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CreateConversationResponse) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
 var File_im_repo_v1_conversation_proto protoreflect.FileDescriptor
 
 const file_im_repo_v1_conversation_proto_rawDesc = "" +
@@ -702,13 +803,20 @@ const file_im_repo_v1_conversation_proto_rawDesc = "" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12'\n" +
 	"\x10last_read_seq_id\x18\x03 \x01(\x03R\rlastReadSeqId\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x04 \x01(\x03R\tupdatedAt2\xff\x03\n" +
+	"updated_at\x18\x04 \x01(\x03R\tupdatedAt\"N\n" +
+	"\x19CreateConversationRequest\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\x05R\x04type\x12\x1d\n" +
+	"\n" +
+	"member_ids\x18\x02 \x03(\tR\tmemberIds\"E\n" +
+	"\x1aCreateConversationResponse\x12'\n" +
+	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId2\xe4\x04\n" +
 	"\x13ConversationService\x12i\n" +
 	"\x14GetUserConversations\x12'.im.repo.v1.GetUserConversationsRequest\x1a(.im.repo.v1.GetUserConversationsResponse\x12`\n" +
 	"\x11UpdateReadPointer\x12$.im.repo.v1.UpdateReadPointerRequest\x1a%.im.repo.v1.UpdateReadPointerResponse\x12W\n" +
 	"\x0eGetUnreadCount\x12!.im.repo.v1.GetUnreadCountRequest\x1a\".im.repo.v1.GetUnreadCountResponse\x12W\n" +
 	"\x0eGetReadPointer\x12!.im.repo.v1.GetReadPointerRequest\x1a\".im.repo.v1.GetReadPointerResponse\x12i\n" +
-	"\x14BatchGetUnreadCounts\x12'.im.repo.v1.BatchGetUnreadCountsRequest\x1a(.im.repo.v1.BatchGetUnreadCountsResponseB7Z5github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1b\x06proto3"
+	"\x14BatchGetUnreadCounts\x12'.im.repo.v1.BatchGetUnreadCountsRequest\x1a(.im.repo.v1.BatchGetUnreadCountsResponse\x12c\n" +
+	"\x12CreateConversation\x12%.im.repo.v1.CreateConversationRequest\x1a&.im.repo.v1.CreateConversationResponseB7Z5github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1b\x06proto3"
 
 var (
 	file_im_repo_v1_conversation_proto_rawDescOnce sync.Once
@@ -722,7 +830,7 @@ func file_im_repo_v1_conversation_proto_rawDescGZIP() []byte {
 	return file_im_repo_v1_conversation_proto_rawDescData
 }
 
-var file_im_repo_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_im_repo_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_im_repo_v1_conversation_proto_goTypes = []any{
 	(*GetUserConversationsRequest)(nil),  // 0: im.repo.v1.GetUserConversationsRequest
 	(*GetUserConversationsResponse)(nil), // 1: im.repo.v1.GetUserConversationsResponse
@@ -735,23 +843,27 @@ var file_im_repo_v1_conversation_proto_goTypes = []any{
 	(*BatchGetUnreadCountsRequest)(nil),  // 8: im.repo.v1.BatchGetUnreadCountsRequest
 	(*BatchGetUnreadCountsResponse)(nil), // 9: im.repo.v1.BatchGetUnreadCountsResponse
 	(*ReadPointer)(nil),                  // 10: im.repo.v1.ReadPointer
-	nil,                                  // 11: im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
+	(*CreateConversationRequest)(nil),    // 11: im.repo.v1.CreateConversationRequest
+	(*CreateConversationResponse)(nil),   // 12: im.repo.v1.CreateConversationResponse
+	nil,                                  // 13: im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
 }
 var file_im_repo_v1_conversation_proto_depIdxs = []int32{
 	10, // 0: im.repo.v1.GetReadPointerResponse.read_pointer:type_name -> im.repo.v1.ReadPointer
-	11, // 1: im.repo.v1.BatchGetUnreadCountsResponse.unread_counts:type_name -> im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
+	13, // 1: im.repo.v1.BatchGetUnreadCountsResponse.unread_counts:type_name -> im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
 	0,  // 2: im.repo.v1.ConversationService.GetUserConversations:input_type -> im.repo.v1.GetUserConversationsRequest
 	2,  // 3: im.repo.v1.ConversationService.UpdateReadPointer:input_type -> im.repo.v1.UpdateReadPointerRequest
 	4,  // 4: im.repo.v1.ConversationService.GetUnreadCount:input_type -> im.repo.v1.GetUnreadCountRequest
 	6,  // 5: im.repo.v1.ConversationService.GetReadPointer:input_type -> im.repo.v1.GetReadPointerRequest
 	8,  // 6: im.repo.v1.ConversationService.BatchGetUnreadCounts:input_type -> im.repo.v1.BatchGetUnreadCountsRequest
-	1,  // 7: im.repo.v1.ConversationService.GetUserConversations:output_type -> im.repo.v1.GetUserConversationsResponse
-	3,  // 8: im.repo.v1.ConversationService.UpdateReadPointer:output_type -> im.repo.v1.UpdateReadPointerResponse
-	5,  // 9: im.repo.v1.ConversationService.GetUnreadCount:output_type -> im.repo.v1.GetUnreadCountResponse
-	7,  // 10: im.repo.v1.ConversationService.GetReadPointer:output_type -> im.repo.v1.GetReadPointerResponse
-	9,  // 11: im.repo.v1.ConversationService.BatchGetUnreadCounts:output_type -> im.repo.v1.BatchGetUnreadCountsResponse
-	7,  // [7:12] is the sub-list for method output_type
-	2,  // [2:7] is the sub-list for method input_type
+	11, // 7: im.repo.v1.ConversationService.CreateConversation:input_type -> im.repo.v1.CreateConversationRequest
+	1,  // 8: im.repo.v1.ConversationService.GetUserConversations:output_type -> im.repo.v1.GetUserConversationsResponse
+	3,  // 9: im.repo.v1.ConversationService.UpdateReadPointer:output_type -> im.repo.v1.UpdateReadPointerResponse
+	5,  // 10: im.repo.v1.ConversationService.GetUnreadCount:output_type -> im.repo.v1.GetUnreadCountResponse
+	7,  // 11: im.repo.v1.ConversationService.GetReadPointer:output_type -> im.repo.v1.GetReadPointerResponse
+	9,  // 12: im.repo.v1.ConversationService.BatchGetUnreadCounts:output_type -> im.repo.v1.BatchGetUnreadCountsResponse
+	12, // 13: im.repo.v1.ConversationService.CreateConversation:output_type -> im.repo.v1.CreateConversationResponse
+	8,  // [8:14] is the sub-list for method output_type
+	2,  // [2:8] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -768,7 +880,7 @@ func file_im_repo_v1_conversation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_repo_v1_conversation_proto_rawDesc), len(file_im_repo_v1_conversation_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -395,7 +395,9 @@ type User struct {
 	// 创建时间（Unix 时间戳）
 	CreatedAt int64 `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// 更新时间（Unix 时间戳）
-	UpdatedAt     int64 `protobuf:"varint,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt int64 `protobuf:"varint,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// 是否为游客
+	IsGuest       bool `protobuf:"varint,7,opt,name=is_guest,json=isGuest,proto3" json:"is_guest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -470,6 +472,13 @@ func (x *User) GetUpdatedAt() int64 {
 		return x.UpdatedAt
 	}
 	return 0
+}
+
+func (x *User) GetIsGuest() bool {
+	if x != nil {
+		return x.IsGuest
+	}
+	return false
 }
 
 // OnlineStatus 在线状态
@@ -633,7 +642,7 @@ const file_im_logic_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\x03R\tcreatedAt\x12)\n" +
 	"\x06sender\x18\b \x01(\v2\x11.im.logic.v1.UserR\x06sender\x12\x14\n" +
-	"\x05extra\x18\t \x01(\tR\x05extra\"\xab\x01\n" +
+	"\x05extra\x18\t \x01(\tR\x05extra\"\xc6\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1a\n" +
@@ -643,7 +652,8 @@ const file_im_logic_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\x03R\tupdatedAt\"\x80\x01\n" +
+	"updated_at\x18\x06 \x01(\x03R\tupdatedAt\x12\x19\n" +
+	"\bis_guest\x18\a \x01(\bR\aisGuest\"\x80\x01\n" +
 	"\fOnlineStatus\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tis_online\x18\x02 \x01(\bR\bisOnline\x12\x1d\n" +

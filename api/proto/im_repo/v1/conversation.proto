@@ -29,6 +29,10 @@ service ConversationService {
   // BatchGetUnreadCounts 批量获取未读消息数
   // 批量查询多个会话的未读消息数
   rpc BatchGetUnreadCounts(BatchGetUnreadCountsRequest) returns (BatchGetUnreadCountsResponse);
+
+  // CreateConversation 创建会话
+  // 在数据库中创建新的会话记录
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
 }
 
 // GetUserConversationsRequest 获取用户会话列表请求
@@ -123,4 +127,18 @@ message ReadPointer {
   int64 last_read_seq_id = 3;
   // 更新时间（Unix 时间戳）
   int64 updated_at = 4;
+}
+
+// CreateConversationRequest 创建会话请求
+message CreateConversationRequest {
+  // 会话类型
+  int32 type = 1;
+  // 成员用户 ID 列表
+  repeated string member_ids = 2;
+}
+
+// CreateConversationResponse 创建会话响应
+message CreateConversationResponse {
+  // 会话 ID
+  string conversation_id = 1;
 }

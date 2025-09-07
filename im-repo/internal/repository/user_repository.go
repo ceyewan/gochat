@@ -31,14 +31,17 @@ func NewUserRepository(db *Database, cache *CacheManager) *UserRepository {
 func (r *UserRepository) CreateUser(ctx context.Context, user *model.User) error {
 	r.logger.Info("创建用户", clog.String("username", user.Username))
 
-	// 哈希密码
-	if user.PasswordHash != "" {
+	// 如果是普通用户，哈希密码
+	if !user.IsGuest && user.PasswordHash != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.PasswordHash), bcrypt.DefaultCost)
 		if err != nil {
 			r.logger.Error("密码哈希失败", clog.Err(err))
 			return fmt.Errorf("密码哈希失败: %w", err)
 		}
 		user.PasswordHash = string(hashedPassword)
+	} else if user.IsGuest {
+		// 游客用户可以没有密码
+		user.PasswordHash = ""
 	}
 
 	// 设置时间戳

@@ -26,6 +26,9 @@ type User struct {
 
 	// 更新时间
 	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
+
+	// 是否为游客
+	IsGuest bool `gorm:"not null;default:false;column:is_guest" json:"is_guest"`
 }
 
 // TableName 返回表名
@@ -147,4 +150,27 @@ type UserReadPointer struct {
 // TableName 返回表名
 func (UserReadPointer) TableName() string {
 	return "user_read_pointers"
+}
+
+// Conversation 会话数据模型
+type Conversation struct {
+	// 会话 ID（主键）
+	ID string `gorm:"primaryKey;size:64;column:id" json:"id"`
+
+	// 会话类型 (1:单聊, 2:群聊)
+	Type int `gorm:"not null;column:type" json:"type"`
+
+	// 最后一条消息的 ID
+	LastMessageID uint64 `gorm:"column:last_message_id" json:"last_message_id"`
+
+	// 创建时间
+	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
+
+	// 更新时间
+	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
+}
+
+// TableName 返回表名
+func (Conversation) TableName() string {
+	return "conversations"
 }

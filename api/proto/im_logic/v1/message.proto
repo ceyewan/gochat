@@ -1,0 +1,38 @@
+// im_logic/v1/message.proto
+// Defines the message management service for im-logic.
+
+syntax = "proto3";
+
+package im.logic.v1;
+
+option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
+
+import "im_logic/v1/common.proto";
+
+// MessageService is responsible for handling message-related operations.
+service MessageService {
+  // SendMessage sends a new message to a conversation.
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+}
+
+// SendMessageRequest is the request to send a message.
+message SendMessageRequest {
+  // The ID of the user sending the message.
+  string user_id = 1;
+  // The ID of the conversation to send the message to.
+  string conversation_id = 2;
+  // The content of the message.
+  string content = 3;
+  // The type of the message.
+  MessageType type = 4;
+  // A temporary client-side ID for idempotency.
+  string client_msg_id = 5;
+}
+
+// SendMessageResponse is the response after sending a message.
+message SendMessageResponse {
+  // The server-generated message.
+  Message message = 1;
+  // The temporary client-side ID for matching.
+  string client_msg_id = 2;
+}

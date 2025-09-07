@@ -710,6 +710,125 @@ func (x *ConversationUnreadCount) GetUnreadCount() int64 {
 	return 0
 }
 
+// CreateConversationRequest 创建会话请求
+type CreateConversationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 创建者用户 ID
+	CreatorId string `protobuf:"bytes,1,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	// 会话类型
+	Type ConversationType `protobuf:"varint,2,opt,name=type,proto3,enum=im.logic.v1.ConversationType" json:"type,omitempty"`
+	// 成员用户 ID 列表
+	MemberIds []string `protobuf:"bytes,3,rep,name=member_ids,json=memberIds,proto3" json:"member_ids,omitempty"`
+	// 会话名称（群聊时需要）
+	Name          string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateConversationRequest) Reset() {
+	*x = CreateConversationRequest{}
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateConversationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateConversationRequest) ProtoMessage() {}
+
+func (x *CreateConversationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateConversationRequest.ProtoReflect.Descriptor instead.
+func (*CreateConversationRequest) Descriptor() ([]byte, []int) {
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CreateConversationRequest) GetCreatorId() string {
+	if x != nil {
+		return x.CreatorId
+	}
+	return ""
+}
+
+func (x *CreateConversationRequest) GetType() ConversationType {
+	if x != nil {
+		return x.Type
+	}
+	return ConversationType_CONVERSATION_TYPE_UNSPECIFIED
+}
+
+func (x *CreateConversationRequest) GetMemberIds() []string {
+	if x != nil {
+		return x.MemberIds
+	}
+	return nil
+}
+
+func (x *CreateConversationRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// CreateConversationResponse 创建会话响应
+type CreateConversationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 会话信息
+	Conversation  *Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateConversationResponse) Reset() {
+	*x = CreateConversationResponse{}
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateConversationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateConversationResponse) ProtoMessage() {}
+
+func (x *CreateConversationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateConversationResponse.ProtoReflect.Descriptor instead.
+func (*CreateConversationResponse) Descriptor() ([]byte, []int) {
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CreateConversationResponse) GetConversation() *Conversation {
+	if x != nil {
+		return x.Conversation
+	}
+	return nil
+}
+
 // Conversation 会话信息
 type Conversation struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -737,7 +856,7 @@ type Conversation struct {
 
 func (x *Conversation) Reset() {
 	*x = Conversation{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -749,7 +868,7 @@ func (x *Conversation) String() string {
 func (*Conversation) ProtoMessage() {}
 
 func (x *Conversation) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -762,7 +881,7 @@ func (x *Conversation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Conversation.ProtoReflect.Descriptor instead.
 func (*Conversation) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{11}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Conversation) GetId() string {
@@ -876,7 +995,16 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x13conversation_counts\x18\x02 \x03(\v2$.im.logic.v1.ConversationUnreadCountR\x12conversationCounts\"e\n" +
 	"\x17ConversationUnreadCount\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId\x12!\n" +
-	"\funread_count\x18\x02 \x01(\x03R\vunreadCount\"\xbf\x02\n" +
+	"\funread_count\x18\x02 \x01(\x03R\vunreadCount\"\xa0\x01\n" +
+	"\x19CreateConversationRequest\x12\x1d\n" +
+	"\n" +
+	"creator_id\x18\x01 \x01(\tR\tcreatorId\x121\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x1d.im.logic.v1.ConversationTypeR\x04type\x12\x1d\n" +
+	"\n" +
+	"member_ids\x18\x03 \x03(\tR\tmemberIds\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\"[\n" +
+	"\x1aCreateConversationResponse\x12=\n" +
+	"\fconversation\x18\x01 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\"\xbf\x02\n" +
 	"\fConversation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1d.im.logic.v1.ConversationTypeR\x04type\x12\x12\n" +
@@ -888,14 +1016,15 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\a \x01(\x03R\tupdatedAt\x12!\n" +
 	"\fmember_count\x18\b \x01(\x05R\vmemberCount\x12\x1b\n" +
-	"\tuser_role\x18\t \x01(\x05R\buserRole2\xd0\x03\n" +
+	"\tuser_role\x18\t \x01(\x05R\buserRole2\xb7\x04\n" +
 	"\x13ConversationService\x12_\n" +
 	"\x10GetConversations\x12$.im.logic.v1.GetConversationsRequest\x1a%.im.logic.v1.GetConversationsResponse\x12\\\n" +
 	"\x0fGetConversation\x12#.im.logic.v1.GetConversationRequest\x1a$.im.logic.v1.GetConversationResponse\x12P\n" +
 	"\vGetMessages\x12\x1f.im.logic.v1.GetMessagesRequest\x1a .im.logic.v1.GetMessagesResponse\x12M\n" +
 	"\n" +
 	"MarkAsRead\x12\x1e.im.logic.v1.MarkAsReadRequest\x1a\x1f.im.logic.v1.MarkAsReadResponse\x12Y\n" +
-	"\x0eGetUnreadCount\x12\".im.logic.v1.GetUnreadCountRequest\x1a#.im.logic.v1.GetUnreadCountResponseB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
+	"\x0eGetUnreadCount\x12\".im.logic.v1.GetUnreadCountRequest\x1a#.im.logic.v1.GetUnreadCountResponse\x12e\n" +
+	"\x12CreateConversation\x12&.im.logic.v1.CreateConversationRequest\x1a'.im.logic.v1.CreateConversationResponseB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
 
 var (
 	file_im_logic_v1_conversation_proto_rawDescOnce sync.Once
@@ -909,46 +1038,52 @@ func file_im_logic_v1_conversation_proto_rawDescGZIP() []byte {
 	return file_im_logic_v1_conversation_proto_rawDescData
 }
 
-var file_im_logic_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_im_logic_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_im_logic_v1_conversation_proto_goTypes = []any{
-	(*GetConversationsRequest)(nil),  // 0: im.logic.v1.GetConversationsRequest
-	(*GetConversationsResponse)(nil), // 1: im.logic.v1.GetConversationsResponse
-	(*GetConversationRequest)(nil),   // 2: im.logic.v1.GetConversationRequest
-	(*GetConversationResponse)(nil),  // 3: im.logic.v1.GetConversationResponse
-	(*GetMessagesRequest)(nil),       // 4: im.logic.v1.GetMessagesRequest
-	(*GetMessagesResponse)(nil),      // 5: im.logic.v1.GetMessagesResponse
-	(*MarkAsReadRequest)(nil),        // 6: im.logic.v1.MarkAsReadRequest
-	(*MarkAsReadResponse)(nil),       // 7: im.logic.v1.MarkAsReadResponse
-	(*GetUnreadCountRequest)(nil),    // 8: im.logic.v1.GetUnreadCountRequest
-	(*GetUnreadCountResponse)(nil),   // 9: im.logic.v1.GetUnreadCountResponse
-	(*ConversationUnreadCount)(nil),  // 10: im.logic.v1.ConversationUnreadCount
-	(*Conversation)(nil),             // 11: im.logic.v1.Conversation
-	(ConversationType)(0),            // 12: im.logic.v1.ConversationType
-	(*Message)(nil),                  // 13: im.logic.v1.Message
+	(*GetConversationsRequest)(nil),    // 0: im.logic.v1.GetConversationsRequest
+	(*GetConversationsResponse)(nil),   // 1: im.logic.v1.GetConversationsResponse
+	(*GetConversationRequest)(nil),     // 2: im.logic.v1.GetConversationRequest
+	(*GetConversationResponse)(nil),    // 3: im.logic.v1.GetConversationResponse
+	(*GetMessagesRequest)(nil),         // 4: im.logic.v1.GetMessagesRequest
+	(*GetMessagesResponse)(nil),        // 5: im.logic.v1.GetMessagesResponse
+	(*MarkAsReadRequest)(nil),          // 6: im.logic.v1.MarkAsReadRequest
+	(*MarkAsReadResponse)(nil),         // 7: im.logic.v1.MarkAsReadResponse
+	(*GetUnreadCountRequest)(nil),      // 8: im.logic.v1.GetUnreadCountRequest
+	(*GetUnreadCountResponse)(nil),     // 9: im.logic.v1.GetUnreadCountResponse
+	(*ConversationUnreadCount)(nil),    // 10: im.logic.v1.ConversationUnreadCount
+	(*CreateConversationRequest)(nil),  // 11: im.logic.v1.CreateConversationRequest
+	(*CreateConversationResponse)(nil), // 12: im.logic.v1.CreateConversationResponse
+	(*Conversation)(nil),               // 13: im.logic.v1.Conversation
+	(ConversationType)(0),              // 14: im.logic.v1.ConversationType
+	(*Message)(nil),                    // 15: im.logic.v1.Message
 }
 var file_im_logic_v1_conversation_proto_depIdxs = []int32{
-	12, // 0: im.logic.v1.GetConversationsRequest.type:type_name -> im.logic.v1.ConversationType
-	11, // 1: im.logic.v1.GetConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
-	11, // 2: im.logic.v1.GetConversationResponse.conversation:type_name -> im.logic.v1.Conversation
-	13, // 3: im.logic.v1.GetMessagesResponse.messages:type_name -> im.logic.v1.Message
+	14, // 0: im.logic.v1.GetConversationsRequest.type:type_name -> im.logic.v1.ConversationType
+	13, // 1: im.logic.v1.GetConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
+	13, // 2: im.logic.v1.GetConversationResponse.conversation:type_name -> im.logic.v1.Conversation
+	15, // 3: im.logic.v1.GetMessagesResponse.messages:type_name -> im.logic.v1.Message
 	10, // 4: im.logic.v1.GetUnreadCountResponse.conversation_counts:type_name -> im.logic.v1.ConversationUnreadCount
-	12, // 5: im.logic.v1.Conversation.type:type_name -> im.logic.v1.ConversationType
-	13, // 6: im.logic.v1.Conversation.last_message:type_name -> im.logic.v1.Message
-	0,  // 7: im.logic.v1.ConversationService.GetConversations:input_type -> im.logic.v1.GetConversationsRequest
-	2,  // 8: im.logic.v1.ConversationService.GetConversation:input_type -> im.logic.v1.GetConversationRequest
-	4,  // 9: im.logic.v1.ConversationService.GetMessages:input_type -> im.logic.v1.GetMessagesRequest
-	6,  // 10: im.logic.v1.ConversationService.MarkAsRead:input_type -> im.logic.v1.MarkAsReadRequest
-	8,  // 11: im.logic.v1.ConversationService.GetUnreadCount:input_type -> im.logic.v1.GetUnreadCountRequest
-	1,  // 12: im.logic.v1.ConversationService.GetConversations:output_type -> im.logic.v1.GetConversationsResponse
-	3,  // 13: im.logic.v1.ConversationService.GetConversation:output_type -> im.logic.v1.GetConversationResponse
-	5,  // 14: im.logic.v1.ConversationService.GetMessages:output_type -> im.logic.v1.GetMessagesResponse
-	7,  // 15: im.logic.v1.ConversationService.MarkAsRead:output_type -> im.logic.v1.MarkAsReadResponse
-	9,  // 16: im.logic.v1.ConversationService.GetUnreadCount:output_type -> im.logic.v1.GetUnreadCountResponse
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	14, // 5: im.logic.v1.CreateConversationRequest.type:type_name -> im.logic.v1.ConversationType
+	13, // 6: im.logic.v1.CreateConversationResponse.conversation:type_name -> im.logic.v1.Conversation
+	14, // 7: im.logic.v1.Conversation.type:type_name -> im.logic.v1.ConversationType
+	15, // 8: im.logic.v1.Conversation.last_message:type_name -> im.logic.v1.Message
+	0,  // 9: im.logic.v1.ConversationService.GetConversations:input_type -> im.logic.v1.GetConversationsRequest
+	2,  // 10: im.logic.v1.ConversationService.GetConversation:input_type -> im.logic.v1.GetConversationRequest
+	4,  // 11: im.logic.v1.ConversationService.GetMessages:input_type -> im.logic.v1.GetMessagesRequest
+	6,  // 12: im.logic.v1.ConversationService.MarkAsRead:input_type -> im.logic.v1.MarkAsReadRequest
+	8,  // 13: im.logic.v1.ConversationService.GetUnreadCount:input_type -> im.logic.v1.GetUnreadCountRequest
+	11, // 14: im.logic.v1.ConversationService.CreateConversation:input_type -> im.logic.v1.CreateConversationRequest
+	1,  // 15: im.logic.v1.ConversationService.GetConversations:output_type -> im.logic.v1.GetConversationsResponse
+	3,  // 16: im.logic.v1.ConversationService.GetConversation:output_type -> im.logic.v1.GetConversationResponse
+	5,  // 17: im.logic.v1.ConversationService.GetMessages:output_type -> im.logic.v1.GetMessagesResponse
+	7,  // 18: im.logic.v1.ConversationService.MarkAsRead:output_type -> im.logic.v1.MarkAsReadResponse
+	9,  // 19: im.logic.v1.ConversationService.GetUnreadCount:output_type -> im.logic.v1.GetUnreadCountResponse
+	12, // 20: im.logic.v1.ConversationService.CreateConversation:output_type -> im.logic.v1.CreateConversationResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_im_logic_v1_conversation_proto_init() }
@@ -963,7 +1098,7 @@ func file_im_logic_v1_conversation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_logic_v1_conversation_proto_rawDesc), len(file_im_logic_v1_conversation_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

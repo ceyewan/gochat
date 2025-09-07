@@ -31,6 +31,10 @@ service AuthService {
   // ValidateToken 验证令牌
   // 验证访问令牌的有效性并返回用户信息
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // GuestLogin 游客登录
+  // 为游客创建临时账号并返回令牌
+  rpc GuestLogin(GuestLoginRequest) returns (LoginResponse);
 }
 
 // LoginRequest 登录请求
@@ -119,3 +123,10 @@ message ValidateTokenResponse {
   int64 expires_at = 3;
 }
 
+// GuestLoginRequest 游客登录请求
+message GuestLoginRequest {
+  // 游客昵称（可选）
+  string nickname = 1;
+  // 客户端信息（可选）
+  string client_info = 2;
+}

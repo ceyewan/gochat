@@ -31,6 +31,10 @@ service ConversationService {
   // GetUnreadCount 获取未读消息数
   // 返回用户在指定会话中的未读消息数量
   rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse);
+
+  // CreateConversation 创建会话
+  // 主要用于创建私聊会话
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
 }
 
 // GetConversationsRequest 获取会话列表请求
@@ -137,6 +141,24 @@ message ConversationUnreadCount {
   string conversation_id = 1;
   // 未读数量
   int64 unread_count = 2;
+}
+
+// CreateConversationRequest 创建会话请求
+message CreateConversationRequest {
+  // 创建者用户 ID
+  string creator_id = 1;
+  // 会话类型
+  ConversationType type = 2;
+  // 成员用户 ID 列表
+  repeated string member_ids = 3;
+  // 会话名称（群聊时需要）
+  string name = 4;
+}
+
+// CreateConversationResponse 创建会话响应
+message CreateConversationResponse {
+  // 会话信息
+  Conversation conversation = 1;
 }
 
 // Conversation 会话信息

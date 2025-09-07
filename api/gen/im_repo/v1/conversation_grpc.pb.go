@@ -27,6 +27,7 @@ const (
 	ConversationService_GetUnreadCount_FullMethodName       = "/im.repo.v1.ConversationService/GetUnreadCount"
 	ConversationService_GetReadPointer_FullMethodName       = "/im.repo.v1.ConversationService/GetReadPointer"
 	ConversationService_BatchGetUnreadCounts_FullMethodName = "/im.repo.v1.ConversationService/BatchGetUnreadCounts"
+	ConversationService_CreateConversation_FullMethodName   = "/im.repo.v1.ConversationService/CreateConversation"
 )
 
 // ConversationServiceClient is the client API for ConversationService service.
@@ -51,6 +52,9 @@ type ConversationServiceClient interface {
 	// BatchGetUnreadCounts 批量获取未读消息数
 	// 批量查询多个会话的未读消息数
 	BatchGetUnreadCounts(ctx context.Context, in *BatchGetUnreadCountsRequest, opts ...grpc.CallOption) (*BatchGetUnreadCountsResponse, error)
+	// CreateConversation 创建会话
+	// 在数据库中创建新的会话记录
+	CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error)
 }
 
 type conversationServiceClient struct {
@@ -111,6 +115,16 @@ func (c *conversationServiceClient) BatchGetUnreadCounts(ctx context.Context, in
 	return out, nil
 }
 
+func (c *conversationServiceClient) CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateConversationResponse)
+	err := c.cc.Invoke(ctx, ConversationService_CreateConversation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConversationServiceServer is the server API for ConversationService service.
 // All implementations must embed UnimplementedConversationServiceServer
 // for forward compatibility.
@@ -133,6 +147,9 @@ type ConversationServiceServer interface {
 	// BatchGetUnreadCounts 批量获取未读消息数
 	// 批量查询多个会话的未读消息数
 	BatchGetUnreadCounts(context.Context, *BatchGetUnreadCountsRequest) (*BatchGetUnreadCountsResponse, error)
+	// CreateConversation 创建会话
+	// 在数据库中创建新的会话记录
+	CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error)
 	mustEmbedUnimplementedConversationServiceServer()
 }
 
@@ -157,6 +174,9 @@ func (UnimplementedConversationServiceServer) GetReadPointer(context.Context, *G
 }
 func (UnimplementedConversationServiceServer) BatchGetUnreadCounts(context.Context, *BatchGetUnreadCountsRequest) (*BatchGetUnreadCountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchGetUnreadCounts not implemented")
+}
+func (UnimplementedConversationServiceServer) CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateConversation not implemented")
 }
 func (UnimplementedConversationServiceServer) mustEmbedUnimplementedConversationServiceServer() {}
 func (UnimplementedConversationServiceServer) testEmbeddedByValue()                             {}
@@ -269,6 +289,24 @@ func _ConversationService_BatchGetUnreadCounts_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConversationService_CreateConversation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateConversationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).CreateConversation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_CreateConversation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).CreateConversation(ctx, req.(*CreateConversationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ConversationService_ServiceDesc is the grpc.ServiceDesc for ConversationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -295,6 +333,10 @@ var ConversationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchGetUnreadCounts",
 			Handler:    _ConversationService_BatchGetUnreadCounts_Handler,
+		},
+		{
+			MethodName: "CreateConversation",
+			Handler:    _ConversationService_CreateConversation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

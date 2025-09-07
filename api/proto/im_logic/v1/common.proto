@@ -73,6 +73,8 @@ message User {
   int64 created_at = 5;
   // 更新时间（Unix 时间戳）
   int64 updated_at = 6;
+  // 是否为游客
+  bool is_guest = 7;
 }
 
 // OnlineStatus 在线状态

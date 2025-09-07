@@ -601,6 +601,61 @@ func (x *ValidateTokenResponse) GetExpiresAt() int64 {
 	return 0
 }
 
+// GuestLoginRequest 游客登录请求
+type GuestLoginRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 游客昵称（可选）
+	Nickname string `protobuf:"bytes,1,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	// 客户端信息（可选）
+	ClientInfo    string `protobuf:"bytes,2,opt,name=client_info,json=clientInfo,proto3" json:"client_info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GuestLoginRequest) Reset() {
+	*x = GuestLoginRequest{}
+	mi := &file_im_logic_v1_auth_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GuestLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuestLoginRequest) ProtoMessage() {}
+
+func (x *GuestLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_im_logic_v1_auth_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuestLoginRequest.ProtoReflect.Descriptor instead.
+func (*GuestLoginRequest) Descriptor() ([]byte, []int) {
+	return file_im_logic_v1_auth_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GuestLoginRequest) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
+}
+
+func (x *GuestLoginRequest) GetClientInfo() string {
+	if x != nil {
+		return x.ClientInfo
+	}
+	return ""
+}
+
 var File_im_logic_v1_auth_proto protoreflect.FileDescriptor
 
 const file_im_logic_v1_auth_proto_rawDesc = "" +
@@ -643,13 +698,19 @@ const file_im_logic_v1_auth_proto_rawDesc = "" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12%\n" +
 	"\x04user\x18\x02 \x01(\v2\x11.im.logic.v1.UserR\x04user\x12\x1d\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\x03R\texpiresAt2\x86\x03\n" +
+	"expires_at\x18\x03 \x01(\x03R\texpiresAt\"P\n" +
+	"\x11GuestLoginRequest\x12\x1a\n" +
+	"\bnickname\x18\x01 \x01(\tR\bnickname\x12\x1f\n" +
+	"\vclient_info\x18\x02 \x01(\tR\n" +
+	"clientInfo2\xd0\x03\n" +
 	"\vAuthService\x12>\n" +
 	"\x05Login\x12\x19.im.logic.v1.LoginRequest\x1a\x1a.im.logic.v1.LoginResponse\x12G\n" +
 	"\bRegister\x12\x1c.im.logic.v1.RegisterRequest\x1a\x1d.im.logic.v1.RegisterResponse\x12S\n" +
 	"\fRefreshToken\x12 .im.logic.v1.RefreshTokenRequest\x1a!.im.logic.v1.RefreshTokenResponse\x12A\n" +
 	"\x06Logout\x12\x1a.im.logic.v1.LogoutRequest\x1a\x1b.im.logic.v1.LogoutResponse\x12V\n" +
-	"\rValidateToken\x12!.im.logic.v1.ValidateTokenRequest\x1a\".im.logic.v1.ValidateTokenResponseB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
+	"\rValidateToken\x12!.im.logic.v1.ValidateTokenRequest\x1a\".im.logic.v1.ValidateTokenResponse\x12H\n" +
+	"\n" +
+	"GuestLogin\x12\x1e.im.logic.v1.GuestLoginRequest\x1a\x1a.im.logic.v1.LoginResponseB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
 
 var (
 	file_im_logic_v1_auth_proto_rawDescOnce sync.Once
@@ -663,7 +724,7 @@ func file_im_logic_v1_auth_proto_rawDescGZIP() []byte {
 	return file_im_logic_v1_auth_proto_rawDescData
 }
 
-var file_im_logic_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_im_logic_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_im_logic_v1_auth_proto_goTypes = []any{
 	(*LoginRequest)(nil),          // 0: im.logic.v1.LoginRequest
 	(*LoginResponse)(nil),         // 1: im.logic.v1.LoginResponse
@@ -675,24 +736,27 @@ var file_im_logic_v1_auth_proto_goTypes = []any{
 	(*LogoutResponse)(nil),        // 7: im.logic.v1.LogoutResponse
 	(*ValidateTokenRequest)(nil),  // 8: im.logic.v1.ValidateTokenRequest
 	(*ValidateTokenResponse)(nil), // 9: im.logic.v1.ValidateTokenResponse
-	(*User)(nil),                  // 10: im.logic.v1.User
+	(*GuestLoginRequest)(nil),     // 10: im.logic.v1.GuestLoginRequest
+	(*User)(nil),                  // 11: im.logic.v1.User
 }
 var file_im_logic_v1_auth_proto_depIdxs = []int32{
-	10, // 0: im.logic.v1.LoginResponse.user:type_name -> im.logic.v1.User
-	10, // 1: im.logic.v1.RegisterResponse.user:type_name -> im.logic.v1.User
-	10, // 2: im.logic.v1.ValidateTokenResponse.user:type_name -> im.logic.v1.User
+	11, // 0: im.logic.v1.LoginResponse.user:type_name -> im.logic.v1.User
+	11, // 1: im.logic.v1.RegisterResponse.user:type_name -> im.logic.v1.User
+	11, // 2: im.logic.v1.ValidateTokenResponse.user:type_name -> im.logic.v1.User
 	0,  // 3: im.logic.v1.AuthService.Login:input_type -> im.logic.v1.LoginRequest
 	2,  // 4: im.logic.v1.AuthService.Register:input_type -> im.logic.v1.RegisterRequest
 	4,  // 5: im.logic.v1.AuthService.RefreshToken:input_type -> im.logic.v1.RefreshTokenRequest
 	6,  // 6: im.logic.v1.AuthService.Logout:input_type -> im.logic.v1.LogoutRequest
 	8,  // 7: im.logic.v1.AuthService.ValidateToken:input_type -> im.logic.v1.ValidateTokenRequest
-	1,  // 8: im.logic.v1.AuthService.Login:output_type -> im.logic.v1.LoginResponse
-	3,  // 9: im.logic.v1.AuthService.Register:output_type -> im.logic.v1.RegisterResponse
-	5,  // 10: im.logic.v1.AuthService.RefreshToken:output_type -> im.logic.v1.RefreshTokenResponse
-	7,  // 11: im.logic.v1.AuthService.Logout:output_type -> im.logic.v1.LogoutResponse
-	9,  // 12: im.logic.v1.AuthService.ValidateToken:output_type -> im.logic.v1.ValidateTokenResponse
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
+	10, // 8: im.logic.v1.AuthService.GuestLogin:input_type -> im.logic.v1.GuestLoginRequest
+	1,  // 9: im.logic.v1.AuthService.Login:output_type -> im.logic.v1.LoginResponse
+	3,  // 10: im.logic.v1.AuthService.Register:output_type -> im.logic.v1.RegisterResponse
+	5,  // 11: im.logic.v1.AuthService.RefreshToken:output_type -> im.logic.v1.RefreshTokenResponse
+	7,  // 12: im.logic.v1.AuthService.Logout:output_type -> im.logic.v1.LogoutResponse
+	9,  // 13: im.logic.v1.AuthService.ValidateToken:output_type -> im.logic.v1.ValidateTokenResponse
+	1,  // 14: im.logic.v1.AuthService.GuestLogin:output_type -> im.logic.v1.LoginResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -710,7 +774,7 @@ func file_im_logic_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_logic_v1_auth_proto_rawDesc), len(file_im_logic_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

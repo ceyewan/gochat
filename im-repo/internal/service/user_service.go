@@ -47,6 +47,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *repopb.CreateUserRequ
 		PasswordHash: req.PasswordHash,
 		Nickname:     req.Nickname,
 		AvatarURL:    req.AvatarUrl,
+		IsGuest:      req.IsGuest,
 	}
 
 	// 如果昵称为空，使用用户名作为昵称
@@ -293,5 +294,6 @@ func (s *UserService) modelToProto(user *model.User) *repopb.User {
 		AvatarUrl: user.AvatarURL,
 		CreatedAt: user.CreatedAt.Unix(),
 		UpdatedAt: user.UpdatedAt.Unix(),
+		IsGuest:   user.IsGuest,
 	}
 }

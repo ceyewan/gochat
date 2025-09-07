@@ -22,11 +22,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConversationService_GetConversations_FullMethodName = "/im.logic.v1.ConversationService/GetConversations"
-	ConversationService_GetConversation_FullMethodName  = "/im.logic.v1.ConversationService/GetConversation"
-	ConversationService_GetMessages_FullMethodName      = "/im.logic.v1.ConversationService/GetMessages"
-	ConversationService_MarkAsRead_FullMethodName       = "/im.logic.v1.ConversationService/MarkAsRead"
-	ConversationService_GetUnreadCount_FullMethodName   = "/im.logic.v1.ConversationService/GetUnreadCount"
+	ConversationService_GetConversations_FullMethodName   = "/im.logic.v1.ConversationService/GetConversations"
+	ConversationService_GetConversation_FullMethodName    = "/im.logic.v1.ConversationService/GetConversation"
+	ConversationService_GetMessages_FullMethodName        = "/im.logic.v1.ConversationService/GetMessages"
+	ConversationService_MarkAsRead_FullMethodName         = "/im.logic.v1.ConversationService/MarkAsRead"
+	ConversationService_GetUnreadCount_FullMethodName     = "/im.logic.v1.ConversationService/GetUnreadCount"
+	ConversationService_CreateConversation_FullMethodName = "/im.logic.v1.ConversationService/CreateConversation"
 )
 
 // ConversationServiceClient is the client API for ConversationService service.
@@ -51,6 +52,9 @@ type ConversationServiceClient interface {
 	// GetUnreadCount 获取未读消息数
 	// 返回用户在指定会话中的未读消息数量
 	GetUnreadCount(ctx context.Context, in *GetUnreadCountRequest, opts ...grpc.CallOption) (*GetUnreadCountResponse, error)
+	// CreateConversation 创建会话
+	// 主要用于创建私聊会话
+	CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error)
 }
 
 type conversationServiceClient struct {
@@ -111,6 +115,16 @@ func (c *conversationServiceClient) GetUnreadCount(ctx context.Context, in *GetU
 	return out, nil
 }
 
+func (c *conversationServiceClient) CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateConversationResponse)
+	err := c.cc.Invoke(ctx, ConversationService_CreateConversation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConversationServiceServer is the server API for ConversationService service.
 // All implementations must embed UnimplementedConversationServiceServer
 // for forward compatibility.
@@ -133,6 +147,9 @@ type ConversationServiceServer interface {
 	// GetUnreadCount 获取未读消息数
 	// 返回用户在指定会话中的未读消息数量
 	GetUnreadCount(context.Context, *GetUnreadCountRequest) (*GetUnreadCountResponse, error)
+	// CreateConversation 创建会话
+	// 主要用于创建私聊会话
+	CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error)
 	mustEmbedUnimplementedConversationServiceServer()
 }
 
@@ -157,6 +174,9 @@ func (UnimplementedConversationServiceServer) MarkAsRead(context.Context, *MarkA
 }
 func (UnimplementedConversationServiceServer) GetUnreadCount(context.Context, *GetUnreadCountRequest) (*GetUnreadCountResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUnreadCount not implemented")
+}
+func (UnimplementedConversationServiceServer) CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateConversation not implemented")
 }
 func (UnimplementedConversationServiceServer) mustEmbedUnimplementedConversationServiceServer() {}
 func (UnimplementedConversationServiceServer) testEmbeddedByValue()                             {}
@@ -269,6 +289,24 @@ func _ConversationService_GetUnreadCount_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConversationService_CreateConversation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateConversationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).CreateConversation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_CreateConversation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).CreateConversation(ctx, req.(*CreateConversationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ConversationService_ServiceDesc is the grpc.ServiceDesc for ConversationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -295,6 +333,10 @@ var ConversationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUnreadCount",
 			Handler:    _ConversationService_GetUnreadCount_Handler,
+		},
+		{
+			MethodName: "CreateConversation",
+			Handler:    _ConversationService_CreateConversation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
