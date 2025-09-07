@@ -1,86 +1,86 @@
-# Using `im-infra` Components
+# 使用 `im-infra` 组件
 
-The `im-infra` directory contains shared libraries used across all microservices. This guide explains how to use the key components.
+`im-infra` 目录包含在所有微服务中使用的共享库。本指南解释如何使用关键组件。
 
-## 1. `clog` - Structured Logging
+## 1. `clog` - 结构化日志
 
-The `clog` library provides a standardized, structured logging interface.
+`clog` 库提供标准化的结构化日志接口。
 
--   **Initialization**: A logger is typically initialized in `main.go` and passed down to other components.
--   **Usage**:
+-   **初始化**: 日志记录器通常在 `main.go` 中初始化并传递给其他组件。
+-   **用法**:
     ```go
     import "github.com/ceyewan/gochat/im-infra/clog"
 
-    // Get a logger for a specific module
+    // 获取特定模块的日志记录器
     logger := clog.Module("user-service")
 
-    // Log messages with structured context
-    logger.Info("User logged in",
+    // 使用结构化上下文记录消息
+    logger.Info("用户已登录",
         clog.String("username", "test"),
         clog.Uint64("user_id", 123),
     )
 
-    logger.Error("Failed to connect to database", clog.Err(err))
+    logger.Error("无法连接到数据库", clog.Err(err))
     ```
--   **Configuration**: The logger is configured via the `clog.json` file, which is loaded by the `coord` service. See the [Configuration Management](./../../04_deployment/02_configuration.md) guide for details.
+-   **配置**: 日志记录器通过 `clog.json` 文件配置，该文件由 `coord` 服务加载。有关详细信息，请参阅[配置管理](./../../04_deployment/02_configuration.md)指南。
 
-## 2. `coord` - Distributed Coordination
+## 2. `coord` - 分布式协调
 
-The `coord` library provides an interface for distributed coordination services, including service discovery, configuration management, and distributed locks, using `etcd` as the backend.
+`coord` 库为分布式协调服务提供接口，包括服务发现、配置管理和分布式锁，使用 `etcd` 作为后端。
 
--   **Initialization**: A `coord.Provider` is created in `main.go` and is used to access the different coordination services.
+-   **初始化**: `coord.Provider` 在 `main.go` 中创建，用于访问不同的协调服务。
     ```go
     import "github.com/ceyewan/gochat/im-infra/coord"
 
-    // cfg is loaded from the config file
+    // cfg 从配置文件加载
     coordinator, err := coord.New(context.Background(), cfg)
     if err != nil {
-        // handle error
+        // 处理错误
     }
     defer coordinator.Close()
     ```
 
-### Service Discovery & gRPC
+### 服务发现和 gRPC
 
--   The `coord` library integrates with gRPC to provide client-side load balancing.
--   **Getting a gRPC client connection**:
+-   `coord` 库与 gRPC 集成以提供客户端负载平衡。
+-   **获取 gRPC 客户端连接**:
     ```go
-    // Get a connection to the "user-service"
+    // 获取到 "user-service" 的连接
     conn, err := coordinator.Registry().GetConnection(ctx, "user-service")
     if err != nil {
-        // handle error
+        // 处理错误
     }
     defer conn.Close()
 
-    // Create a gRPC client
+    // 创建 gRPC 客户端
     userClient := userpb.NewUserServiceClient(conn)
     ```
 
-### Configuration Management
+### 配置管理
 
--   Services use the `coord` provider to fetch their configuration from `etcd`.
--   **Fetching a configuration**:
+-   服务使用 `coord` 提供程序从 `etcd` 获取其配置。
+-   **获取配置**:
     ```go
     var dbConfig myapp.DatabaseConfig
     err := coordinator.Config().Get(ctx, "/config/dev/im-repo/db", &dbConfig)
     if err != nil {
-        // handle error
+        // 处理错误
     }
     ```
 
-### Distributed Locking
+### 分布式锁
 
--   The `coord` library provides a simple interface for acquiring and releasing distributed locks.
--   **Acquiring a lock**:
+-   `coord` 库提供了获取和释放分布式锁的简单接口。
+-   **获取锁**:
     ```go
-    // Acquire a lock with a 30-second TTL
+    // 获取具有 30 秒 TTL 的锁
     lock, err := coordinator.Lock().Acquire(ctx, "my-resource-key", 30*time.Second)
     if err != nil {
-        // handle error (e.g., lock already held)
+        // 处理错误（例如，锁已被持有）
     }
     defer lock.Unlock(ctx)
 
-    // ... perform critical section work ...
+    // ... 执行关键部分工作 ...
     ```
 
-For more detailed information on the design and capabilities of the `coord` module, refer to its [design document](../../../im-infra/coord/DESIGN.md) and [README](../../../im-infra/coord/README.md).
+有关 `coord` 模块的设计和功能的更多详细信息，请参阅其[设计文档](../../../im-infra/coord/DESIGN.md)和[README](../../../im-infra/coord/README.md)。

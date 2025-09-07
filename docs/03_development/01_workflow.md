@@ -1,41 +1,41 @@
-# GoChat Development Workflow
+# GoChat 开发工作流
 
-This document outlines the development workflow for the GoChat project. All contributors are expected to follow these guidelines to ensure code quality, consistency, and a smooth development process.
+本文档概述了 GoChat 项目的开发工作流。所有贡献者都应遵循这些指南，以确保代码质量、一致性和顺畅的开发过程。
 
-## 1. Branching Strategy
+## 1. 分支策略
 
-We use a simplified Gitflow model.
+我们使用简化的 Gitflow 模型。
 
--   **`main`**: This branch represents the production-ready code. Direct pushes to `main` are forbidden. Changes are merged into `main` only through pull requests from the `develop` branch.
--   **`develop`**: This is the main development branch. All feature branches are created from `develop` and merged back into it.
--   **Feature Branches**: For any new feature or bugfix, create a new branch from `develop`.
-    -   Branch naming convention: `feature/<short-description>` or `fix/<short-description>`.
-    -   Example: `feature/add-friend-request` or `fix/login-bug`.
+-   **`main`**: 此分支代表生产就绪的代码。禁止直接推送到 `main`。更改只能通过来自 `develop` 分支的拉取请求合并到 `main`。
+-   **`develop`**: 这是主要的开发分支。所有功能分支都从 `develop` 创建并合并回其中。
+-   **功能分支**: 对于任何新功能或错误修复，从 `develop` 创建一个新分支。
+    -   分支命名约定：`feature/<简短描述>` 或 `fix/<简短描述>`。
+    -   示例：`feature/add-friend-request` 或 `fix/login-bug`。
 
-## 2. Development Process
+## 2. 开发过程
 
-1.  **Create an Issue**: Before starting work, create an issue in the project's issue tracker to describe the feature or bug.
-2.  **Create a Branch**: Create a new feature or fix branch from the `develop` branch.
-3.  **Develop**: Write your code, following the [Code Style and Conventions](./02_style_guide.md).
-4.  **Test**: Write unit and integration tests for your changes. Ensure all tests pass.
-5.  **Update Documentation**: If your changes affect any APIs, data models, or architecture, update the relevant documentation in the `docs/` directory.
-6.  **Create a Pull Request (PR)**: Once your work is complete and tested, create a pull request to merge your branch into `develop`.
-    -   The PR description should clearly explain the changes and reference the issue it resolves.
-7.  **Code Review**: At least one other team member must review and approve the PR.
-8.  **Merge**: Once approved, the PR can be merged into `develop`.
+1.  **创建问题**: 在开始工作之前，在项目的问题跟踪器中创建一个问题来描述功能或错误。
+2.  **创建分支**: 从 `develop` 分支创建一个新的功能或修复分支。
+3.  **开发**: 编写代码，遵循[代码风格和约定](./02_style_guide.md)。
+4.  **测试**: 为您的更改编写单元和集成测试。确保所有测试都通过。
+5.  **更新文档**: 如果您的更改影响任何 API、数据模型或架构，请更新 `docs/` 目录中的相关文档。
+6.  **创建拉取请求 (PR)**: 一旦您的工作完成并经过测试，创建一个拉取请求以将您的分支合并到 `develop`。
+    -   PR 描述应清楚地解释更改并引用它解决的问题。
+7.  **代码审查**: 至少需要一名其他团队成员审查并批准 PR。
+8.  **合并**: 一旦获得批准，PR 可以合并到 `develop`。
 
-## 3. Pull Request (PR) Requirements
+## 3. 拉取请求 (PR) 要求
 
--   **Clear Title and Description**: The title should be concise, and the description should explain the "what" and "why" of the changes.
--   **Link to Issue**: The PR must be linked to the corresponding issue.
--   **Passing CI Checks**: All automated checks (build, lint, test) must pass.
--   **Code Review Approval**: Must be approved by at least one other developer.
+-   **清晰的标题和描述**: 标题应简洁，描述应解释更改的"什么"和"为什么"。
+-   **问题链接**: PR 必须链接到相应的问题。
+-   **通过 CI 检查**: 所有自动化检查（构建、检查、测试）必须通过。
+-   **代码审查批准**: 必须至少由一名其他开发人员批准。
 
-## 4. Versioning
+## 4. 版本控制
 
-We use Semantic Versioning (SemVer). Version numbers are updated in the `develop` branch as part of the release process.
+我们使用语义版本控制 (SemVer)。版本号在发布过程中在 `develop` 分支中更新。
 
-## 5. Documentation
+## 5. 文档
 
--   **Documentation-Driven Development**: For new features, it is encouraged to write or update the documentation *before* or *during* development, not after.
--   **Updating Docs**: Any change that impacts the system's behavior, API, or architecture must be reflected in the documentation. This is a mandatory part of the development process.
+-   **文档驱动开发**: 对于新功能，鼓励在开发*之前*或*期间*编写或更新文档，而不是之后。
+-   **更新文档**: 任何影响系统行为、API 或架构的更改都必须反映在文档中。这是开发过程的强制性部分。

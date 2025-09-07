@@ -1,59 +1,59 @@
-# GoChat Code Style and Conventions
+# GoChat 代码风格和约定
 
-This document defines the coding style, formatting, and commenting standards for the GoChat project. Adhering to these conventions is crucial for maintaining code quality, readability, and consistency across the codebase.
+本文档定义了 GoChat 项目的编码风格、格式化和注释标准。遵循这些约定对于维护代码质量、可读性和整个代码库的一致性至关重要。
 
-## 1. Go Language Style
+## 1. Go 语言风格
 
--   **Formatting**: All Go code **must** be formatted with `gofmt`. Most IDEs can be configured to do this automatically on save.
--   **Linting**: We use `golangci-lint` for static analysis. All code must pass the linter checks before being merged. The configuration for the linter can be found in the `.golangci.yml` file at the project root.
--   **Error Handling**:
-    -   Errors should be handled explicitly. Do not ignore errors using the blank identifier (`_`).
-    -   Error messages should be in lowercase and not capitalized.
-    -   Use `fmt.Errorf` with the `%w` verb to wrap errors when adding context.
--   **Variable Naming**:
-    -   Use `camelCase` for local variables and function parameters.
-    -   Use `PascalCase` for exported identifiers (functions, types, variables).
-    -   Keep variable names short but descriptive. Avoid single-letter variable names except for loop counters (`i`, `j`).
--   **Package Naming**:
-    -   Package names should be short, concise, and all lowercase.
-    -   Avoid using underscores or `camelCase` in package names.
+-   **格式化**: 所有 Go 代码**必须**使用 `gofmt` 格式化。大多数 IDE 可以配置为在保存时自动执行此操作。
+-   **代码检查**: 我们使用 `golangci-lint` 进行静态分析。所有代码在合并前必须通过代码检查。代码检查的配置可以在项目根目录的 `.golangci.yml` 文件中找到。
+-   **错误处理**:
+    -   应该显式处理错误。不要使用空白标识符 (`_`) 忽略错误。
+    -   错误消息应使用小写字母，不要大写。
+    -   在添加上下文时，使用带有 `%w` 动词的 `fmt.Errorf` 来包装错误。
+-   **变量命名**:
+    -   局部变量和函数参数使用 `camelCase`。
+    -   导出的标识符（函数、类型、变量）使用 `PascalCase`。
+    -   保持变量名称简短但描述性强。避免使用单字母变量名，循环计数器（`i`, `j`）除外。
+-   **包命名**:
+    -   包名称应简短、简洁且全小写。
+    -   避免在包名中使用下划线或 `camelCase`。
 
-## 2. Code Organization
+## 2. 代码组织
 
--   **Package Structure**: Each microservice follows a standard package structure:
-    -   `/cmd`: Main application entry points.
-    -   `/internal`: Private application and library code.
-        -   `/internal/service`: Business logic layer (gRPC service implementations).
-        -   `/internal/repository`: Data access layer.
-        -   `/internal/model`: Database models (structs).
-        -   `/internal/config`: Configuration loading.
-    -   `/api`: Protobuf definitions and generated code.
--   **Separation of Concerns**:
-    -   Business logic should reside in the `service` layer.
-    -   Database and cache interactions should be in the `repository` layer.
-    -   HTTP/WebSocket handling and gRPC server setup should be in the `server` or `cmd` packages.
+-   **包结构**: 每个微服务都遵循标准的包结构：
+    -   `/cmd`: 主应用程序入口点。
+    -   `/internal`: 私有应用程序和库代码。
+        -   `/internal/service`: 业务逻辑层（gRPC 服务实现）。
+        -   `/internal/repository`: 数据访问层。
+        -   `/internal/model`: 数据库模型（结构体）。
+        -   `/internal/config`: 配置加载。
+    -   `/api`: Protobuf 定义和生成的代码。
+-   **关注点分离**:
+    -   业务逻辑应位于 `service` 层。
+    -   数据库和缓存交互应位于 `repository` 层。
+    -   HTTP/WebSocket 处理和 gRPC 服务器设置应位于 `server` 或 `cmd` 包中。
 
-## 3. Commenting
+## 3. 注释
 
--   **Public APIs**: All exported functions, types, and variables **must** have a doc comment.
-    -   The comment should start with the name of the identifier it is describing.
-    -   Example: `// UserService is the service for user-related logic.`
--   **Complex Logic**: Add comments to explain complex or non-obvious parts of the code. Explain the "why," not the "what."
--   **TODO Comments**: Use `// TODO:` to mark areas that need future work. Include a brief description of what needs to be done.
+-   **公共 API**: 所有导出的函数、类型和变量**必须**有文档注释。
+    -   注释应以它所描述的标识符名称开头。
+    -   示例：`// UserService 是用于用户相关逻辑的服务。`
+-   **复杂逻辑**: 添加注释来解释代码的复杂或不明显的部分。解释"为什么"，而不是"什么"。
+-   **TODO 注释**: 使用 `// TODO:` 标记需要未来工作的区域。包括需要完成的简短描述。
 
-## 4. Logging
+## 4. 日志记录
 
--   **Library**: We use the custom `clog` library located in `im-infra/clog`.
--   **Structured Logging**: All logs **must** be structured logs. Use key-value pairs to add context.
-    -   Example: `logger.Info("User created", clog.String("username", user.Username), clog.Uint64("user_id", user.ID))`
--   **Log Levels**:
-    -   `Debug`: For detailed, verbose information useful for debugging.
-    -   `Info`: For normal application behavior (e.g., starting a service, handling a request).
-    -   `Warn`: For potential issues that do not prevent the application from functioning.
-    -   `Error`: For errors that occur but are handled (e.g., a database query fails but is retried).
-    -   `Fatal`: For errors that cause the application to crash.
+-   **库**: 我们使用位于 `im-infra/clog` 的自定义 `clog` 库。
+-   **结构化日志**: 所有日志**必须**是结构化日志。使用键值对添加上下文。
+    -   示例：`logger.Info("用户已创建", clog.String("username", user.Username), clog.Uint64("user_id", user.ID))`
+-   **日志级别**:
+    -   `Debug`: 用于详细的、冗长的信息，对调试有用。
+    -   `Info`: 用于正常的应用程序行为（例如，启动服务、处理请求）。
+    -   `Warn`: 用于不阻止应用程序运行的潜在问题。
+    -   `Error`: 用于发生但已处理的错误（例如，数据库查询失败但已重试）。
+    -   `Fatal`: 用于导致应用程序崩溃的错误。
 
-## 5. API and Interface Definitions
+## 5. API 和接口定义
 
--   **Protobuf Style**: Follow the [Google Cloud API Design Guide](https://cloud.google.com/apis/design/style_guide) for `.proto` files.
--   **Clarity and Consistency**: Ensure that API requests and responses are clear, consistent, and well-documented within the `.proto` files.
+-   **Protobuf 风格**: 遵循 [Google Cloud API 设计指南](https://cloud.google.com/apis/design/style_guide) 处理 `.proto` 文件。
+-   **清晰性和一致性**: 确保 API 请求和响应在 `.proto` 文件中清晰、一致且文档齐全。

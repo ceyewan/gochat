@@ -1,62 +1,62 @@
-# Microservice Development Guide
+# 微服务开发指南
 
-This guide provides instructions and best practices for developing, running, and testing individual microservices within the GoChat project.
+本指南提供了在 GoChat 项目中开发、运行和测试单个微服务的说明和最佳实践。
 
-## 1. Service Structure
+## 1. 服务结构
 
-Each microservice (e.g., `im-logic`, `im-repo`) follows a consistent directory structure:
+每个微服务（例如 `im-logic`、`im-repo`）都遵循一致的目录结构：
 
--   **/cmd**: Contains the `main.go` file, which is the entry point for the service. Its primary responsibility is to initialize and start the service.
--   **/internal**: Contains all the private code for the service.
-    -   **/config**: Handles loading and managing configuration.
-    -   **/model**: Defines the data structures (structs) used within the service, particularly for database interaction.
-    -   **/repository**: The data access layer. It contains the logic for interacting with the database and cache.
-    -   **/service**: The business logic layer. It implements the gRPC service interfaces defined in the `.proto` files.
--   **/api**: This directory is at the project root and contains all `.proto` definitions and generated code.
+-   **/cmd**: 包含 `main.go` 文件，这是服务的入口点。其主要职责是初始化和启动服务。
+-   **/internal**: 包含服务的所有私有代码。
+    -   **/config**: 处理加载和管理配置。
+    -   **/model**: 定义服务内使用的数据结构（结构体），特别是用于数据库交互的数据结构。
+    -   **/repository**: 数据访问层。它包含与数据库和缓存交互的逻辑。
+    -   **/service**: 业务逻辑层。它实现 `.proto` 文件中定义的 gRPC 服务接口。
+-   **/api**: 此目录位于项目根目录，包含所有 `.proto` 定义和生成的代码。
 
-## 2. Running a Service Locally
+## 2. 在本地运行服务
 
-Each microservice can be run independently for development and testing.
+每个微服务都可以独立运行以进行开发和测试。
 
-1.  **Prerequisites**: Ensure the necessary infrastructure (database, cache, etc.) is running. You can start it with the script in the `deployment` directory:
+1.  **先决条件**: 确保必要的基础设施（数据库、缓存等）正在运行。您可以使用 `deployment` 目录中的脚本启动它：
     ```bash
     ./deployment/scripts/start-infra.sh
     ```
-2.  **Run the Service**: Navigate to the service's directory and use the `go run` command:
+2.  **运行服务**: 导航到服务的目录并使用 `go run` 命令：
     ```bash
     cd im-repo
     go run ./cmd/server/main.go
     ```
 
-## 3. Adding a New gRPC Method
+## 3. 添加新的 gRPC 方法
 
-1.  **Define in `.proto`**: Add the new RPC method to the appropriate service definition in the relevant `.proto` file in `api/proto/`.
-2.  **Generate Code**: Run `buf generate` from the `api/` directory to generate the updated Go interfaces and client/server code.
+1.  **在 `.proto` 中定义**: 将新的 RPC 方法添加到 `api/proto/` 中相关 `.proto` 文件中的适当服务定义中。
+2.  **生成代码**: 从 `api/` 目录运行 `buf generate` 以生成更新的 Go 接口和客户端/服务器代码。
     ```bash
     cd api
     buf generate
     ```
-3.  **Implement in Repository (if needed)**: If the new method requires data access, add the corresponding function to the appropriate repository file in `im-repo/internal/repository/`.
-4.  **Implement in Service**: Implement the new gRPC method in the corresponding service file (e.g., `im-logic/internal/service/user_service.go`). This is where the business logic resides.
-5.  **Write Tests**: Add unit tests for the new repository and service functions.
+3.  **在仓储中实现（如果需要）**: 如果新方法需要数据访问，请将相应的函数添加到 `im-repo/internal/repository/` 中的适当仓储文件中。
+4.  **在服务中实现**: 在相应的服务文件中实现新的 gRPC 方法（例如 `im-logic/internal/service/user_service.go`）。这是业务逻辑所在的位置。
+5.  **编写测试**: 为新的仓储和服务函数添加单元测试。
 
-## 4. Testing
+## 4. 测试
 
--   **Unit Tests**: Each new function in the `service` and `repository` layers should have corresponding unit tests.
-    -   Use mocks for dependencies (e.g., mock the repository when testing the service).
-    -   Test files should be named `_test.go`.
--   **Integration Tests**: For more complex features, integration tests can be added to test the interaction between services. These tests typically run against a real database and other infrastructure components spun up via Docker.
--   **Running Tests**:
+-   **单元测试**: `service` 和 `repository` 层中的每个新函数都应有相应的单元测试。
+    -   为依赖项使用模拟（例如，在测试服务时模拟仓储）。
+    -   测试文件应命名为 `_test.go`。
+-   **集成测试**: 对于更复杂的功能，可以添加集成测试以测试服务之间的交互。这些测试通常针对通过 Docker 启动的真实数据库和其他基础设施组件运行。
+-   **运行测试**:
     ```bash
-    # Run tests for a specific package
+    # 运行特定包的测试
     go test ./im-repo/internal/service
 
-    # Run all tests in the project
+    # 运行项目中的所有测试
     go test ./...
     ```
 
-## 5. Dependency Management
+## 5. 依赖管理
 
--   Dependencies are managed using Go Modules.
--   To add a new dependency, use `go get <package-name>`.
--   After adding or updating dependencies, run `go mod tidy` to clean up the `go.mod` and `go.sum` files.
+-   依赖项使用 Go Modules 管理。
+-   要添加新的依赖项，请使用 `go get <package-name>`。
+-   添加或更新依赖项后，运行 `go mod tidy` 以清理 `go.mod` 和 `go.sum` 文件。

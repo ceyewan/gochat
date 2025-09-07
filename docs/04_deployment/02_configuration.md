@@ -1,51 +1,51 @@
-# Configuration Management
+# 配置管理
 
-This document explains how to manage configuration for the GoChat microservices.
+本文档解释如何管理 GoChat 微服务的配置。
 
-## 1. Overview
+## 1. 概述
 
-GoChat uses a centralized configuration management system powered by `etcd`. Configuration files are written in JSON and stored in the `/config/dev` directory. A command-line tool, `config-cli`, is provided to sync these local files to the `etcd` server.
+GoChat 使用由 `etcd` 驱动的集中式配置管理系统。配置文件以 JSON 格式编写并存储在 `/config/dev` 目录中。提供了一个命令行工具 `config-cli`，用于将这些本地文件同步到 `etcd` 服务器。
 
-## 2. Configuration Structure
+## 2. 配置结构
 
--   **Local Files**: All configuration files are located in `config/dev/`. Each service has its own subdirectory, and each component within that service has its own JSON file.
-    -   Example: `config/dev/im-repo/db.json`
--   **etcd Path**: The configuration path in `etcd` follows a strict schema:
+-   **本地文件**: 所有配置文件都位于 `config/dev/` 中。每个服务都有自己的子目录，该服务中的每个组件都有自己的 JSON 文件。
+    -   示例：`config/dev/im-repo/db.json`
+-   **etcd 路径**: `etcd` 中的配置路径遵循严格的模式：
     -   `/config/{environment}/{service}/{component}`
-    -   Example: `/config/dev/im-repo/db`
+    -   示例：`/config/dev/im-repo/db`
 
-## 3. `config-cli` Tool
+## 3. `config-cli` 工具
 
-The `config-cli` tool is used to synchronize the local JSON configuration files with the `etcd` server.
+`config-cli` 工具用于将本地 JSON 配置文件与 `etcd` 服务器同步。
 
--   **Location**: `config/config-cli/`
--   **Usage**:
+-   **位置**: `config/config-cli/`
+-   **用法**:
     ```bash
-    # Navigate to the tool's directory
+    # 导航到工具的目录
     cd config/config-cli
 
-    # Sync all configurations for the 'dev' environment
+    # 同步 'dev' 环境的所有配置
     ./config-cli sync dev
 
-    # Sync all configurations for a specific service
+    # 同步特定服务的所有配置
     ./config-cli sync dev im-repo
 
-    # Sync a single component's configuration
+    # 同步单个组件的配置
     ./config-cli sync dev im-repo db
     ```
 
-## 4. Configuration Loading in Services
+## 4. 服务中的配置加载
 
-Microservices load their configuration in a two-stage process to ensure resilience.
+微服务以两阶段过程加载其配置以确保弹性。
 
-1.  **Bootstrap Phase**: On startup, the service loads a minimal, hard-coded default configuration. This is just enough to initialize the logging and `coord` (etcd client) components.
-2.  **Full Configuration Load**: The service then uses the `coord` component to connect to `etcd` and fetch its full configuration.
-    -   If the connection to `etcd` fails, the service will continue to run with the default configuration, ensuring it can still start up even if the configuration service is temporarily unavailable.
-    -   The `coord` component also watches for changes in `etcd`, allowing for dynamic, hot-reloading of configuration without restarting the service.
+1.  **引导阶段**: 启动时，服务加载一个最小的、硬编码的默认配置。这足以初始化日志记录和 `coord`（etcd 客户端）组件。
+2.  **完整配置加载**: 然后服务使用 `coord` 组件连接到 `etcd` 并获取其完整配置。
+    -   如果与 `etcd` 的连接失败，服务将继续使用默认配置运行，确保即使配置服务暂时不可用也能启动。
+    -   `coord` 组件还监视 `etcd` 中的更改，允许在不重新启动服务的情况下进行动态热重载配置。
 
-## 5. Configuration Schema Examples
+## 5. 配置模式示例
 
-### `db.json` (Database)
+### `db.json`（数据库）
 
 ```json
 {
@@ -56,7 +56,7 @@ Microservices load their configuration in a two-stage process to ensure resilien
 }
 ```
 
-### `cache.json` (Redis Cache)
+### `cache.json`（Redis 缓存）
 
 ```json
 {
@@ -66,7 +66,7 @@ Microservices load their configuration in a two-stage process to ensure resilien
 }
 ```
 
-### `coord.json` (etcd)
+### `coord.json`（etcd）
 
 ```json
 {
@@ -75,7 +75,7 @@ Microservices load their configuration in a two-stage process to ensure resilien
 }
 ```
 
-### `clog.json` (Logging)
+### `clog.json`（日志记录）
 
 ```json
 {

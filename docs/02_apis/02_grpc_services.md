@@ -1,103 +1,103 @@
-# GoChat Internal gRPC Services
+# GoChat 内部 gRPC 服务
 
-This document outlines the gRPC services used for internal communication between microservices. For detailed message and service definitions, please refer to the corresponding `.proto` files.
+本文档概述了用于微服务之间内部通信的 gRPC 服务。有关详细的消息和服务定义，请参考相应的 `.proto` 文件。
 
-## 1. Overview
+## 1. 概述
 
-Internal communication in GoChat is handled via gRPC, which provides a high-performance, strongly-typed, and language-agnostic RPC framework. This ensures efficient and reliable communication between the microservices.
+GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语言无关的 RPC 框架。这确保了微服务之间高效可靠的通信。
 
--   **`im-logic` Service**: Exposes business logic functions.
--   **`im-repo` Service**: Exposes data persistence functions.
+-   **`im-logic` 服务**: 暴露业务逻辑功能。
+-   **`im-repo` 服务**: 暴露数据持久化功能。
 
-## 2. `im-logic` Services
+## 2. `im-logic` 服务
 
-The `im-logic` microservice exposes several gRPC services that encapsulate the core business logic of the application.
+`im-logic` 微服务暴露了几个 gRPC 服务，它们封装了应用程序的核心业务逻辑。
 
--   **Proto File Location**: `api/proto/im_logic/v1/`
+-   **Proto 文件位置**: `api/proto/im_logic/v1/`
 
 ### `AuthService`
 
--   **Description**: Handles all user authentication and token management logic.
--   **Proto File**: [`auth.proto`](../../../api/proto/im_logic/v1/auth.proto)
--   **Key RPCs**:
-    -   `Login`: Authenticates a user with a username and password.
-    -   `Register`: Creates a new user account.
-    -   `GuestLogin`: Creates a temporary guest account.
-    -   `ValidateToken`: Validates a JWT access token.
+-   **描述**: 处理所有用户认证和令牌管理逻辑。
+-   **Proto 文件**: [`auth.proto`](../../../api/proto/im_logic/v1/auth.proto)
+-   **主要 RPC**:
+    -   `Login`: 使用用户名和密码认证用户。
+    -   `Register`: 创建新用户账户。
+    -   `GuestLogin`: 创建临时访客账户。
+    -   `ValidateToken`: 验证 JWT 访问令牌。
 
 ### `ConversationService`
 
--   **Description**: Manages conversation-related logic, such as fetching conversation lists and messages.
--   **Proto File**: [`conversation.proto`](../../../api/proto/im_logic/v1/conversation.proto)
--   **Key RPCs**:
-    -   `GetConversations`: Retrieves a user's conversation list.
-    -   `CreateConversation`: Creates a new private conversation.
-    -   `GetMessages`: Fetches the message history for a conversation.
-    -   `MarkAsRead`: Updates a user's read pointer in a conversation.
+-   **描述**: 管理会话相关逻辑，例如获取会话列表和消息。
+-   **Proto 文件**: [`conversation.proto`](../../../api/proto/im_logic/v1/conversation.proto)
+-   **主要 RPC**:
+    -   `GetConversations`: 检索用户的会话列表。
+    -   `CreateConversation`: 创建新的私人会话。
+    -   `GetMessages`: 获取会话的消息历史记录。
+    -   `MarkAsRead`: 更新用户在会话中的已读指针。
 
 ### `GroupService`
 
--   **Description**: Manages group chat logic, including creation, membership, and information retrieval.
--   **Proto File**: [`group.proto`](../../../api/proto/im_logic/v1/group.proto)
--   **Key RPCs**:
-    -   `CreateGroup`: Creates a new group.
-    -   `GetGroup`: Retrieves detailed information about a group.
-    -   `GetGroupMembers`: Fetches the member list of a group.
-    -   `JoinGroup`, `LeaveGroup`: Manages group membership.
+-   **描述**: 管理群聊逻辑，包括创建、成员资格和信息检索。
+-   **Proto 文件**: [`group.proto`](../../../api/proto/im_logic/v1/group.proto)
+-   **主要 RPC**:
+    -   `CreateGroup`: 创建新群组。
+    -   `GetGroup`: 检索群组的详细信息。
+    -   `GetGroupMembers`: 获取群组的成员列表。
+    -   `JoinGroup`, `LeaveGroup`: 管理群组成员资格。
 
 ### `MessageService`
 
--   **Description**: Handles the logic for sending messages.
--   **Proto File**: [`message.proto`](../../../api/proto/im_logic/v1/message.proto)
--   **Key RPCs**:
-    -   `SendMessage`: Processes an outgoing message, saves it, and triggers fan-out.
+-   **描述**: 处理发送消息的逻辑。
+-   **Proto 文件**: [`message.proto`](../../../api/proto/im_logic/v1/message.proto)
+-   **主要 RPC**:
+    -   `SendMessage`: 处理外发消息，保存它并触发消息扩散。
 
-## 3. `im-repo` Services
+## 3. `im-repo` 服务
 
-The `im-repo` microservice exposes gRPC services for data access, abstracting the database and cache from the business logic layer.
+`im-repo` 微服务暴露了用于数据访问的 gRPC 服务，从业务逻辑层抽象了数据库和缓存。
 
--   **Proto File Location**: `api/proto/im_repo/v1/`
+-   **Proto 文件位置**: `api/proto/im_repo/v1/`
 
 ### `UserService`
 
--   **Description**: Provides CRUD operations for user data.
--   **Proto File**: [`user.proto`](../../../api/proto/im_repo/v1/user.proto)
--   **Key RPCs**:
-    -   `CreateUser`: Inserts a new user record into the database.
-    -   `GetUser`: Retrieves a user by their ID.
-    -   `GetUserByUsername`: Retrieves a user by their username.
-    -   `VerifyPassword`: Verifies a user's password hash.
+-   **描述**: 为用户数据提供 CRUD 操作。
+-   **Proto 文件**: [`user.proto`](../../../api/proto/im_repo/v1/user.proto)
+-   **主要 RPC**:
+    -   `CreateUser`: 在数据库中插入新用户记录。
+    -   `GetUser`: 通过 ID 检索用户。
+    -   `GetUserByUsername`: 通过用户名检索用户。
+    -   `VerifyPassword`: 验证用户的密码哈希。
 
 ### `ConversationService`
 
--   **Description**: Provides data access operations for conversations.
--   **Proto File**: [`conversation.proto`](../../../api/proto/im_repo/v1/conversation.proto)
--   **Key RPCs**:
-    -   `CreateConversation`: Creates a new conversation record.
-    -   `GetUserConversations`: Retrieves the conversation IDs a user is part of.
-    -   `UpdateReadPointer`: Updates a user's read progress in the database.
+-   **描述**: 为会话提供数据访问操作。
+-   **Proto 文件**: [`conversation.proto`](../../../api/proto/im_repo/v1/conversation.proto)
+-   **主要 RPC**:
+    -   `CreateConversation`: 创建新的会话记录。
+    -   `GetUserConversations`: 检索用户所属的会话 ID。
+    -   `UpdateReadPointer`: 在数据库中更新用户的已读进度。
 
 ### `GroupService`
 
--   **Description**: Provides data access operations for groups and their members.
--   **Proto File**: [`group.proto`](../../../api/proto/im_repo/v1/group.proto)
--   **Key RPCs**:
-    -   `CreateGroup`: Creates a new group record.
-    -   `GetGroup`: Retrieves group information from the database.
-    -   `AddGroupMember`, `RemoveGroupMember`: Manages group membership records.
+-   **描述**: 为群组及其成员提供数据访问操作。
+-   **Proto 文件**: [`group.proto`](../../../api/proto/im_repo/v1/group.proto)
+-   **主要 RPC**:
+    -   `CreateGroup`: 创建新的群组记录。
+    -   `GetGroup`: 从数据库中检索群组信息。
+    -   `AddGroupMember`, `RemoveGroupMember`: 管理群组成员记录。
 
 ### `MessageService`
 
--   **Description**: Provides data access operations for messages.
--   **Proto File**: [`message.proto`](../../../api/proto/im_repo/v1/message.proto)
--   **Key RPCs**:
-    -   `SaveMessage`: Saves a message to the database.
-    -   `GetConversationMessages`: Retrieves a list of messages for a conversation.
+-   **描述**: 为消息提供数据访问操作。
+-   **Proto 文件**: [`message.proto`](../../../api/proto/im_repo/v1/message.proto)
+-   **主要 RPC**:
+    -   `SaveMessage`: 将消息保存到数据库。
+    -   `GetConversationMessages`: 检索会话的消息列表。
 
 ### `OnlineStatusService`
 
--   **Description**: Manages user online status, primarily using Redis.
--   **Proto File**: [`online_status.proto`](../../../api/proto/im_repo/v1/online_status.proto)
--   **Key RPCs**:
-    -   `SetUserOnline`, `SetUserOffline`: Updates a user's online status.
-    -   `GetUserOnlineStatus`: Retrieves the online status for a user.
+-   **描述**: 管理用户在线状态，主要使用 Redis。
+-   **Proto 文件**: [`online_status.proto`](../../../api/proto/im_repo/v1/online_status.proto)
+-   **主要 RPC**:
+    -   `SetUserOnline`, `SetUserOffline`: 更新用户的在线状态。
+    -   `GetUserOnlineStatus`: 检索用户的在线状态。

@@ -1,50 +1,50 @@
-# GoChat Technology Stack
+# GoChat 技术栈
 
-This document lists the key technologies, frameworks, and libraries used in the GoChat project.
+本文档列出了 GoChat 项目中使用的关键技术、框架和库。
 
-## 1. Backend
+## 1. 后端
 
--   **Programming Language**: [Go](https://golang.org/)
-    -   Chosen for its performance, concurrency model, and strong standard library, making it well-suited for high-throughput network services.
--   **Web Framework**: [Gin](https://gin-gonic.com/)
-    -   A high-performance, minimalist web framework used in `im-gateway` for handling HTTP requests.
--   **WebSocket Library**: [Gorilla WebSocket](https://github.com/gorilla/websocket)
-    -   A widely-used WebSocket implementation for Go, used in `im-gateway` to manage real-time client connections.
--   **gRPC Framework**: [gRPC-Go](https://grpc.io/)
-    -   Used for all internal RPC communication between microservices, providing high-performance, strongly-typed contracts with Protobuf.
--   **Database ORM**: [GORM](https://gorm.io/)
-    -   The primary ORM used in `im-repo` for interacting with the MySQL database.
+-   **编程语言**: [Go](https://golang.org/)
+    -   选择它是因为其性能、并发模型和强大的标准库，使其非常适合高吞吐量的网络服务。
+-   **Web 框架**: [Gin](https://gin-gonic.com/)
+    -   一个高性能、极简的 Web 框架，在 `im-gateway` 中用于处理 HTTP 请求。
+-   **WebSocket 库**: [Gorilla WebSocket](https://github.com/gorilla/websocket)
+    -   一个广泛使用的 Go WebSocket 实现，在 `im-gateway` 中用于管理实时客户端连接。
+-   **gRPC 框架**: [gRPC-Go](https://grpc.io/)
+    -   用于微服务之间的所有内部 RPC 通信，提供高性能、强类型化的 Protobuf 契约。
+-   **数据库 ORM**: [GORM](https://gorm.io/)
+    -   在 `im-repo` 中用于与 MySQL 数据库交互的主要 ORM。
 
-## 2. Data Stores & Messaging
+## 2. 数据存储和消息传递
 
--   **Database**: [MySQL](https://www.mysql.com/)
-    -   The primary relational database for storing persistent data like users, messages, and groups.
--   **Cache**: [Redis](https://redis.io/)
-    -   Used for caching frequently accessed data and managing transient state, such as user online status.
--   **Message Queue**: [Apache Kafka](https://kafka.apache.org/)
-    -   The backbone of the asynchronous messaging system, used to decouple services and handle tasks like message fan-out.
--   **Configuration & Discovery**: [etcd](https://etcd.io/)
-    -   A distributed key-value store used as the service discovery and configuration management backend.
+-   **数据库**: [MySQL](https://www.mysql.com/)
+    -   用于存储持久化数据（如用户、消息和群组）的主要关系型数据库。
+-   **缓存**: [Redis](https://redis.io/)
+    -   用于缓存频繁访问的数据和管理瞬时状态，如用户在线状态。
+-   **消息队列**: [Apache Kafka](https://kafka.apache.org/)
+    -   异步消息系统的骨干，用于解耦服务并处理消息扩散等任务。
+-   **配置和发现**: [etcd](https://etcd.io/)
+    -   用作服务发现和配置管理后端的分布式键值存储。
 
-## 3. Tooling & Deployment
+## 3. 工具和部署
 
--   **Containerization**: [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
-    -   Used to containerize all microservices and infrastructure components for consistent development and deployment environments.
--   **API Definition**: [Protocol Buffers (Protobuf)](https://developers.google.com/protocol-buffers)
-    -   Used to define the gRPC service contracts.
--   **Build Tooling**: [Buf](https://buf.build/)
-    -   Used to build, lint, and generate code from the Protobuf definitions.
--   **Dependency Management**: Go Modules
+-   **容器化**: [Docker](https://www.docker.com/) 和 [Docker Compose](https://docs.docker.com/compose/)
+    -   用于容器化所有微服务和基础设施组件，以实现一致的开发和部署环境。
+-   **API 定义**: [Protocol Buffers (Protobuf)](https://developers.google.com/protocol-buffers)
+    -   用于定义 gRPC 服务契约。
+-   **构建工具**: [Buf](https://buf.build/)
+    -   用于从 Protobuf 定义构建、检查和生成代码。
+-   **依赖管理**: Go Modules
 
-## 4. Monitoring & Logging
+## 4. 监控和日志
 
--   **Logging**: [Loki](https://grafana.com/oss/loki/)
-    -   The central log aggregation system.
--   **Log Shipper**: [Vector](https://vector.dev/)
-    -   Collects logs from all services and forwards them to Loki.
--   **Metrics**: [Prometheus](https://prometheus.io/)
-    -   The time-series database for storing application and system metrics.
--   **Visualization**: [Grafana](https://grafana.com/)
-    -   The unified dashboard for visualizing logs from Loki and metrics from Prometheus.
--   **Distributed Tracing**: [Jaeger](https://www.jaegertracing.io/)
-    -   Used to trace requests as they travel through the microservices, aiding in debugging and performance analysis.
+-   **日志**: [Loki](https://grafana.com/oss/loki/)
+    -   中央日志聚合系统。
+-   **日志收集器**: [Vector](https://vector.dev/)
+    -   从所有服务收集日志并将其转发到 Loki。
+-   **指标**: [Prometheus](https://prometheus.io/)
+    -   用于存储应用程序和系统指标的时间序列数据库。
+-   **可视化**: [Grafana](https://grafana.com/)
+    -   用于可视化 Loki 日志和 Prometheus 指标的统一仪表板。
+-   **分布式追踪**: [Jaeger](https://www.jaegertracing.io/)
+    -   用于追踪请求在微服务中的传播，有助于调试和性能分析。

@@ -1,71 +1,71 @@
-# GoChat Deployment Guide
+# GoChat 部署指南
 
-This document provides instructions for deploying the GoChat system using the provided Docker Compose setup.
+本文档提供了使用提供的 Docker Compose 设置部署 GoChat 系统的说明。
 
-## 1. Architecture
+## 1. 架构
 
-The deployment is split into two main parts:
+部署分为两个主要部分：
 
--   **Infrastructure**: Contains all the backend services required by the application, such as databases, caches, and message queues.
--   **Applications**: Contains the GoChat microservices themselves.
+-   **基础设施**: 包含应用程序所需的所有后端服务，例如数据库、缓存和消息队列。
+-   **应用程序**: 包含 GoChat 微服务本身。
 
-This separation allows the infrastructure to be started once and remain running while the application services can be rebuilt and restarted independently during development.
+这种分离允许基础设施启动一次并保持运行，而应用程序服务可以在开发期间独立重建和重新启动。
 
-## 2. Prerequisites
+## 2. 先决条件
 
 -   [Docker](https://www.docker.com/get-started)
 -   [Docker Compose](https://docs.docker.com/compose/install/)
 
-## 3. Quick Start
+## 3. 快速开始
 
-### Step 1: Start the Infrastructure
+### 第 1 步：启动基础设施
 
-Navigate to the `deployment` directory and run the `start-infra.sh` script. This will start all the necessary backend services.
+导航到 `deployment` 目录并运行 `start-infra.sh` 脚本。这将启动所有必要的后端服务。
 
 ```bash
 cd deployment
 ./scripts/start-infra.sh
 ```
 
-The infrastructure stack includes:
--   etcd (for configuration and service discovery)
--   Kafka (for messaging)
--   MySQL (for data persistence)
--   Redis (for caching)
--   Loki, Prometheus, Grafana, Jaeger (for monitoring and logging)
+基础设施堆栈包括：
+-   etcd（用于配置和服务发现）
+-   Kafka（用于消息传递）
+-   MySQL（用于数据持久化）
+-   Redis（用于缓存）
+-   Loki、Prometheus、Grafana、Jaeger（用于监控和日志记录）
 
-### Step 2: Build and Start the Application Services
+### 第 2 步：构建和启动应用程序服务
 
-Each microservice has its own `Dockerfile` for building a container image. The `start-apps.sh` script will build and start all the application services.
+每个微服务都有自己的 `Dockerfile` 用于构建容器映像。`start-apps.sh` 脚本将构建并启动所有应用程序服务。
 
 ```bash
 cd deployment
 ./scripts/start-apps.sh
 ```
 
-This will start the following services:
+这将启动以下服务：
 -   `im-gateway`
 -   `im-logic`
 -   `im-repo`
 -   `im-task`
 
-### Step 3: Verify the Deployment
+### 第 3 步：验证部署
 
-Use the `health-check.sh` script to verify that all services are running correctly.
+使用 `health-check.sh` 脚本验证所有服务是否正确运行。
 
 ```bash
 cd deployment
 ./scripts/health-check.sh
 ```
 
-## 4. Service Endpoints
+## 4. 服务端点
 
-Once all services are running, you can access them at the following addresses:
+所有服务运行后，您可以在以下地址访问它们：
 
-### Management UIs
+### 管理 UI
 
-| Service        | Address                   | Credentials               |
-| -------------- | ------------------------- | ------------------------- |
+| 服务        | 地址                   | 凭据               |
+| ------------ | ------------------------- | ------------------------- |
 | Grafana        | `http://localhost:3000`   | `admin`/`gochat_grafana_2024` |
 | Kafka UI       | `http://localhost:8080`   | -                         |
 | etcd Manager   | `http://localhost:8081`   | -                         |
@@ -73,37 +73,38 @@ Once all services are running, you can access them at the following addresses:
 | phpMyAdmin     | `http://localhost:8083`   | -                         |
 | Jaeger         | `http://localhost:16686`  | -                         |
 
-### Application API
+### 应用程序 API
 
-| Service      | Address                 |
+| 服务      | 地址                 |
 | ------------ | ----------------------- |
 | **GoChat API** | `http://localhost:8080` |
 | **WebSocket**  | `ws://localhost:8080/ws`  |
 
-## 5. Stopping the Environment
+## 5. 停止环境
 
-To stop the services, use the `cleanup.sh` script.
+要停止服务，请使用 `cleanup.sh` 脚本。
 
 ```bash
 cd deployment
 
-# Stop only the application services
+# 仅停止应用程序服务
 ./scripts/cleanup.sh --apps
 
-# Stop all services (infrastructure and applications)
+# 停止所有服务（基础设施和应用程序）
 ./scripts/cleanup.sh --all
 
-# Stop all services and remove data volumes
+# 停止所有服务并删除数据卷
 ./scripts/cleanup.sh --all --remove-volumes
 ```
 
-## 6. Individual Service Management
+## 6. 单个服务管理
 
-You can manage individual services using `docker-compose` commands directly.
+您可以直接使用 `docker-compose` 命令管理单个服务。
 
 ```bash
-# View logs for a specific service
+# 查看特定服务的日志
 docker-compose -f applications/docker-compose.yml logs -f im-logic
 
-# Rebuild and restart a single service
+# 重新构建并重新启动单个服务
 docker-compose -f applications/docker-compose.yml up -d --build im-gateway
+```

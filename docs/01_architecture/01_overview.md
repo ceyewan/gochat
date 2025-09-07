@@ -1,26 +1,26 @@
-# GoChat Architecture Overview
+# GoChat 架构概览
 
-This document provides a high-level overview of the GoChat system architecture, its components, and the flow of data between them.
+本文档提供了 GoChat 系统架构的高级概览，包括其组件以及它们之间的数据流。
 
-## 1. System Goal
+## 1. 系统目标
 
-The primary goal of GoChat is to provide a reliable, scalable, and low-latency instant messaging service. It supports core features like user registration, real-time one-on-one chat, group chat, message history, and notifications.
+GoChat 的主要目标是提供可靠、可扩展和低延迟的即时通讯服务。它支持核心功能，如用户注册、实时一对一聊天、群聊、消息历史记录和通知。该项目是面向就业的学习项目，侧重于分布式微服务架构与 Go 语言实践，以及良好的代码质量和测试覆盖率。不要扩展太多内容，保持简洁，遵循 KISS 原则。
 
-## 2. Microservice Architecture
+## 2. 微服务架构
 
-The system is designed using a microservice architecture to ensure separation of concerns, independent scalability, and maintainability. The core services are:
+系统采用微服务架构设计，以确保关注点分离、独立可扩展性和可维护性。核心服务包括：
 
--   **`im-gateway`**: The API Gateway is the single entry point for all clients (web, mobile). It handles client connections (HTTP/WebSocket), translates protocols, and routes requests to the appropriate backend services. It is responsible for managing persistent WebSocket connections for real-time communication.
+-   **`im-gateway`**: API 网关是所有客户端（Web、移动端）的唯一入口点。它处理客户端连接（HTTP/WebSocket），转换协议，并将请求路由到适当的后端服务。它负责管理持久化的 WebSocket 连接以实现实时通信。
 
--   **`im-logic`**: This service contains the core business logic of the application. Its responsibilities include user authentication (login, registration, guest access), session management, conversation and group logic, and composing responses by fetching data from other services. It is the central orchestrator for most user-facing operations.
+-   **`im-logic`**: 此服务包含应用程序的核心业务逻辑。其职责包括用户认证（登录、注册、访客访问）、会话管理、会话和群组逻辑，以及通过从其他服务获取数据来组成响应。它是大多数面向用户操作的中央协调器。
 
--   **`im-repo`**: The Repository Service is responsible for all data persistence. It abstracts the database and cache layers, providing a clean gRPC API for other services to access and manipulate data. It directly interacts with MySQL for persistent storage and Redis for caching and managing transient data like online status.
+-   **`im-repo`**: 仓储服务负责所有数据持久化。它抽象了数据库和缓存层，为其他服务提供清晰的 gRPC API 来访问和操作数据。它直接与 MySQL 交互以进行持久化存储，与 Redis 交互以进行缓存和管理瞬时数据（如在线状态）。
 
--   **`im-task`**: The Task Service handles all asynchronous background processing. Its primary role is to consume messages from a message queue (Kafka) and perform tasks that do not need to be processed synchronously, such as message fan-out to multiple recipients in a group chat or pushing notifications. This decouples the core messaging flow and improves system resilience and performance.
+-   **`im-task`**: 任务服务处理所有异步后台处理。其主要角色是消费来自消息队列（Kafka）的消息，并执行不需要同步处理的任务，例如群聊中的消息扩散到多个收件人或推送通知。这解耦了核心消息流，并提高了系统的弹性和性能。
 
-## 3. Data Flow: Sending a Message
+## 3. 数据流：发送消息
 
-The following diagram illustrates the data flow when a user sends a message:
+下图说明了用户发送消息时的数据流：
 
 ```
 [Client] --(WebSocket)--> [im-gateway] --(gRPC)--> [im-logic]
@@ -36,13 +36,13 @@ The following diagram illustrates the data flow when a user sends a message:
                        [im-repo (Cache)]
 ```
 
-**Steps:**
+**步骤：**
 
-1.  **Client to Gateway**: A user sends a message via a persistent WebSocket connection to `im-gateway`.
-2.  **Gateway to Logic**: `im-gateway` receives the message and forwards it to `im-logic` via a gRPC call for processing.
-3.  **Logic to Repo (Save)**: `im-logic` performs validation, requests a persistent sequence ID from `im-repo`, and then sends the message to `im-repo` to be saved in the MySQL database.
-4.  **Logic to Message Queue**: After the message is saved, `im-logic` publishes a "message dispatch" event to a Kafka topic.
-5.  **Task Consumes Event**: `im-task` is subscribed to the Kafka topic and consumes the dispatch event.
-6.  **Task to Repo (Query)**: `im-task` determines all recipients of the message. It queries `im-repo` to get the online status of each recipient, which includes the specific `im-gateway` instance they are connected to.
-7.  **Task to Gateway (Push)**: `im-task` pushes the message to the appropriate `im-gateway` instances for each online recipient.
-8.  **Gateway to Client**: The `im-gateway` instances deliver the message to the online recipients over their respective WebSocket connections.
+1.  **客户端到网关**: 用户通过持久的 WebSocket 连接向 `im-gateway` 发送消息。
+2.  **网关到逻辑**: `im-gateway` 接收消息并通过 gRPC 调用将其转发到 `im-logic` 进行处理。
+3.  **逻辑到仓储（保存）**: `im-logic` 执行验证，从 `im-repo` 请求持久化序列 ID，然后将消息发送到 `im-repo` 以保存在 MySQL 数据库中。
+4.  **逻辑到消息队列**: 消息保存后，`im-logic` 将"消息分发"事件发布到 Kafka 主题。
+5.  **任务消费事件**: `im-task` 订阅了 Kafka 主题并消费分发事件。
+6.  **任务到仓储（查询）**: `im-task` 确定消息的所有接收者。它查询 `im-repo` 以获取每个接收者的在线状态，其中包括他们连接到的特定 `im-gateway` 实例。
+7.  **任务到网关（推送）**: `im-task` 将消息推送到适当的 `im-gateway` 实例，以便每个在线接收者接收。
+8.  **网关到客户端**: `im-gateway` 实例通过它们各自的 WebSocket 连接将消息传递给在线接收者。
