@@ -85,7 +85,21 @@
 | `last_read_seq_id`| `BIGINT`      | `NOT NULL`                   | 最后读取消息的序列 ID。 |
 | `updated_at`    | `DATETIME`    | `NOT NULL`                   | 最后更新的时间戳。             |
 
-## 7. 持久化与数据拉取策略
+## 7. 表：`friends`
+
+存储用户之间的好友关系。为了确保关系的唯一性和查询效率，每对好友关系会存储两条记录（A->B 和 B->A）。
+
+| 列 | 类型 | 约束 | 描述 |
+|---|---|---|---|
+| `id` | `BIGINT` | `PRIMARY KEY` | 记录的唯一标识符。 |
+| `user_id` | `BIGINT` | `UNIQUE(user_id, friend_id)` | 用户的 ID。 |
+| `friend_id` | `BIGINT` | `UNIQUE(user_id, friend_id)` | 好友的 ID。 |
+| `status` | `INT` | `NOT NULL, DEFAULT 0` | 关系状态（0: 待处理, 1: 已接受, 2: 已拒绝, 3: 已拉黑）。 |
+| `remarks` | `VARCHAR(100)` | | 用户对好友的备注名。 |
+| `created_at` | `DATETIME` | `NOT NULL` | 关系创建或发起的时间戳。 |
+| `updated_at` | `DATETIME` | `NOT NULL` | 关系状态最后更新的时间戳。 |
+
+## 8. 持久化与数据拉取策略
 
 ### 7.1 消息持久化流程
 

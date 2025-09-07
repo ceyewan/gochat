@@ -98,3 +98,13 @@ type TaskMessage struct {
 	Data      json.RawMessage `json:"data"`
 	CreatedAt int64           `json:"created_at"`
 }
+
+// SystemSignalMessage 系统信令消息
+// 用于后端服务之间（如 im-task -> im-gateway）传递需要实时推送给客户端的非聊天类信息。
+type SystemSignalMessage struct {
+	TraceID      string          `json:"trace_id"`
+	TargetUserIDs []string        `json:"target_user_ids"` // 目标用户列表
+	SignalType   string          `json:"signal_type"`     // 信令类型, e.g., "friend.status.changed", "message.receipt.updated"
+	Payload      json.RawMessage `json:"payload"`         // 具体信令的载荷
+	Timestamp    int64           `json:"timestamp"`
+}

@@ -8,8 +8,17 @@ GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语�
 
 -   **`im-logic` 服务**: 暴露业务逻辑功能。
 -   **`im-repo` 服务**: 暴露数据持久化功能。
+-   **`im-gateway` 服务**: 暴露一个内部 gRPC 服务，用于接收来自后端的推送指令。
 
-## 2. `im-logic` 服务
+## 2. `im-gateway` 内部服务
+
+### `PusherService`
+
+-   **描述**: 提供一个内部 gRPC 入口，允许后端服务（如 `im-pusher`）向一个或多个在线用户推送实时信令或通知。
+-   **主要 RPC**:
+    -   `PushToUsers`: 将一条消息或信令推送给指定的一批用户。`im-gateway` 会查询这些用户当前连接在哪个 `gateway` 实例上，并将请求转发给对应的实例进行推送。
+
+## 3. `im-logic` 服务
 
 `im-logic` 微服务暴露了几个 gRPC 服务，它们封装了应用程序的核心业务逻辑。
 
@@ -101,3 +110,11 @@ GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语�
 -   **主要 RPC**:
     -   `SetUserOnline`, `SetUserOffline`: 更新用户的在线状态。
     -   `GetUserOnlineStatus`: 检索用户的在线状态。
+
+### `FriendService`
+
+-   **描述**: 为好友关系提供 CRUD 操作。
+-   **主要 RPC**:
+    -   `AddFriend`: 创建好友关系记录。
+    -   `UpdateFriendStatus`: 更新好友关系状态（如接受、拒绝）。
+    -   `GetUserFriends`: 获取一个用户的所有好友列表。
