@@ -18,6 +18,15 @@ const (
 
 	// TopicTasksFanout 大群扇出任务 (logic -> task)
 	TopicTasksFanout = "gochat.tasks.fanout"
+
+	// --- 领域事件 Topics ---
+
+	// TopicUserEvents 用户事件 (例如: 上线、下线、信息变更)
+	TopicUserEvents = "gochat.user-events"
+	// TopicMessageEvents 消息事件 (例如: 已读、撤回)
+	TopicMessageEvents = "gochat.message-events"
+	// TopicNotifications 系统通知 (例如: 被拉入群、好友申请)
+	TopicNotifications = "gochat.notifications"
 )
 
 // UpstreamMessage 上行消息结构
