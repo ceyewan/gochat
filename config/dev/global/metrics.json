@@ -1,0 +1,10 @@
+{
+  "exporterType": "prometheus",
+  "prometheusListenAddr": ":9091",
+  "samplerType": "const",
+  "samplerRatio": 1.0,
+  "slowRequestThreshold": "200ms",
+  "enableTracing": true,
+  "enableMetrics": true,
+  "metricsNamespace": "gochat"
+}

@@ -65,7 +65,7 @@
 
   // 2. 配置管理: 获取配置
   var dbConfig myapp.DatabaseConfig
-  err = coordinator.Config().Get(ctx, "/config/dev/im-repo/db", &dbConfig)
+  err = coordinator.Config().Get(ctx, "/config/dev/global/db", &dbConfig)
   // ...
 
   // 3. 分布式锁

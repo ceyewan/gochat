@@ -1,221 +1,93 @@
 # GoChat 应用服务部署配置
-# 包含所有微服务：im-repo、im-logic、im-gateway、im-task
+# 遵循 KISS 原则，所有服务仅依赖 etcd 进行配置。
 version: '3.8'
 
-# 网络配置 - 连接到基础设施网络
 networks:
-  # 应用网络
-  app-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.21.0.0/16
-  # 连接到基础设施网络
-  infra-net:
+  gochat-net:
+    name: deployment_infrastructure_gochat-net
     external: true
-    name: infrastructure_infra-net
-  # 连接到监控网络
-  monitoring-net:
-    external: true
-    name: infrastructure_monitoring-net
 
 services:
-  # ===== im-repo 服务 =====
   im-repo:
     image: gochat/im-repo:latest
     container_name: gochat-im-repo
-    hostname: im-repo
     restart: unless-stopped
-    environment:
-      # 应用配置
-      - APP_ENV=dev
-      - APP_NAME=im-repo
-      - APP_VERSION=1.0.0
-      # 数据库配置
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_NAME=gochat_dev
-      - DB_USER=gochat
-      - DB_PASSWORD=gochat_pass_2024
-      # Redis 配置
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
-      # etcd 配置
-      - ETCD_ENDPOINTS=etcd1:2379,etcd2:2379,etcd3:2379
-      # Kafka 配置
-      - KAFKA_BROKERS=kafka1:9092,kafka2:9092,kafka3:9092
-      # 监控配置
-      - METRICS_PORT=9091
-      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
-      # 日志配置
-      - LOG_LEVEL=info
-      - LOG_FORMAT=json
-      - LOG_OUTPUT=file
-      - LOG_FILE=/app/logs/app.log
-    ports:
-      - "8090:8080"  # HTTP API
-      - "9091:9091"  # Metrics
     networks:
-      - app-net
-      - infra-net
-      - monitoring-net
+      - gochat-net
+    environment:
+      - COORD_ETCD_ENDPOINTS=etcd1:2379,etcd2:2389,etcd3:2399
+    ports:
+      - "8090:8080" # HTTP API for health check or debug
+      - "9091:9091" # Metrics
     depends_on:
-      - mysql
-      - redis
       - etcd1
-      - kafka1
+      - etcd2
+      - etcd3
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-    volumes:
-      - ./config/im-repo:/app/config
-      - ./logs/im-repo:/app/logs
 
-  # ===== im-logic 服务 =====
   im-logic:
     image: gochat/im-logic:latest
     container_name: gochat-im-logic
-    hostname: im-logic
     restart: unless-stopped
-    environment:
-      # 应用配置
-      - APP_ENV=dev
-      - APP_NAME=im-logic
-      - APP_VERSION=1.0.0
-      # gRPC 配置
-      - GRPC_PORT=9000
-      # etcd 配置
-      - ETCD_ENDPOINTS=etcd1:2379,etcd2:2379,etcd3:2379
-      # Kafka 配置
-      - KAFKA_BROKERS=kafka1:9092,kafka2:9092,kafka3:9092
-      # 监控配置
-      - METRICS_PORT=9092
-      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
-      # 日志配置
-      - LOG_LEVEL=info
-      - LOG_FORMAT=json
-      - LOG_OUTPUT=file
-      - LOG_FILE=/app/logs/app.log
-      # 依赖服务配置
-      - IM_REPO_ENDPOINT=im-repo:8080
-    ports:
-      - "9000:9000"  # gRPC
-      - "9092:9092"  # Metrics
     networks:
-      - app-net
-      - infra-net
-      - monitoring-net
+      - gochat-net
+    environment:
+      - COORD_ETCD_ENDPOINTS=etcd1:2379,etcd2:2389,etcd3:2399
+    ports:
+      - "9000:9000" # gRPC
+      - "9092:9092" # Metrics
     depends_on:
-      - im-repo
       - etcd1
-      - kafka1
+      - etcd2
+      - etcd3
     healthcheck:
       test: ["CMD", "grpc_health_probe", "-addr=localhost:9000"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-    volumes:
-      - ./config/im-logic:/app/config
-      - ./logs/im-logic:/app/logs
 
-  # ===== im-gateway 服务 =====
   im-gateway:
     image: gochat/im-gateway:latest
     container_name: gochat-im-gateway
-    hostname: im-gateway
     restart: unless-stopped
-    environment:
-      # 应用配置
-      - APP_ENV=dev
-      - APP_NAME=im-gateway
-      - APP_VERSION=1.0.0
-      # HTTP 配置
-      - HTTP_PORT=8080
-      - WEBSOCKET_PORT=8081
-      # etcd 配置
-      - ETCD_ENDPOINTS=etcd1:2379,etcd2:2379,etcd3:2379
-      # 监控配置
-      - METRICS_PORT=9093
-      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
-      # 日志配置
-      - LOG_LEVEL=info
-      - LOG_FORMAT=json
-      - LOG_OUTPUT=file
-      - LOG_FILE=/app/logs/app.log
-      # 依赖服务配置
-      - IM_LOGIC_ENDPOINT=im-logic:9000
-    ports:
-      - "8080:8080"  # HTTP API
-      - "8081:8081"  # WebSocket
-      - "9093:9093"  # Metrics
     networks:
-      - app-net
-      - infra-net
-      - monitoring-net
+      - gochat-net
+    environment:
+      - COORD_ETCD_ENDPOINTS=etcd1:2379,etcd2:2389,etcd3:2399
+    ports:
+      - "8081:8080" # HTTP API
+      - "8082:8081" # WebSocket
+      - "9093:9093" # Metrics
     depends_on:
-      - im-logic
       - etcd1
+      - etcd2
+      - etcd3
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-    volumes:
-      - ./config/im-gateway:/app/config
-      - ./logs/im-gateway:/app/logs
 
-  # ===== im-task 服务 =====
   im-task:
     image: gochat/im-task:latest
     container_name: gochat-im-task
-    hostname: im-task
     restart: unless-stopped
-    environment:
-      # 应用配置
-      - APP_ENV=dev
-      - APP_NAME=im-task
-      - APP_VERSION=1.0.0
-      # etcd 配置
-      - ETCD_ENDPOINTS=etcd1:2379,etcd2:2379,etcd3:2379
-      # Kafka 配置
-      - KAFKA_BROKERS=kafka1:9092,kafka2:9092,kafka3:9092
-      # Redis 配置
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=1
-      # 监控配置
-      - METRICS_PORT=9094
-      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
-      # 日志配置
-      - LOG_LEVEL=info
-      - LOG_FORMAT=json
-      - LOG_OUTPUT=file
-      - LOG_FILE=/app/logs/app.log
-      # 依赖服务配置
-      - IM_LOGIC_ENDPOINT=im-logic:9000
-    ports:
-      - "9094:9094"  # Metrics
     networks:
-      - app-net
-      - infra-net
-      - monitoring-net
+      - gochat-net
+    environment:
+      - COORD_ETCD_ENDPOINTS=etcd1:2379,etcd2:2389,etcd3:2399
+    ports:
+      - "9094:9094" # Metrics
     depends_on:
-      - im-logic
-      - redis
-      - kafka1
       - etcd1
+      - etcd2
+      - etcd3
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9094/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-    volumes:
-      - ./config/im-task:/app/config
-      - ./logs/im-task:/app/logs

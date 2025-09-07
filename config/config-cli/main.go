@@ -62,33 +62,24 @@ func syncCmd() *cobra.Command {
 	var force bool
 
 	cmd := &cobra.Command{
-		Use:   "sync [env] [service] [component]",
+		Use:   "sync [env]",
 		Short: "将 JSON 配置文件同步到 etcd 配置中心",
 		Long: `将本地 JSON 配置文件原子地写入 etcd 配置中心。
-配置文件结构应为: <config-path>/{env}/{service}/{component}.json
-配置将写入 etcd 路径: /config/{env}/{service}/{component}
+支持同步所有配置或指定环境的配置。
 
 示例:
-  config-cli sync                           # 同步所有配置
-  config-cli sync dev                       # 同步开发环境所有配置
-  config-cli sync dev im-repo               # 同步 im-repo 服务所有配置
-  config-cli sync dev im-repo cache         # 同步特定配置`,
-		Args: cobra.MaximumNArgs(3),
+		config-cli sync          # 同步所有环境的配置
+		config-cli sync dev      # 同步 'dev' 环境的所有配置`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 解析参数
-			var env, service, component string
+			var env string
 			if len(args) >= 1 {
 				env = args[0]
 			}
-			if len(args) >= 2 {
-				service = args[1]
-			}
-			if len(args) >= 3 {
-				component = args[2]
-			}
 
 			// 扫描配置文件
-			configs, err := scanConfigs(configPath, env, service, component)
+			configs, err := scanConfigs(configPath, env, "", "")
 			if err != nil {
 				return fmt.Errorf("扫描配置文件失败: %w", err)
 			}
@@ -170,8 +161,8 @@ func scanConfigs(basePath, env, service, component string) ([]ConfigInfo, error)
 		}
 
 		parts := strings.Split(relPath, string(filepath.Separator))
-		if len(parts) != 3 {
-			// 跳过不符合 {env}/{service}/{component}.json 格式的文件
+		// 路径至少需要是 {env}/{service}/{component}.json 的形式
+		if len(parts) < 3 {
 			return nil
 		}
 
@@ -179,16 +170,23 @@ func scanConfigs(basePath, env, service, component string) ([]ConfigInfo, error)
 		fileService := parts[1]
 		fileComponent := strings.TrimSuffix(parts[2], ".json")
 
+		// 如果路径是 {env}/global/{component}.json，则服务名是 "global"
+		// 否则，服务名是路径的第二部分
+		if fileService == "global" {
+			// 允许 global 目录下的任何组件
+		}
+
 		// 应用过滤条件
 		if env != "" && fileEnv != env {
 			return nil
 		}
-		if service != "" && fileService != service {
-			return nil
-		}
-		if component != "" && fileComponent != component {
-			return nil
-		}
+		// service 和 component 参数已移除，不再需要过滤
+		// if service != "" && fileService != service {
+		// 	return nil
+		// }
+		// if component != "" && fileComponent != component {
+		// 	return nil
+		// }
 
 		// 读取配置文件
 		data, err := os.ReadFile(path)

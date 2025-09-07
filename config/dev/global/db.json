@@ -1,0 +1,4 @@
+{
+  "dsn": "gochat:gochat_pass_2024@tcp(mysql:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local",
+  "driver": "mysql"
+}

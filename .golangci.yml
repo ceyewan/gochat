@@ -8,7 +8,7 @@ run:
   # 设置超时时间，防止 linter 运行时间过长。
   timeout: 5m
   # 在分析代码时使用的 Go 版本。
-  go: '1.2'
+  go: '1.24'
 
 linters-settings:
   govet:

@@ -231,8 +231,8 @@ func GetCurrentConfig() *MyModuleConfig {
 ```
 
 示例：
-- clog 配置：`/config/dev/gochat/clog`
-- db 配置：`/config/dev/gochat/db`
+- clog 配置：`/config/dev/global/clog`
+- db 配置：`/config/dev/global/db`
 - 自定义模块：`/config/prod/myapp/mycomponent`
 
 ## 最佳实践

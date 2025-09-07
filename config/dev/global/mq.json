@@ -1,0 +1,30 @@
+{
+  "common": {
+    "brokers": [
+      "kafka1:9092",
+      "kafka2:9092",
+      "kafka3:9092"
+    ],
+    "clientIDPrefix": "gochat"
+  },
+  "producer": {
+    "requiredAcks": -1,
+    "enableIdempotence": true,
+    "compression": "lz4",
+    "batchSize": 16384,
+    "lingerMs": 5
+  },
+  "consumer": {
+    "autoCommitIntervalMs": 5000,
+    "autoOffsetReset": "latest",
+    "sessionTimeoutMs": 30000,
+    "heartbeatIntervalMs": 10000
+  },
+  "topics": {
+    "userEvents": "gochat.user-events",
+    "messageEvents": "gochat.message-events",
+    "notifications": "gochat.notifications"
+  },
+  "enableMetrics": true,
+  "enableTracing": true
+}

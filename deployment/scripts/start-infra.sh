@@ -1,25 +1,28 @@
 #!/bin/bash
+#
+# 启动所有基础设施服务
+#
 set -e
 
-# 脚本移动到基础设施目录
-cd "$(dirname "${BASH_SOURCE[0]}")/../infrastructure"
+# 获取脚本所在的目录
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+INFRA_DIR="$SCRIPT_DIR/../infrastructure"
 
-# 创建并设置 Kafka 数据目录权限
-echo "创建并设置 Kafka 数据目录权限..."
-mkdir -p ./data/kafka1 ./data/kafka2 ./data/kafka3
-chmod -R 777 ./data/kafka1 ./data/kafka2 ./data/kafka3
-echo "目录权限设置完成"
+echo "==> 切换到基础设施目录: $INFRA_DIR"
+cd "$INFRA_DIR"
 
-# 生成 Kafka 集群 ID
-KAFKA_CLUSTER_ID=$(docker run --rm apache/kafka:latest /bin/sh -c '/opt/kafka/bin/kafka-storage.sh random-uuid')
-echo "KAFKA_CLUSTER_ID=$KAFKA_CLUSTER_ID" > .env
-echo "生成的 Kafka 集群 ID: $KAFKA_CLUSTER_ID"
-echo "已将集群 ID 保存到 .env 文件"
+# 检查并生成 Kafka Cluster ID
+if [ ! -f .env ] || ! grep -q 'KAFKA_CLUSTER_ID' .env; then
+  echo "==> 生成新的 Kafka Cluster ID..."
+  KAFKA_CLUSTER_ID=$(docker run --rm bitnami/kafka:3.5 kafka-storage.sh random-uuid)
+  echo "KAFKA_CLUSTER_ID=$KAFKA_CLUSTER_ID" > .env
+  echo "    -> 新的 ID: $KAFKA_CLUSTER_ID (已保存到 .env 文件)"
+else
+  echo "==> 使用已存在的 Kafka Cluster ID."
+fi
 
-# 导出集群 ID 环境变量并启动 Docker Compose
-export KAFKA_CLUSTER_ID
-docker-compose up -d
+echo "==> 使用 'docker compose' 启动所有基础设施服务..."
+docker compose up -d
 
-echo "Kafka KRaft 集群启动中..."
-sleep 5
-echo "可以使用以下命令查看容器状态: docker-compose ps"
+echo ""
+echo "✅ 基础设施启动命令已执行。请使用 'docker compose ps' 查看状态。"

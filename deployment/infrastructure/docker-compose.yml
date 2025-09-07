@@ -42,6 +42,10 @@ volumes:
   # redis-insight 数据卷
   redis-insight-data:
     driver: local
+  # 监控数据卷
+  prometheus-data:
+  loki-data:
+  grafana-data:
 
 services:
   # ===== etcd 集群 =====
@@ -164,8 +168,6 @@ services:
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
-      --innodb-buffer-pool-size=256M
-      --max-connections=200
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pgochat_root_2024"]
       interval: 30s
@@ -180,7 +182,6 @@ services:
     restart: unless-stopped
     volumes:
       - redis-data:/data
-      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
     ports:
       - "6379:6379"
     networks:
@@ -194,94 +195,143 @@ services:
 
   # ===== Kafka 集群 =====
   kafka1:
-    image: apache/kafka:latest
+    image: 'bitnami/kafka:3.5'
     container_name: gochat-kafka1
     hostname: kafka1
     restart: unless-stopped
     ports:
-      - "19092:19092"
+      - "19092:9092"
     networks:
       - infra-net
     environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://kafka1:9092,CONTROLLER://kafka1:9093,EXTERNAL://0.0.0.0:19092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092,EXTERNAL://localhost:19092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      CLUSTER_ID: '${KAFKA_CLUSTER_ID}'
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     volumes:
-      - ./data/kafka1:/tmp/kafka-logs
+      - kafka-data-1:/bitnami/kafka
 
   kafka2:
-    image: apache/kafka:latest
+    image: 'bitnami/kafka:3.5'
     container_name: gochat-kafka2
     hostname: kafka2
     restart: unless-stopped
     ports:
-      - "29092:29092"
+      - "29092:9092"
     networks:
       - infra-net
     depends_on:
       - kafka1
     environment:
-      KAFKA_NODE_ID: 2
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://kafka2:9092,CONTROLLER://kafka2:9093,EXTERNAL://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9092,EXTERNAL://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      CLUSTER_ID: '${KAFKA_CLUSTER_ID}'
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_BROKER_ID=2
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     volumes:
-      - ./data/kafka2:/tmp/kafka-logs
+      - kafka-data-2:/bitnami/kafka
 
   kafka3:
-    image: apache/kafka:latest
+    image: 'bitnami/kafka:3.5'
     container_name: gochat-kafka3
     hostname: kafka3
     restart: unless-stopped
     ports:
-      - "39092:39092"
+      - "39092:9092"
     networks:
       - infra-net
     depends_on:
       - kafka1
       - kafka2
     environment:
-      KAFKA_NODE_ID: 3
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://kafka3:9092,CONTROLLER://kafka3:9093,EXTERNAL://0.0.0.0:39092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9092,EXTERNAL://localhost:39092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      CLUSTER_ID: '${KAFKA_CLUSTER_ID}'
+      - KAFKA_CFG_NODE_ID=3
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_BROKER_ID=3
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     volumes:
-      - ./data/kafka3:/tmp/kafka-logs
+      - kafka-data-3:/bitnami/kafka
+
+  # ===== 监控 & 日志 =====
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: gochat-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - infra-net
+      - monitoring-net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  loki:
+    image: grafana/loki:2.8.2
+    container_name: gochat-loki
+    hostname: loki
+    restart: unless-stopped
+    volumes:
+      - ./config/loki/loki.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring-net
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:2.8.2
+    container_name: gochat-promtail
+    hostname: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/promtail/promtail-config.yml:/etc/promtail/config.yml
+    networks:
+      - monitoring-net
+    command: -config.file=/etc/promtail/config.yml
+
+  grafana:
+    image: grafana/grafana:9.5.3
+    container_name: gochat-grafana
+    hostname: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=gochat_grafana_2024
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring-net
 
   # ===== 管理界面 =====
-  # Kafka UI 管理界面
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: gochat-kafka-ui
     hostname: kafka-ui
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8088:8080"
     networks:
       - infra-net
       - monitoring-net
@@ -290,11 +340,9 @@ services:
       - kafka2
       - kafka3
     environment:
-      KAFKA_CLUSTERS_0_NAME: KraftCluster
+      KAFKA_CLUSTERS_0_NAME: gochat-cluster
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092,kafka3:9092
-      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
 
-  # etcd 管理界面
   etcd-workbench:
     image: tzfun/etcd-workbench:latest
     container_name: gochat-etcd-workbench
@@ -312,23 +360,21 @@ services:
     environment:
       ETCD_HOST: etcd1:2379,etcd2:2379,etcd3:2379
 
-  # Redis 管理界面 - RedisInsight
   redis-insight:
     image: redis/redisinsight:latest
     container_name: gochat-redis-insight
     hostname: redis-insight
     restart: unless-stopped
     ports:
-      - "5540:5540"
+      - "8001:8001"
     networks:
       - infra-net
       - monitoring-net
     depends_on:
       - redis
     volumes:
-      - redis-insight-data:/data
+      - redis-insight-data:/db
 
-  # MySQL 管理界面 (phpMyAdmin)
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     container_name: gochat-phpmyadmin

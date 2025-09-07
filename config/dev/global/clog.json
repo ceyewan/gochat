@@ -1,0 +1,9 @@
+{
+  "level": "info",
+  "format": "json",
+  "outputPaths": ["stdout"],
+  "errorOutputPaths": ["stdout"],
+  "encoding": "json",
+  "enableCaller": true,
+  "development": false
+}

@@ -30,6 +30,48 @@ help:
 	@echo "  test         - Run all unit tests with race detector enabled"
 	@echo "  tidy         - Tidy go.mod and go.sum files"
 	@echo "  clean        - Clean up generated files and build artifacts"
+	@echo ""
+	@echo "Deployment Targets:"
+	@echo "  infra-up     - Start all infrastructure services"
+	@echo "  infra-down   - Stop all infrastructure services"
+	@echo "  app-up       - Start all application services"
+	@echo "  app-down     - Stop all application services"
+	@echo "  config-sync  - Sync all configurations to etcd"
+	@echo "  config-sync-dev - Sync dev configurations to etcd"
+
+# ==============================================================================
+# 部署命令
+# ==============================================================================
+
+.PHONY: infra-up
+infra-up:
+	@echo "🚀 Starting infrastructure via script..."
+	@./deployment/scripts/start-infra.sh
+
+.PHONY: infra-down
+infra-down:
+	@echo "🛑 Stopping infrastructure and applications via script..."
+	@./deployment/scripts/cleanup.sh
+
+.PHONY: app-up
+app-up:
+	@echo "🚀 Starting applications via script..."
+	@./deployment/scripts/start-apps.sh
+
+.PHONY: app-down
+app-down:
+	@echo "🛑 Stopping applications..."
+	@docker compose -f deployment/applications/docker-compose.yml down
+
+.PHONY: config-sync
+config-sync:
+	@echo "🔄 Syncing all configurations to etcd..."
+	@cd config/config-cli && $(GO) run . sync --force
+
+.PHONY: config-sync-dev
+config-sync-dev:
+	@echo "🔄 Syncing dev configurations to etcd..."
+	@cd config/config-cli && $(GO) run . sync dev --force
 
 # ==============================================================================
 # 代码生成与格式化
