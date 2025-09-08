@@ -45,13 +45,43 @@ help:
 
 .PHONY: infra-up
 infra-up:
-	@echo "🚀 Starting infrastructure via script..."
-	@./deployment/scripts/start-infra.sh
+	@echo "🚀 Starting core infrastructure services..."
+	@docker compose -f deployment/infrastructure/docker-compose.yml up -d
 
 .PHONY: infra-down
 infra-down:
-	@echo "🛑 Stopping infrastructure and applications via script..."
-	@./deployment/scripts/cleanup.sh
+	@echo "🛑 Stopping core infrastructure services..."
+	@docker compose -f deployment/infrastructure/docker-compose.yml down
+
+.PHONY: infra-up-all
+infra-up-all:
+	@echo "🚀 Starting all infrastructure services via script (core, monitoring, admin)..."
+	@./deployment/scripts/start-infra.sh all
+
+.PHONY: infra-down-all
+infra-down-all:
+	@echo "🛑 Stopping all infrastructure and applications via script..."
+	@./deployment/scripts/cleanup.sh all
+
+.PHONY: monitoring-up
+monitoring-up:
+	@echo "🚀 Starting monitoring services..."
+	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml up -d
+
+.PHONY: monitoring-down
+monitoring-down:
+	@echo "🛑 Stopping monitoring services..."
+	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml down
+
+.PHONY: admin-up
+admin-up:
+	@echo "🚀 Starting admin tools..."
+	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.admin.yml up -d
+
+.PHONY: admin-down
+admin-down:
+	@echo "🛑 Stopping admin tools..."
+	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.admin.yml down
 
 .PHONY: app-up
 app-up:

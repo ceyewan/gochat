@@ -1,0 +1,78 @@
+# GoChat 监控 & 日志服务
+# 可选组件，用于提供监控、日志收集和告警功能
+version: '3.8'
+
+networks:
+  monitoring-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+  # 引用核心网络以实现服务发现
+  infra-net:
+    external: true
+    name: "gochat_infra-net" # 确保名称与 docker compose 默认生成的网络名一致
+
+volumes:
+  prometheus-data:
+  loki-data:
+  grafana-data:
+
+services:
+  prometheus:
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/prom-prometheus:latest
+    container_name: gochat-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - infra-net
+      - monitoring-net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  loki:
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-loki:latest
+    container_name: gochat-loki
+    hostname: loki
+    restart: unless-stopped
+    volumes:
+      - ./config/loki/loki.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring-net
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-promtail:latest
+    container_name: gochat-promtail
+    hostname: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/promtail/promtail-config.yml:/etc/promtail/config.yml
+    networks:
+      - monitoring-net
+    command: -config.file=/etc/promtail/config.yml
+
+  grafana:
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-grafana:latest
+    container_name: gochat-grafana
+    hostname: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=gochat_grafana_2024
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring-net

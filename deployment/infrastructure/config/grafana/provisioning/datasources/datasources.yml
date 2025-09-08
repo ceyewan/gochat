@@ -23,26 +23,3 @@ datasources:
     editable: true
     jsonData:
       maxLines: 1000
-      derivedFields:
-        - datasourceUid: "prometheus"
-          matcherRegex: "trace_id=(\\w+)"
-          name: "TraceID"
-          url: "http://jaeger:16686/trace/$${__value.raw}"
-
-  # Jaeger 数据源 - 链路追踪
-  - name: Jaeger
-    type: jaeger
-    access: proxy
-    url: http://jaeger:16686
-    isDefault: false
-    editable: true
-    jsonData:
-      tracesToLogs:
-        datasourceUid: "loki"
-        tags: ["service", "trace_id"]
-        mappedTags:
-          - key: "service"
-            value: "service"
-        mapTagNamesEnabled: true
-        spanStartTimeShift: "-1h"
-        spanEndTimeShift: "1h"

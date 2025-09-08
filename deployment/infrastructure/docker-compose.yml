@@ -1,56 +1,36 @@
-# GoChat 基础设施部署配置
-# 包含所有基础设施组件：etcd、kafka、mysql、redis 等
+# GoChat 核心基础设施
+# 包含运行应用所必需的服务: etcd, kafka, mysql, redis
 version: '3.8'
 
-# 网络配置 - 分离不同类型的服务
 networks:
-  # 基础设施网络 - etcd、kafka、mysql、redis
   infra-net:
     driver: bridge
     ipam:
       config:
         - subnet: 172.20.0.0/16
-  # 监控网络 - prometheus、grafana、管理界面
-  monitoring-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.22.0.0/16
 
-# 数据卷配置 - 确保数据持久化
 volumes:
-  # etcd 数据卷
   etcd-data-1:
     driver: local
   etcd-data-2:
     driver: local
   etcd-data-3:
     driver: local
-  # kafka 数据卷
   kafka-data-1:
     driver: local
   kafka-data-2:
     driver: local
   kafka-data-3:
     driver: local
-  # mysql 数据卷
   mysql-data:
     driver: local
-  # redis 数据卷
   redis-data:
     driver: local
-  # redis-insight 数据卷
-  redis-insight-data:
-    driver: local
-  # 监控数据卷
-  prometheus-data:
-  loki-data:
-  grafana-data:
 
 services:
   # ===== etcd 集群 =====
   etcd1:
-    image: 'bitnami/etcd:3.5'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
     container_name: gochat-etcd1
     hostname: etcd1
     restart: unless-stopped
@@ -80,7 +60,7 @@ services:
       retries: 3
 
   etcd2:
-    image: 'bitnami/etcd:3.5'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
     container_name: gochat-etcd2
     hostname: etcd2
     restart: unless-stopped
@@ -112,7 +92,7 @@ services:
       retries: 3
 
   etcd3:
-    image: 'bitnami/etcd:3.5'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
     container_name: gochat-etcd3
     hostname: etcd3
     restart: unless-stopped
@@ -146,7 +126,7 @@ services:
 
   # ===== MySQL 数据库 =====
   mysql:
-    image: mysql:8.0
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-mysql:latest
     container_name: gochat-mysql
     hostname: mysql
     restart: unless-stopped
@@ -176,7 +156,7 @@ services:
 
   # ===== Redis 缓存 =====
   redis:
-    image: redis:7-alpine
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-redis:latest
     container_name: gochat-redis
     hostname: redis
     restart: unless-stopped
@@ -186,7 +166,6 @@ services:
       - "6379:6379"
     networks:
       - infra-net
-    command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -195,7 +174,7 @@ services:
 
   # ===== Kafka 集群 =====
   kafka1:
-    image: 'bitnami/kafka:3.5'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-kafka:latest'
     container_name: gochat-kafka1
     hostname: kafka1
     restart: unless-stopped
@@ -217,7 +196,7 @@ services:
       - kafka-data-1:/bitnami/kafka
 
   kafka2:
-    image: 'bitnami/kafka:3.5'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-kafka:latest'
     container_name: gochat-kafka2
     hostname: kafka2
     restart: unless-stopped
@@ -241,7 +220,7 @@ services:
       - kafka-data-2:/bitnami/kafka
 
   kafka3:
-    image: 'bitnami/kafka:3.5'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-kafka:latest'
     container_name: gochat-kafka3
     hostname: kafka3
     restart: unless-stopped
@@ -264,132 +243,3 @@ services:
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     volumes:
       - kafka-data-3:/bitnami/kafka
-
-  # ===== 监控 & 日志 =====
-  prometheus:
-    image: prom/prometheus:v2.45.0
-    container_name: gochat-prometheus
-    hostname: prometheus
-    restart: unless-stopped
-    volumes:
-      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    ports:
-      - "9090:9090"
-    networks:
-      - infra-net
-      - monitoring-net
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-
-  loki:
-    image: grafana/loki:2.8.2
-    container_name: gochat-loki
-    hostname: loki
-    restart: unless-stopped
-    volumes:
-      - ./config/loki/loki.yml:/etc/loki/local-config.yaml
-      - loki-data:/loki
-    ports:
-      - "3100:3100"
-    networks:
-      - monitoring-net
-    command: -config.file=/etc/loki/local-config.yaml
-
-  promtail:
-    image: grafana/promtail:2.8.2
-    container_name: gochat-promtail
-    hostname: promtail
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/promtail/promtail-config.yml:/etc/promtail/config.yml
-    networks:
-      - monitoring-net
-    command: -config.file=/etc/promtail/config.yml
-
-  grafana:
-    image: grafana/grafana:9.5.3
-    container_name: gochat-grafana
-    hostname: grafana
-    restart: unless-stopped
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./config/grafana/provisioning:/etc/grafana/provisioning
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=gochat_grafana_2024
-    ports:
-      - "3000:3000"
-    networks:
-      - monitoring-net
-
-  # ===== 管理界面 =====
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: gochat-kafka-ui
-    hostname: kafka-ui
-    restart: unless-stopped
-    ports:
-      - "8088:8080"
-    networks:
-      - infra-net
-      - monitoring-net
-    depends_on:
-      - kafka1
-      - kafka2
-      - kafka3
-    environment:
-      KAFKA_CLUSTERS_0_NAME: gochat-cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092,kafka3:9092
-
-  etcd-workbench:
-    image: tzfun/etcd-workbench:latest
-    container_name: gochat-etcd-workbench
-    hostname: etcd-workbench
-    restart: unless-stopped
-    ports:
-      - "8002:8002"
-    networks:
-      - infra-net
-      - monitoring-net
-    depends_on:
-      - etcd1
-      - etcd2
-      - etcd3
-    environment:
-      ETCD_HOST: etcd1:2379,etcd2:2379,etcd3:2379
-
-  redis-insight:
-    image: redis/redisinsight:latest
-    container_name: gochat-redis-insight
-    hostname: redis-insight
-    restart: unless-stopped
-    ports:
-      - "8001:8001"
-    networks:
-      - infra-net
-      - monitoring-net
-    depends_on:
-      - redis
-    volumes:
-      - redis-insight-data:/db
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: gochat-phpmyadmin
-    hostname: phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: gochat_root_2024
-      MYSQL_ROOT_PASSWORD: gochat_root_2024
-    ports:
-      - "8083:80"
-    networks:
-      - infra-net
-      - monitoring-net
-    depends_on:
-      - mysql

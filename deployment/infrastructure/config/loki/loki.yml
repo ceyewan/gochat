@@ -34,9 +34,6 @@ schema_config:
         prefix: index_
         period: 24h
 
-ruler:
-  alertmanager_url: http://localhost:9093
-
 # 限制配置
 limits_config:
   reject_old_samples: true
