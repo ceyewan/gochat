@@ -104,15 +104,17 @@ type Producer interface {
 	Close() error
 }
 
-// ConsumeCallback 是消费者处理消息的回调函数。
-// 如果函数返回 error，将触发错误日志记录，但消费流程会继续。
+// ConsumeCallback 是标准的消息处理回调函数。
+// 返回 nil: 消息处理成功，偏移量将被自动提交。
+// 返回 error: 消息处理失败，偏移量不会被提交，消息将在后续被重新消费。
 type ConsumeCallback func(ctx context.Context, msg *Message) error
 
 // Consumer 是一个消费者组的接口。
 type Consumer interface {
-	// Subscribe 订阅一个或多个 Topic，并使用提供的回调函数处理消息。
-	// 此方法是阻塞的，它会启动一个循环来拉取和处理消息。
-	// 偏移量由组件在后台自动提交。
+	// Subscribe 订阅消息并根据处理结果决定是否提交偏移量。
+	// 只有当回调函数返回 nil (无错误) 时，偏移量才会被自动提交。
+	// 如果返回 error，偏移量将不会被提交，消息会在下一次拉取时被重新消费。
+	// 这是标准的、推荐的消费方式。
 	Subscribe(ctx context.Context, topics []string, callback ConsumeCallback) error
 
 	// Close 优雅地关闭消费者，完成当前正在处理的消息并提交最后一次偏移量。
@@ -247,16 +249,19 @@ func (s *NotificationService) StartConsuming(ctx context.Context) error {
         var user User
         if err := json.Unmarshal(msg.Value, &user); err != nil {
             logger.Error("反序列化用户事件失败", clog.Err(err))
-            return err // 返回错误，但不会中断消费
+            // 返回错误，偏移量不会被提交，消息后续会重试
+            return err
         }
 
         // 发送欢迎邮件
         if err := s.sendWelcomeEmail(ctx, &user); err != nil {
             logger.Error("发送欢迎邮件失败", clog.Err(err), clog.String("user_id", user.ID))
+            // 返回错误，偏移量不会被提交，消息后续会重试
             return err
         }
         
         logger.Info("成功处理用户注册事件", clog.String("user_id", user.ID))
+        // 返回 nil，偏移量将被自动提交
         return nil
     }
 
