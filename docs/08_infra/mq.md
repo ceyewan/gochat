@@ -424,10 +424,6 @@ analyticsConsumer, _   := mq.NewConsumer(ctx, config, "analytics-service-group")
 - 可从配置中心获取 Kafka 集群信息和认证配置
 - 支持运行时配置热更新（如调整生产者批处理大小等）
 
-**与 retry 集成**:
-- 在消费者回调中使用 retry 组件处理临时故障
-- 避免因网络抖动等临时问题导致的消息处理失败
-
 ## 5. 常见问题 (FAQ)
 
 ### Q1: Topic 需要预先创建吗？

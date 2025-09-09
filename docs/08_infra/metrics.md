@@ -27,6 +27,16 @@ type Config struct {
 	SamplerRatio float64 `json:"samplerRatio"`
 }
 
+// GetDefaultConfig 返回一个推荐的默认配置。
+// serviceName 是必填项。env 可以是 "development" 或 "production"。
+func GetDefaultConfig(serviceName, env string) *Config
+
+// Option 是用于配置 metrics Provider 的函数式选项。
+type Option func(*providerOptions)
+
+// WithLogger 为 metrics Provider 设置一个 clog.Logger 实例。
+func WithLogger(logger clog.Logger) Option
+
 // New 创建一个新的 metrics Provider 实例。
 // 这是与 metrics 组件交互的唯一入口。
 func New(ctx context.Context, config *Config, opts ...Option) (Provider, error)
@@ -83,9 +93,14 @@ type Histogram interface {
 
 ```go
 // 1. 在服务启动时初始化 Provider
-var metricsConfig metrics.Config
-// ... 从 coord 加载配置 ...
-metricsProvider, err := metrics.New(context.Background(), &metricsConfig)
+// 推荐使用 GetDefaultConfig 获取标准配置，然后按需覆盖
+config := metrics.GetDefaultConfig("im-gateway", "production")
+// config.ExporterEndpoint = "http://my-jaeger:14268/api/traces" // 按需覆盖
+
+// 创建 Provider 实例，并通过 With... Options 注入依赖
+metricsProvider, err := metrics.New(context.Background(), config,
+    metrics.WithLogger(clog.Namespace("metrics")),
+)
 if err != nil {
     log.Fatalf("无法创建 metrics provider: %v", err)
 }

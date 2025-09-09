@@ -5,6 +5,184 @@
 所有组件的设计都遵循 `docs/08_infra/README.md` 中定义的核心规范。
 
 ---
+## 统一初始化：典型服务 `main.go`
+
+本章节提供一个**生产级别的 `main` 函数**示例，展示如何在一个典型的微服务（如 `message-service`）中，按正确的依赖顺序，一次性初始化所有需要的 `im-infra` 组件。这是上手 `im-infra` 的**黄金路径**和**最佳实践**。
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/ceyewan/gochat/im-infra/breaker"
+	"github.com/ceyewan/gochat/im-infra/cache"
+	"github.com/ceyewan/gochat/im-infra/clog"
+	"github.com/ceyewan/gochat/im-infra/coord"
+	"github.com/ceyewan/gochat/im-infra/db"
+	"github.com/ceyewan/gochat/im-infra/metrics"
+	"github.com/ceyewan/gochat/im-infra/mq"
+	"github.com/ceyewan/gochat/im-infra/once"
+	"github.com/ceyewan/gochat/im-infra/ratelimit"
+	"github.com/ceyewan/gochat/im-infra/uid"
+)
+
+const (
+	serviceName = "message-service"
+	environment = "production" // "development" or "production"
+)
+
+func main() {
+	// --- 1. 基础组件初始化 (无依赖或仅依赖 context) ---
+
+	// 初始化日志 (clog)
+	clogConfig := clog.GetDefaultConfig(environment)
+	if err := clog.Init(context.Background(), clogConfig, clog.WithNamespace(serviceName)); err != nil {
+		log.Fatalf("初始化 clog 失败: %v", err)
+	}
+	clog.Info("服务开始启动...")
+
+	// 初始化可观测性 (metrics)
+	metricsConfig := metrics.GetDefaultConfig(serviceName, environment)
+	metricsProvider, err := metrics.New(context.Background(), metricsConfig,
+		metrics.WithLogger(clog.Namespace("metrics")),
+	)
+	if err != nil {
+		clog.Fatal("初始化 metrics 失败", clog.Err(err))
+	}
+	defer metricsProvider.Shutdown(context.Background())
+	clog.Info("metrics Provider 初始化成功")
+
+	// --- 2. 核心依赖组件初始化 (依赖 clog) ---
+
+	// 初始化分布式协调 (coord)
+	coordConfig := coord.GetDefaultConfig(environment)
+	// coordConfig.Endpoints = []string{"etcd1:2379", "etcd2:2379", "etcd3:2379"} // 按需覆盖
+	coordProvider, err := coord.New(context.Background(), coordConfig,
+		coord.WithLogger(clog.Namespace("coord")),
+	)
+	if err != nil {
+		clog.Fatal("初始化 coord 失败", clog.Err(err))
+	}
+	defer coordProvider.Close()
+	clog.Info("coord Provider 初始化成功")
+
+	// --- 3. 上层组件初始化 (依赖 clog, coord, etc.) ---
+
+	// 初始化缓存 (cache)
+	cacheConfig := cache.GetDefaultConfig(environment)
+	// cacheConfig.Addr = "redis-cluster:6379" // 按需覆盖
+	cacheProvider, err := cache.New(context.Background(), cacheConfig,
+		cache.WithLogger(clog.Namespace("cache")),
+		cache.WithCoordProvider(coordProvider),
+	)
+	if err != nil {
+		clog.Fatal("初始化 cache 失败", clog.Err(err))
+	}
+	defer cacheProvider.Close()
+	clog.Info("cache Provider 初始化成功")
+
+	// 初始化数据库 (db)
+	dbConfig := db.GetDefaultConfig(environment)
+	// dbConfig.DSN = "..." // 按需覆盖
+	dbProvider, err := db.New(context.Background(), dbConfig,
+		db.WithLogger(clog.Namespace("gorm")),
+	)
+	if err != nil {
+		clog.Fatal("初始化 db 失败", clog.Err(err))
+	}
+	defer dbProvider.Close()
+	clog.Info("db Provider 初始化成功")
+
+	// 初始化唯一ID (uid)
+	uidConfig := uid.GetDefaultConfig(environment)
+	uidConfig.ServiceName = serviceName
+	uidProvider, err := uid.New(context.Background(), uidConfig,
+		uid.WithLogger(clog.Namespace("uid")),
+		uid.WithCoordProvider(coordProvider),
+	)
+	if err != nil {
+		clog.Fatal("初始化 uid 失败", clog.Err(err))
+	}
+	defer uidProvider.Close()
+	clog.Info("uid Provider 初始化成功")
+
+	// 初始化消息队列 (mq)
+	mqConfig := mq.GetDefaultConfig(environment)
+	// mqConfig.Brokers = []string{"kafka1:9092", "kafka2:9092"} // 按需覆盖
+	mqProducer, err := mq.NewProducer(context.Background(), mqConfig,
+		mq.WithLogger(clog.Namespace("mq-producer")),
+		mq.WithCoordProvider(coordProvider),
+	)
+	if err != nil {
+		clog.Fatal("初始化 mq producer 失败", clog.Err(err))
+	}
+	defer mqProducer.Close()
+	clog.Info("mq producer 初始化成功")
+
+	// 初始化限流 (ratelimit)
+	ratelimitConfig := ratelimit.GetDefaultConfig(environment)
+	ratelimitConfig.ServiceName = serviceName
+	// ratelimitConfig.RulesPath = "/config/prod/message-service/ratelimit/" // 按需覆盖
+	rateLimitProvider, err := ratelimit.New(context.Background(), ratelimitConfig,
+		ratelimit.WithLogger(clog.Namespace("ratelimit")),
+		ratelimit.WithCoordProvider(coordProvider),
+		ratelimit.WithCacheProvider(cacheProvider),
+	)
+	if err != nil {
+		clog.Fatal("初始化 ratelimit 失败", clog.Err(err))
+	}
+	defer rateLimitProvider.Close()
+	clog.Info("ratelimit Provider 初始化成功")
+
+	// 初始化幂等 (once)
+	onceConfig := once.GetDefaultConfig(environment)
+	onceConfig.ServiceName = serviceName
+	onceProvider, err := once.New(context.Background(), onceConfig,
+		once.WithLogger(clog.Namespace("once")),
+		once.WithCacheProvider(cacheProvider),
+	)
+	if err != nil {
+		clog.Fatal("初始化 once 失败", clog.Err(err))
+	}
+	defer onceProvider.Close()
+	clog.Info("once Provider 初始化成功")
+
+	// 初始化熔断器 (breaker)
+	breakerConfig := breaker.GetDefaultConfig(serviceName, environment)
+	breakerProvider, err := breaker.New(context.Background(), breakerConfig,
+		breaker.WithLogger(clog.Namespace("breaker")),
+		breaker.WithCoordProvider(coordProvider),
+	)
+	if err != nil {
+		clog.Fatal("初始化 breaker 失败", clog.Err(err))
+	}
+	defer breakerProvider.Close()
+	clog.Info("breaker Provider 初始化成功")
+
+	// --- 4. 启动业务服务 ---
+	// ... 在这里，将初始化好的 providers 注入到你的业务服务中 ...
+	// e.g., messageSvc := service.NewMessageService(dbProvider, cacheProvider, mqProducer, ...)
+	// ... 启动 gRPC/HTTP 服务器 ...
+	clog.Info("所有组件初始化完毕，服务正在运行...")
+
+	// --- 5. 优雅关闭 ---
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	clog.Warn("服务开始关闭...")
+
+	// defer 调用会自动执行，以相反的顺序关闭所有组件
+	clog.Info("服务已优雅关闭")
+}
+```
+
+---
 
 ## 1. `clog` - 结构化日志
 
@@ -463,17 +641,13 @@
       config.ServiceName = "message-service"
       config.RulesPath = "/config/prod/message-service/ratelimit/"
       
-      // 2. 准备 Options
+      // 2. 创建 Provider
       // New 函数内部会根据 config.Mode 决定是否使用 cacheProvider
-      opts := []ratelimit.Option{
+      rateLimitProvider, err := ratelimit.New(context.Background(), config,
           ratelimit.WithLogger(clog.Namespace("ratelimit")),
           ratelimit.WithCoordProvider(coordProvider),
           ratelimit.WithCacheProvider(cacheProvider), // 分布式模式依赖 cache 组件
-      }
-
-      // 3. 创建 Provider
-      // 初始化逻辑被封装在 New 函数中，调用者无需关心具体模式
-      rateLimitProvider, err := ratelimit.New(context.Background(), config, opts...)
+      )
       if err != nil {
           clog.Fatal("初始化 ratelimit 失败", clog.Err(err))
       }
@@ -519,14 +693,11 @@
       config.ServiceName = "message-service"
       config.KeyPrefix = "idempotent:"
       
-      // 2. 准备 Options
-      opts := []once.Option{
+      // 2. 创建 Provider
+      onceProvider, err := once.New(context.Background(), config,
           once.WithLogger(clog.Namespace("once")),
           once.WithCacheProvider(cacheProvider), // 分布式模式依赖 cache 组件
-      }
-
-      // 3. 创建 Provider
-      onceProvider, err := once.New(context.Background(), config, opts...)
+      )
       if err != nil {
           clog.Fatal("初始化 once 失败", clog.Err(err))
       }
@@ -617,4 +788,59 @@
       // 其他业务错误
       return fmt.Errorf("调用失败: %w", err)
   }
+  ```
+
+---
+
+## 10. `metrics` - 可观测性
+
+`metrics` 组件基于 OpenTelemetry，为所有服务提供开箱即用的指标 (Metrics) 和链路追踪 (Tracing) 能力。其核心是**自动化**和**零侵入**。
+
+- **初始化 (main.go)**:
+  ```go
+  import "github.com/ceyewan/gochat/im-infra/metrics"
+
+  // 在服务的 main 函数中，初始化 metrics Provider。
+  func main() {
+      // ... 首先初始化 clog ...
+      
+      // 1. 获取并覆盖配置
+      // 推荐使用 GetDefaultConfig 获取标准配置
+      config := metrics.GetDefaultConfig("message-service", "production")
+      // config.ExporterEndpoint = "http://my-jaeger:14268/api/traces" // 按需覆盖
+      
+      // 2. 创建 Provider
+      metricsProvider, err := metrics.New(context.Background(), config,
+          metrics.WithLogger(clog.Namespace("metrics")),
+      )
+      if err != nil {
+          clog.Fatal("初始化 metrics 失败", clog.Err(err))
+      }
+      defer metricsProvider.Shutdown(context.Background())
+      
+      clog.Info("metrics Provider 初始化成功")
+  }
+  ```
+
+- **核心用法 (集成)**:
+
+  `metrics` 的主要用法是在创建 gRPC 服务器或客户端时，链入由 `Provider` 提供的拦截器。
+
+  ```go
+  // 在创建 gRPC Server 时集成
+  server := grpc.NewServer(
+      grpc.ChainUnaryInterceptor(
+          metricsProvider.GRPCServerInterceptor(),
+          // ... 其他拦截器，如 a, b, c ...
+      ),
+  )
+
+  // 在创建 gRPC Client 时集成
+  conn, err := grpc.Dial(
+      "target-service",
+      grpc.WithUnaryInterceptor(metricsProvider.GRPCClientInterceptor()),
+  )
+  
+  // 对于 Gin HTTP 服务
+  // engine.Use(metricsProvider.HTTPMiddleware())
   ```

@@ -43,17 +43,24 @@
 
 - **[重构任务列表](./07_todo_task/README.md)**: 本目录包含了项目后续的核心重构和开发计划书，是了解项目演进方向的重要参考。
 
-## 8. 基础设施组件
+## 8. 基础设施组件 (`im-infra`)
 
--   **[基础设施层 (im-infra) 总览](./08_infra/README.md)**: `im-infra` 库的整体设计原则、通用架构模式及组件列表。
--   **[MQ 消息队列](./08_infra/mq.md)**: `mq` 组件的接口设计与使用指南。
--   **[Clog 结构化日志](./08_infra/clog.md)**: `clog` 组件的设计理念与使用方法。
--   **[Coord 分布式协调](./08_infra/coord.md)**: `coord` 组件的使用与 `instanceID` 设计方案。
--   **[Cache 分布式缓存](./08_infra/cache.md)**: `cache` 组件的设计理念与使用指南。
--   **[UID 唯一ID生成](./08_infra/uid.md)**: `uid` 组件的设计理念与使用指南。
--   **[DB 数据库操作](./08_infra/db.md)**: `db` 组件的设计理念与使用指南。
--   **[Metrics 可观测性](./08_infra/metrics.md)**: `metrics` 组件的设计理念与使用指南。
--   **[Once 幂等操作](./08_infra/once.md)**: `once` 组件的设计理念与使用指南。
--   **[RateLimit 分布式限流](./08_infra/ratelimit.md)**: `ratelimit` 组件的设计理念与使用指南。
+`im-infra` 是 GoChat 项目的基石，提供了一系列高质量、生产级别的基础组件。
+
+-   **[总览与设计规范](./08_infra/README.md)**: `im-infra` 库的整体设计原则、通用架构模式及组件列表。
+-   **[快速上手指南 (Usage Guide)](./08_infra/usage_guide.md)**: **(首选阅读)** 提供了覆盖所有组件的、生产级别的统一初始化范例和核心用法。
+
+以下是每个核心组件的官方“契约”文档 (按字母排序):
+
+-   **[熔断器 (breaker)](./08_infra/breaker.md)**
+-   **[缓存 (cache)](./08_infra/cache.md)**
+-   **[日志 (clog)](./08_infra/clog.md)**
+-   **[分布式协调 (coord)](./08_infra/coord.md)**
+-   **[数据库 (db)](./08_infra/db.md)**
+-   **[可观测性 (metrics)](./08_infra/metrics.md)**
+-   **[消息队列 (mq)](./08_infra/mq.md)**
+-   **[幂等操作 (once)](./08_infra/once.md)**
+-   **[分布式限流 (ratelimit)](./08_infra/ratelimit.md)**
+-   **[唯一ID (uid)](./08_infra/uid.md)**
 
 本文档旨在成为 GoChat 项目的唯一真实来源。所有团队成员都应该阅读、理解并为其做出贡献。
