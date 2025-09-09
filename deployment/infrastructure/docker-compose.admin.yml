@@ -62,13 +62,26 @@ services:
     hostname: phpmyadmin
     restart: unless-stopped
     environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: gochat_root_2024
-      MYSQL_ROOT_PASSWORD: gochat_root_2024
+      # === 数据库连接配置 ===
+      DATABASE_HOST: mysql                                        # MySQL 服务器主机名
+      DATABASE_PORT_NUMBER: 3306                                  # MySQL 端口
+      DATABASE_USER: root                                         # 默认登录用户
+      DATABASE_PASSWORD: gochat_root_2024                        # 默认登录密码
+      
+      # === 兼容配置（保持向后兼容）===
+      PMA_HOST: mysql                                             # phpMyAdmin 主机配置
+      PMA_PORT: 3306                                             # phpMyAdmin 端口配置
+      PMA_USER: root                                             # phpMyAdmin 用户配置
+      PMA_PASSWORD: gochat_root_2024                             # phpMyAdmin 密码配置
+      
+      # === 安全配置 ===
+      ALLOW_EMPTY_PASSWORD: "no"                                 # 不允许空密码
+      
+      # === phpMyAdmin 特定配置 ===
+      PHPMYADMIN_ALLOW_ARBITRARY_SERVER: "no"                   # 不允许连接任意服务器
+      PHPMYADMIN_ALLOW_NO_PASSWORD: "no"                        # 不允许无密码登录
     ports:
-      - "8083:80"
+      - "8083:8080"  # phpMyAdmin Web 界面 (Bitnami 默认端口 8080)
     networks:
       - infra-net
       - monitoring-net

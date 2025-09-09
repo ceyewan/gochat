@@ -10,6 +10,14 @@
 # - ETCD_INITIAL_CLUSTER_STATE: 集群状态（new/existing）
 # - ETCD_DATA_DIR: 数据目录路径
 #
+# === MySQL 环境变量说明 ===
+# 根据 Bitnami MySQL 官方文档 (https://github.com/bitnami/containers/tree/main/bitnami/mysql):
+# - MYSQL_ROOT_PASSWORD: root 用户密码，必须设置
+# - MYSQL_DATABASE: 启动时创建的数据库名称
+# - MYSQL_USER/MYSQL_PASSWORD: 应用用户名和密码
+# - MYSQL_CHARACTER_SET: 字符集，推荐 utf8mb4
+# - MYSQL_AUTHENTICATION_PLUGIN: 认证插件，mysql_native_password 兼容性更好
+#
 # === Kafka 环境变量说明 ===
 # 根据 Bitnami Kafka 官方文档 (https://hub.docker.com/r/bitnami/kafka):
 # - KAFKA_CLUSTER_ID: Kafka 集群 ID，从 .env 文件读取，确保所有节点使用相同 ID
@@ -21,7 +29,9 @@
 # 1. 生产环境请启用 etcd 认证（设置 ETCD_ROOT_PASSWORD）
 # 2. 不要随意修改 KAFKA_CLUSTER_ID，所有节点必须使用相同的集群 ID
 # 3. etcd 和 Kafka 的 NODE_ID 在各自集群中必须唯一
-# 4. 修改网络配置前请先停止服务并备份数据
+# 4. MySQL 数据卷路径已修改为 Bitnami 标准路径 /bitnami/mysql/data
+# 5. phpMyAdmin 现在使用标准端口 8080，访问地址: http://localhost:8083
+# 6. 修改网络配置前请先停止服务并备份数据
 #
 networks:
   infra-net:
@@ -173,12 +183,23 @@ services:
     hostname: mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: gochat_root_2024
-      MYSQL_DATABASE: gochat_dev
-      MYSQL_USER: gochat
-      MYSQL_PASSWORD: gochat_pass_2024
+      # === 认证配置 ===
+      MYSQL_ROOT_PASSWORD: gochat_root_2024                        # root 用户密码
+      MYSQL_ROOT_USER: root                                        # root 用户名（默认值，可省略）
+      
+      # === 数据库和用户配置 ===
+      MYSQL_DATABASE: gochat_dev                                   # 默认创建的数据库
+      MYSQL_USER: gochat                                           # 应用用户名
+      MYSQL_PASSWORD: gochat_pass_2024                            # 应用用户密码
+      
+      # === 字符集配置 ===
+      MYSQL_CHARACTER_SET: utf8mb4                                # 字符集
+      MYSQL_COLLATE: utf8mb4_unicode_ci                           # 排序规则
+      
+      # === 安全配置 ===
+      MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password         # 兼容性认证插件
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mysql-data:/bitnami/mysql/data                           # 使用 Bitnami 标准路径
       - ./init-scripts/mysql:/docker-entrypoint-initdb.d
     ports:
       - "3306:3306"
