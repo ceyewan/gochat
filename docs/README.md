@@ -19,11 +19,11 @@
 -   **[开发工作流](./03_development/01_workflow.md)**：概述编码、分支和拉取请求的标准。
 -   **[代码风格和约定](./03_development/02_style_guide.md)**：定义编码风格、格式化和注释标准。
 -   **[微服务开发](./03_development/03_service_guide.md)**：开发和测试单个微服务的指南。
+-   **[测试策略与规范](./03_development/04_testing_strategy.md)**：定义了项目的单元测试、集成测试和压力测试标准。
 
 ## 4. 部署和运维
 
--   **[部署指南](./04_deployment/01_deployment.md)**：使用 Docker Compose 部署系统的分步说明。
--   **[配置管理](./04_deployment/02_configuration.md)**：如何使用 `etcd` 和 `config-cli` 工具管理服务配置。
+-   **[部署与配置指南](./deployment/README.md)**：涵盖了使用 Docker Compose 和 Makefile 进行环境部署、配置管理的统一操作流程。
 -   **[日志记录和监控](./04_deployment/03_logging_monitoring.md)**：使用日志记录（Loki）和监控（Prometheus、Grafana）堆栈的指南。
 
 ## 5. 特定服务文档
