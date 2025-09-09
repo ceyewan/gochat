@@ -6,10 +6,10 @@
 #   ./start-infra.sh [component]
 #
 # 参数:
-#   all         (默认) 启动所有服务: core, monitoring, admin
-#   core        只启动核心服务
-#   monitoring  启动核心和监控服务
-#   admin       启动核心和管理工具
+#   core        只启动核心服务 (etcd, kafka, mysql, redis)
+#   monitoring  启动核心和监控服务 (core + prometheus, loki, grafana, promtail)
+#   admin       启动核心、监控和管理工具 (monitoring + kafka-ui, etcd-workbench, redis-insight, phpmyadmin)
+#   all         (默认) 启动所有服务: core + monitoring + admin
 #
 set -e
 
@@ -41,19 +41,19 @@ COMMAND="docker compose"
 
 case "$COMPONENT" in
   core)
-    echo "==> 启动核心基础设施..."
+    echo "==> 启动核心基础设施 (etcd, kafka, mysql, redis)..."
     COMMAND="$COMMAND $CORE_COMPOSE"
     ;;
   monitoring)
-    echo "==> 启动核心及监控服务..."
+    echo "==> 启动核心及监控服务 (core + prometheus, loki, grafana)..."
     COMMAND="$COMMAND $CORE_COMPOSE $MONITORING_COMPOSE"
     ;;
   admin)
-    echo "==> 启动核心及管理工具..."
-    COMMAND="$COMMAND $CORE_COMPOSE $ADMIN_COMPOSE"
+    echo "==> 启动核心、监控及管理工具 (monitoring + admin-tools)..."
+    COMMAND="$COMMAND $CORE_COMPOSE $MONITORING_COMPOSE $ADMIN_COMPOSE"
     ;;
   all|*)
-    echo "==> 启动所有基础设施服务..."
+    echo "==> 启动所有基础设施服务 (core + monitoring + admin)..."
     COMMAND="$COMMAND $CORE_COMPOSE $MONITORING_COMPOSE $ADMIN_COMPOSE"
     ;;
 esac
@@ -62,4 +62,34 @@ esac
 $COMMAND up -d
 
 echo ""
-echo "✅ 基础设施启动命令已执行。请使用 'docker compose ps' 查看状态。"
+echo "✅ 基础设施启动命令已执行。"
+echo ""
+echo "📊 服务状态检查:"
+echo "   docker compose ps"
+echo ""
+echo "🔗 访问地址:"
+case "$COMPONENT" in
+  core)
+    echo "   MySQL:      localhost:3306 (root/gochat_root_2024)"
+    echo "   Redis:      localhost:6379"
+    echo "   etcd1:      localhost:2379"
+    echo "   etcd2:      localhost:12379"
+    echo "   etcd3:      localhost:22379"
+    echo "   Kafka1:     localhost:9092"
+    echo "   Kafka2:     localhost:19092"
+    echo "   Kafka3:     localhost:29092"
+    ;;
+  monitoring)
+    echo "   Core services + :"
+    echo "   Prometheus: http://localhost:9090"
+    echo "   Grafana:    http://localhost:3000 (admin/gochat_grafana_2024)"
+    echo "   Loki:       http://localhost:3100"
+    ;;
+  admin|all)
+    echo "   Core + Monitoring + :"
+    echo "   Kafka UI:       http://localhost:8088"
+    echo "   etcd Workbench: http://localhost:8002"
+    echo "   Redis Insight:  http://localhost:5540"
+    echo "   phpMyAdmin:     http://localhost:8083"
+    ;;
+esac

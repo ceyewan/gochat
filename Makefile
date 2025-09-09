@@ -32,56 +32,66 @@ help:
 	@echo "  clean        - Clean up generated files and build artifacts"
 	@echo ""
 	@echo "Deployment Targets:"
-	@echo "  infra-up     - Start all infrastructure services"
-	@echo "  infra-down   - Stop all infrastructure services"
+	@echo "  infra-up     - Start core infrastructure services only"
+	@echo "  infra-down   - Stop core infrastructure services only"
+	@echo "  infra-up-all - Start all infrastructure services (core + monitoring + admin)"
+	@echo "  infra-down-all - Stop all infrastructure services"
+	@echo "  monitoring-up - Start core + monitoring services"
+	@echo "  monitoring-down - Stop core + monitoring services"
+	@echo "  admin-up     - Start core + monitoring + admin services"
+	@echo "  admin-down   - Stop core + monitoring + admin services"
 	@echo "  app-up       - Start all application services"
 	@echo "  app-down     - Stop all application services"
 	@echo "  config-sync  - Sync all configurations to etcd"
 	@echo "  config-sync-dev - Sync dev configurations to etcd"
 
 # ==============================================================================
-# 部署命令
+# 基础设施部署命令
 # ==============================================================================
 
 .PHONY: infra-up
 infra-up:
-	@echo "🚀 Starting core infrastructure services..."
+	@echo "🚀 Starting core infrastructure services only (etcd, kafka, mysql, redis)..."
 	@docker compose -f deployment/infrastructure/docker-compose.yml up -d
 
 .PHONY: infra-down
 infra-down:
-	@echo "🛑 Stopping core infrastructure services..."
+	@echo "🛑 Stopping core infrastructure services only..."
 	@docker compose -f deployment/infrastructure/docker-compose.yml down
 
 .PHONY: infra-up-all
 infra-up-all:
-	@echo "🚀 Starting all infrastructure services via script (core, monitoring, admin)..."
+	@echo "🚀 Starting all infrastructure services (core + monitoring + admin)..."
 	@./deployment/scripts/start-infra.sh all
 
 .PHONY: infra-down-all
 infra-down-all:
-	@echo "🛑 Stopping all infrastructure and applications via script..."
-	@./deployment/scripts/cleanup.sh all
+	@echo "🛑 Stopping all infrastructure services..."
+	@./deployment/scripts/cleanup.sh infra
 
 .PHONY: monitoring-up
 monitoring-up:
-	@echo "🚀 Starting monitoring services..."
-	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml up -d
+	@echo "🚀 Starting core + monitoring services..."
+	@./deployment/scripts/start-infra.sh monitoring
 
 .PHONY: monitoring-down
 monitoring-down:
-	@echo "🛑 Stopping monitoring services..."
+	@echo "🛑 Stopping core + monitoring services..."
 	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml down
 
 .PHONY: admin-up
 admin-up:
-	@echo "🚀 Starting admin tools (requires core and monitoring)..."
-	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml -f deployment/infrastructure/docker-compose.admin.yml up -d
+	@echo "🚀 Starting core + monitoring + admin services..."
+	@./deployment/scripts/start-infra.sh admin
 
 .PHONY: admin-down
 admin-down:
-	@echo "🛑 Stopping admin tools..."
+	@echo "🛑 Stopping core + monitoring + admin services..."
 	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml -f deployment/infrastructure/docker-compose.admin.yml down
+
+# ==============================================================================
+# 应用服务部署命令
+# ==============================================================================
 
 .PHONY: app-up
 app-up:
