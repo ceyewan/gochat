@@ -38,13 +38,13 @@
 
 ## 4. 监控和日志
 
--   **日志**: [Loki](https://grafana.com/oss/loki/)
-    -   中央日志聚合系统。
--   **日志收集器**: [Vector](https://vector.dev/)
-    -   从所有服务收集日志并将其转发到 Loki。
--   **指标**: [Prometheus](https://prometheus.io/)
-    -   用于存储应用程序和系统指标的时间序列数据库。
--   **可视化**: [Grafana](https://grafana.com/)
-    -   用于可视化 Loki 日志和 Prometheus 指标的统一仪表板。
--   **分布式追踪**: [Jaeger](https://www.jaegertracing.io/)
+-   **日志聚合**: [Loki](https://grafana.com/oss/loki/)
+    -   中央日志聚合系统，专为 Grafana 生态设计的高效日志存储。
+-   **日志收集器**: [Promtail](https://grafana.com/docs/loki/latest/clients/promtail/)
+    -   Grafana Loki 的官方日志收集代理，从所有容器收集日志并转发到 Loki。
+-   **指标监控**: [Prometheus](https://prometheus.io/)
+    -   用于收集和存储应用程序及系统指标的时间序列数据库。
+-   **可视化与告警**: [Grafana](https://grafana.com/)
+    -   用于可视化 Loki 日志和 Prometheus 指标的统一仪表板，支持告警和通知。
+-   **分布式追踪**: [Jaeger](https://www.jaegertracing.io/) *(计划中)*
     -   用于追踪请求在微服务中的传播，有助于调试和性能分析。
