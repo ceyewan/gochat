@@ -324,23 +324,68 @@
   ```go
   import "github.com/ceyewan/gochat/im-infra/cache"
 
-  var config cache.Config
-  // ...
-
-  c, err := cache.New(context.Background(), &config)
-  // ...
+  // 在服务的 main 函数中，初始化 cache Provider。
+  func main() {
+      // ... 首先初始化 clog 和 coord ...
+      
+      // 使用默认配置（推荐）
+      config := cache.GetDefaultConfig("production") // 或 "development"
+      
+      // 根据实际部署环境覆盖特定配置
+      config.Addr = "redis-cluster:6379"
+      config.Password = "your-redis-password"
+      config.KeyPrefix = "gochat:"
+      
+      // 创建 cache Provider
+      cacheProvider, err := cache.New(context.Background(), config, 
+          cache.WithLogger(clog.Namespace("cache")),
+          cache.WithCoordProvider(coordProvider),
+      )
+      if err != nil {
+          clog.Fatal("初始化 cache 失败", clog.Err(err))
+      }
+      defer cacheProvider.Close()
+      
+      clog.Info("cache Provider 初始化成功")
+  }
   ```
 
 - **核心用法**:
   ```go
   // 设置缓存
-  err := c.Set(ctx, "key", "value", 10*time.Minute)
+  err := cacheProvider.String().Set(ctx, "user:123", "John", 10*time.Minute)
+  if err != nil {
+      return fmt.Errorf("设置缓存失败: %w", err)
+  }
 
   // 获取缓存
-  var val string
-  err := c.Get(ctx, "key", &val)
-  if err == cache.ErrCacheMiss {
-      // 缓存未命中
+  val, err := cacheProvider.String().Get(ctx, "user:123")
+  if err != nil {
+      if errors.Is(err, cache.ErrCacheMiss) {
+          // 缓存未命中
+          clog.WithContext(ctx).Info("缓存未命中", clog.String("key", "user:123"))
+          return nil, nil
+      }
+      return fmt.Errorf("获取缓存失败: %w", err)
+  }
+
+  // 使用分布式锁
+  lock, err := cacheProvider.Lock().Acquire(ctx, "critical-section", 30*time.Second)
+  if err != nil {
+      return fmt.Errorf("获取锁失败: %w", err)
+  }
+  defer lock.Unlock(ctx)
+  
+  // ... 执行关键代码 ...
+
+  // 使用布隆过滤器检测重复
+  exists, err := cacheProvider.Bloom().BFExists(ctx, "seen-items", "item123")
+  if err != nil {
+      return fmt.Errorf("检查布隆过滤器失败: %w", err)
+  }
+  if !exists {
+      // 首次出现，添加到过滤器
+      cacheProvider.Bloom().BFAdd(ctx, "seen-items", "item123")
   }
   ```
 
@@ -348,69 +393,175 @@
 
 ## 6. `uid` - 分布式 ID
 
-`uid` 用于生成全局唯一的 ID。
+`uid` 用于生成全局唯一的 ID，支持 Snowflake 和 UUID v7 两种方案。
 
 - **初始化 (main.go)**:
   ```go
   import "github.com/ceyewan/gochat/im-infra/uid"
 
-  // coordProvider 是已经初始化好的 coord.Provider 实例
-  generator, err := uid.New(context.Background(), coordProvider, "my-service-name")
-  // ...
+  // 在服务的 main 函数中，初始化 uid Provider。
+  func main() {
+      // ... 首先初始化 clog 和 coord ...
+      
+      // 使用默认配置（推荐）
+      config := uid.GetDefaultConfig("production") // 或 "development"
+      
+      // 根据实际服务覆盖配置
+      config.ServiceName = "message-service"
+      
+      // 创建 uid Provider
+      uidProvider, err := uid.New(context.Background(), config,
+          uid.WithLogger(clog.Namespace("uid")),
+          uid.WithCoordProvider(coordProvider), // 对于 Snowflake 是必需的依赖
+      )
+      if err != nil {
+          clog.Fatal("初始化 uid 失败", clog.Err(err))
+      }
+      defer uidProvider.Close()
+      
+      clog.Info("uid Provider 初始化成功")
+  }
   ```
 
 - **核心用法**:
   ```go
-  // 生成一个新 ID
-  id, err := generator.NextID()
+  // 生成 UUID v7（无状态，用于请求ID、资源ID等）
+  requestID := uidProvider.GetUUIDV7()
+  logger.Info("生成请求ID", clog.String("request_id", requestID))
+
+  // 生成 Snowflake ID（有状态，用于数据库主键、消息ID等）
+  messageID, err := uidProvider.GenerateSnowflake()
+  if err != nil {
+      return fmt.Errorf("生成消息ID失败: %w", err)
+  }
+  logger.Info("生成消息ID", clog.Int64("message_id", messageID))
+
+  // 解析 Snowflake ID
+  timestamp, instanceID, sequence := uidProvider.ParseSnowflake(messageID)
+  logger.Info("解析ID",
+      clog.Int64("timestamp", timestamp),
+      clog.Int64("instance_id", instanceID),
+      clog.Int64("sequence", sequence))
   ```
 
 ---
 
 ## 7. `ratelimit` - 分布式限流
 
-`ratelimit` 用于控制对资源的访问速率。
+`ratelimit` 用于控制对资源的访问速率，支持分布式和单机两种模式。
 
 - **初始化 (main.go)**:
   ```go
   import "github.com/ceyewan/gochat/im-infra/ratelimit"
 
-  var config ratelimit.Config
-  // ...
+  // 在服务的 main 函数中，初始化 ratelimit Provider。
+  func main() {
+      // ... 首先初始化 clog、coord 和 cache ...
+      
+      // 1. 获取并覆盖配置
+      config := ratelimit.GetDefaultConfig("production")
+      config.ServiceName = "message-service"
+      config.RulesPath = "/config/prod/message-service/ratelimit/"
+      
+      // 2. 准备 Options
+      // New 函数内部会根据 config.Mode 决定是否使用 cacheProvider
+      opts := []ratelimit.Option{
+          ratelimit.WithLogger(clog.Namespace("ratelimit")),
+          ratelimit.WithCoordProvider(coordProvider),
+          ratelimit.WithCacheProvider(cacheProvider), // 分布式模式依赖 cache 组件
+      }
 
-  limiter, err := ratelimit.New(context.Background(), &config)
-  // ...
+      // 3. 创建 Provider
+      // 初始化逻辑被封装在 New 函数中，调用者无需关心具体模式
+      rateLimitProvider, err := ratelimit.New(context.Background(), config, opts...)
+      if err != nil {
+          clog.Fatal("初始化 ratelimit 失败", clog.Err(err))
+      }
+      defer rateLimitProvider.Close()
+      
+      clog.Info("ratelimit Provider 初始化成功", clog.String("mode", config.Mode))
+  }
   ```
 
 - **核心用法**:
   ```go
-  // 检查是否允许
-  allowed, err := limiter.Allow(ctx, "resource-key")
-  if !allowed {
-      // 请求被限流
+  // 检查单个请求是否被允许
+  allowed, err := rateLimitProvider.Allow(ctx, "user:123", "send_message")
+  if err != nil {
+      // 降级策略：限流器异常时的处理
+      clog.WithContext(ctx).Error("限流检查失败", clog.Err(err))
+      // 根据业务需求决定是放行还是拒绝
+      return
   }
+  if !allowed {
+      // 请求被限流，直接返回错误或特定状态码
+      return fmt.Errorf("请求过于频繁，请稍后再试")
+  }
+
+  // ... 执行核心业务逻辑 ...
   ```
 
 ---
+## 8. `once` - 分布式幂等
 
-## 8. `retry` - 优雅重试
+`once` 用于保证操作的幂等性，支持分布式和单机两种模式。
 
-`retry` 提供策略驱动的、统一的错误重试机制。
-
-- **核心用法 (无需初始化)**:
+- **初始化 (main.go)**:
   ```go
-  import "github.com/ceyewan/gochat/im-infra/retry"
+  import "github.com/ceyewan/gochat/im-infra/once"
 
-  policy := retry.Policy{
-      MaxRetries: 3,
-      Backoff:    retry.ExponentialBackoff(100*time.Millisecond, 2),
-      Jitter:     true,
+  // 在服务的 main 函数中，初始化 once Provider。
+  func main() {
+      // ... 首先初始化 clog 和 cache ...
+      
+      // 1. 获取并覆盖配置
+      config := once.GetDefaultConfig("production") // 或 "development"
+      config.ServiceName = "message-service"
+      config.KeyPrefix = "idempotent:"
+      
+      // 2. 准备 Options
+      opts := []once.Option{
+          once.WithLogger(clog.Namespace("once")),
+          once.WithCacheProvider(cacheProvider), // 分布式模式依赖 cache 组件
+      }
+
+      // 3. 创建 Provider
+      onceProvider, err := once.New(context.Background(), config, opts...)
+      if err != nil {
+          clog.Fatal("初始化 once 失败", clog.Err(err))
+      }
+      defer onceProvider.Close()
+      
+      clog.Info("once Provider 初始化成功", clog.String("mode", config.Mode))
+  }
+  ```
+
+- **核心用法**:
+  ```go
+  // 无返回值的幂等操作（最常用）
+  err := onceProvider.Do(ctx, "payment:process:order-123", 24*time.Hour, func() error {
+      // 核心业务逻辑，只会执行一次
+      return processPayment(ctx, orderData)
+  })
+  if err != nil {
+      return fmt.Errorf("处理支付失败: %w", err)
   }
 
-  err := retry.Do(ctx, policy, func(ctx context.Context) error {
-      // ... 执行可能会失败的操作 ...
-      return someOperation()
+  // 有返回值的幂等操作（带结果缓存）
+  result, err := onceProvider.Execute(ctx, "doc:create:xyz", 48*time.Hour, func() (any, error) {
+      // 创建文档并返回结果，结果会被缓存
+      return createDocument(ctx, docData)
   })
+  if err != nil {
+      return fmt.Errorf("创建文档失败: %w", err)
+  }
+  doc := result.(*Document)
+
+  // 清除幂等状态（用于数据订正或手动重试）
+  err = onceProvider.Clear(ctx, "payment:process:order-123")
+  if err != nil {
+      return fmt.Errorf("清除幂等状态失败: %w", err)
+  }
   ```
 
 ---
@@ -423,40 +574,47 @@
   ```go
   import "github.com/ceyewan/gochat/im-infra/breaker"
 
-  var config breaker.Config
-  // ...
-
-  provider, err := breaker.New(context.Background(), &config)
-  // ...
+  // 在服务的 main 函数中，初始化 breaker Provider。
+  func main() {
+      // ... 首先初始化 clog 和 coord ...
+      
+      // 1. 获取并覆盖配置
+      // 推荐使用 GetDefaultConfig 获取标准配置，然后按需覆盖
+      config := breaker.GetDefaultConfig("message-service", "production")
+      // config.PoliciesPath = "/custom/path/if/needed" // 按需覆盖
+      
+      // 2. 创建 Provider，并通过 With... Options 注入依赖
+      breakerProvider, err := breaker.New(context.Background(), config,
+          breaker.WithLogger(clog.Namespace("breaker")),
+          breaker.WithCoordProvider(coordProvider), // 依赖 coord 组件
+      )
+      if err != nil {
+          clog.Fatal("初始化 breaker 失败", clog.Err(err))
+      }
+      defer breakerProvider.Close()
+      
+      clog.Info("breaker Provider 初始化成功")
+  }
   ```
 
 - **核心用法**:
   ```go
-  // 获取特定资源的熔断器
-  br := provider.GetBreaker("downstream-service-A")
-
+  // 获取熔断器实例
+  b := breakerProvider.GetBreaker("grpc:user-service:GetUserInfo")
+  
   // 将操作包裹在熔断器中执行
-  err := br.Do(ctx, func() error {
-      // ... 调用下游服务 ...
-      return callDownstream()
+  err := b.Do(ctx, func() error {
+      // 核心业务逻辑，如gRPC调用、HTTP请求等
+      return callDownstreamService(ctx)
   })
-
-  if err == breaker.ErrOpenState {
-      // 熔断器处于打开状态，请求被拒绝
+  
+  // 处理熔断器错误
+  if errors.Is(err, breaker.ErrBreakerOpen) {
+      // 熔断器处于打开状态，请求被拒绝，可以返回特定错误或执行降级逻辑
+      return fmt.Errorf("服务暂时不可用，请稍后重试")
+  }
+  if err != nil {
+      // 其他业务错误
+      return fmt.Errorf("调用失败: %w", err)
   }
   ```
-
-### 组合使用: `retry` + `breaker`
-
-最佳实践是将 `retry` 嵌套在 `breaker` 内部，以避免在熔断器打开时进行无效的重试。
-
-```go
-br := provider.GetBreaker("my-resource")
-policy := retry.Policy{ /* ... */ }
-
-err := br.Do(ctx, func() error {
-    return retry.Do(ctx, policy, func(ctx context.Context) error {
-        // 只有在熔断器闭合或半开时，才会执行此处的重试逻辑
-        return someFlakyOperation()
-    })
-})

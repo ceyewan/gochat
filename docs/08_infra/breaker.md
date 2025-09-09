@@ -2,7 +2,7 @@
 
 ## 1. 设计理念
 
-`breaker` 是 `gochat` 项目中用于实现服务保护、防止雪崩效应的核心组件。它与 `retry` 组件相辅相成，共同构成了完整的系统韧性保障体系。
+`breaker` 是 `gochat` 项目中用于实现服务保护、防止雪崩效应的核心组件。
 
 其核心设计理念是：
 - **防止雪崩，快速失败**: 当一个下游服务持续失败时，熔断器会“跳闸”（进入 Open 状态），在一段时间内阻止所有对该服务的进一步调用。这既保护了下游服务，也避免了上游服务因无谓的等待和重试而耗尽资源。
@@ -48,6 +48,21 @@ type Provider interface {
     Close() error
 }
 
+// GetDefaultConfig 返回一个推荐的默认配置。
+// serviceName 会被用作 Config.ServiceName，并用于构建默认的 PoliciesPath。
+// 生产环境 ("production") 和开发环境 ("development") 会有不同的熔断策略。
+func GetDefaultConfig(serviceName, env string) *Config
+
+// Option 是用于配置 breaker Provider 的函数式选项。
+type Option func(*providerOptions)
+
+// WithLogger 为 breaker Provider 设置一个 clog.Logger 实例。
+func WithLogger(logger clog.Logger) Option
+
+// WithCoordProvider 为 breaker Provider 设置一个 coord.Provider 实例。
+// 这是动态加载和更新熔断策略所必需的。
+func WithCoordProvider(coordProvider coord.Provider) Option
+
 // New 创建一个新的熔断器 Provider。
 // 它会自动从 coord 加载所有策略，并监听后续变更。
 func New(ctx context.Context, config *Config, opts ...Option) (Provider, error)
@@ -76,9 +91,15 @@ var ErrBreakerOpen = errors.New("circuit breaker is open")
 
 ```go
 // 1. 在服务启动时初始化 Breaker Provider
-var breakerConfig breaker.Config
-// ... 从 coord 加载配置 ...
-breakerProvider, err := breaker.New(context.Background(), &breakerConfig)
+// 推荐使用 GetDefaultConfig 获取标准配置，然后按需覆盖
+config := breaker.GetDefaultConfig("im-gateway", "production")
+// config.PoliciesPath = "/custom/path/if/needed" // 按需覆盖
+
+// 创建 Provider 实例，并通过 With... Options 注入依赖
+breakerProvider, err := breaker.New(context.Background(), config,
+    breaker.WithLogger(clog.Namespace("breaker")),
+    breaker.WithCoordProvider(coordProvider), // 依赖 coord 组件
+)
 if err != nil {
     log.Fatal(err)
 }
@@ -110,28 +131,6 @@ conn, err := grpc.Dial(
 )
 ```
 
-### 场景 2: 与 `retry` 组件协同工作
-
-当一个操作既需要重试，又需要熔断保护时，**熔断器应该在最外层**，包裹住重试逻辑。
-
-```go
-func (c *ExternalServiceClient) GetUserInfoWithAllProtections(ctx context.Context, userID string) (*UserInfo, error) {
-    // 获取该操作专属的熔断器
-    b := c.breakerProvider.GetBreaker("grpc:user-service:GetUserInfo")
-    
-    // 将【带重试逻辑的操作】整体包裹在熔断器中
-    err := b.Do(ctx, func() error {
-        // 在这里使用我们之前设计的 retry.Do
-        return retry.Do(ctx, c.retryPolicy, func(opCtx context.Context) error {
-            // ... 真正的 gRPC 调用 ...
-            _, err := c.grpcClient.GetUserInfo(opCtx, &pb.GetUserInfoRequest{UserId: userID})
-            return err
-        })
-    })
-    
-    return userInfo, err
-}
-```
 
 ## 4. 配置管理
 
