@@ -140,25 +140,84 @@
   ```go
   import "github.com/ceyewan/gochat/im-infra/mq"
 
-  var config mq.Config
-  // ...
-  
-  producer, err := mq.NewProducer(context.Background(), &config)
-  // ...
-  consumer, err := mq.NewConsumer(context.Background(), &config, "group-id")
-  // ...
+  // 在服务的 main 函数中，初始化 mq Producer 和 Consumer。
+  func main() {
+      // ... 首先初始化 clog 和 coord ...
+      clog.Init(...)
+      coordProvider, _ := coord.New(...)
+
+      // 1. 使用默认配置（推荐），或从配置中心加载
+      config := mq.GetDefaultConfig("development") // "development" or "production"
+      
+      // 2. 根据环境覆盖必要的配置
+      config.Brokers = []string{"localhost:9092"} // 开发环境单节点
+      // config.Brokers = []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"} // 生产环境集群
+      
+      // 3. 创建 Producer 实例
+      producer, err := mq.NewProducer(
+          context.Background(),
+          config,
+          mq.WithLogger(clog.NameSpace("mq-producer")),
+          mq.WithCoordProvider(coordProvider),
+      )
+      if err != nil {
+          log.Fatalf("初始化 mq producer 失败: %v", err)
+      }
+      defer producer.Close()
+      
+      // 4. 创建 Consumer 实例
+      consumer, err := mq.NewConsumer(
+          context.Background(),
+          config,
+          "notification-service-user-events-group", // 遵循命名规范的 GroupID
+          mq.WithLogger(clog.Module("mq-consumer")),
+          mq.WithCoordProvider(coordProvider),
+      )
+      if err != nil {
+          log.Fatalf("初始化 mq consumer 失败: %v", err)
+      }
+      defer consumer.Close()
+      
+      // 后续可以将 producer 和 consumer 注入到业务服务中
+      // ...
+  }
   ```
 
 - **核心用法**:
   ```go
   // 生产消息
-  err := producer.Publish(ctx, "topic-name", mq.NewMessage("key", []byte("value")))
+  msg := &mq.Message{
+      Topic: "user.events.registered",
+      Key:   []byte("user123"),
+      Value: []byte(`{"id":"user123","name":"John"}`),
+  }
+  
+  // 异步发送（推荐）
+  producer.Send(ctx, msg, func(err error) {
+      if err != nil {
+          clog.WithContext(ctx).Error("发送消息失败", clog.Err(err))
+      }
+  })
+  
+  // 同步发送（需要强一致性时）
+  if err := producer.SendSync(ctx, msg); err != nil {
+      return fmt.Errorf("发送消息失败: %w", err)
+  }
 
   // 消费消息
-  err := consumer.Subscribe(ctx, "topic-name", func(msg mq.Message) error {
-      // 处理消息
+  handler := func(ctx context.Context, msg *mq.Message) error {
+      logger := clog.WithContext(ctx)
+      logger.Info("收到消息", clog.String("topic", msg.Topic))
+      
+      // 处理消息逻辑
       return nil
-  })
+  }
+  
+  topics := []string{"user.events.registered"}
+  err := consumer.Subscribe(ctx, topics, handler)
+  if err != nil {
+      return fmt.Errorf("订阅消息失败: %w", err)
+  }
   ```
 
 ---
