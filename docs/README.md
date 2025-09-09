@@ -19,7 +19,6 @@
 -   **[开发工作流](./03_development/01_workflow.md)**：概述编码、分支和拉取请求的标准。
 -   **[代码风格和约定](./03_development/02_style_guide.md)**：定义编码风格、格式化和注释标准。
 -   **[微服务开发](./03_development/03_service_guide.md)**：开发和测试单个微服务的指南。
--   **[使用 `im-infra` 组件](./03_development/04_infra_components.md)**：如何使用共享的基础设施组件，如 `clog` 和 `coord`。
 
 ## 4. 部署和运维
 
@@ -40,7 +39,11 @@
 -   **[数据库架构](./06_data_models/01_db_schema.md)**：关于 MySQL 数据库表和关系的详细信息。
 -   **[核心业务流程](./06_data_models/02_core_im_flows.md)**：详细阐述 IM 核心功能（如消息收发、在线状态）的实现流程。
 
-## 7. 基础设施组件
+## 7. 近期重构计划 (Roadmap)
+
+- **[重构任务列表](./07_todo_task/README.md)**: 本目录包含了项目后续的核心重构和开发计划书，是了解项目演进方向的重要参考。
+
+## 8. 基础设施组件
 
 -   **[基础设施层 (im-infra) 总览](./08_infra/README.md)**: `im-infra` 库的整体设计原则、通用架构模式及组件列表。
 -   **[MQ 消息队列](./08_infra/mq.md)**: `mq` 组件的接口设计与使用指南。
