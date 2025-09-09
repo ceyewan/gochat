@@ -1,5 +1,28 @@
 # GoChat 核心基础设施
 # 包含运行应用所必需的服务: etcd, kafka, mysql, redis
+#
+# === etcd 环境变量说明 ===
+# 根据 Bitnami etcd 官方文档 (https://hub.docker.com/r/bitnami/etcd):
+# - ALLOW_NONE_AUTHENTICATION: 允许无密码访问（仅开发环境）
+# - ETCD_NAME: etcd 成员名称，集群中唯一
+# - ETCD_INITIAL_CLUSTER: 集群初始成员列表
+# - ETCD_INITIAL_CLUSTER_TOKEN: 集群引导令牌，防止不同集群混合
+# - ETCD_INITIAL_CLUSTER_STATE: 集群状态（new/existing）
+# - ETCD_DATA_DIR: 数据目录路径
+#
+# === Kafka 环境变量说明 ===
+# 根据 Bitnami Kafka 官方文档 (https://hub.docker.com/r/bitnami/kafka):
+# - KAFKA_CLUSTER_ID: Kafka 集群 ID，从 .env 文件读取，确保所有节点使用相同 ID
+# - KAFKA_CFG_NODE_ID: 节点唯一标识符，KRaft 模式必需
+# - KAFKA_CFG_PROCESS_ROLES: 节点角色，controller（控制器）+ broker（代理）
+# - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 控制器选举投票者列表
+# 
+# ⚠️  重要提醒：
+# 1. 生产环境请启用 etcd 认证（设置 ETCD_ROOT_PASSWORD）
+# 2. 不要随意修改 KAFKA_CLUSTER_ID，所有节点必须使用相同的集群 ID
+# 3. etcd 和 Kafka 的 NODE_ID 在各自集群中必须唯一
+# 4. 修改网络配置前请先停止服务并备份数据
+#
 networks:
   infra-net:
     driver: bridge
@@ -28,22 +51,29 @@ volumes:
 services:
   # ===== etcd 集群 =====
   etcd1:
-    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:3.5.1'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
     container_name: gochat-etcd1
     hostname: etcd1
     restart: unless-stopped
     environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
-      - ETCD_NAME=etcd1
-      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd1:2380
-      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
-      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd1:2379
-      - ETCD_INITIAL_CLUSTER_TOKEN=gochat-etcd-cluster
+      # === 认证配置 ===
+      - ALLOW_NONE_AUTHENTICATION=yes                               # 允许无密码访问（仅开发环境）
+      
+      # === 集群成员配置 ===
+      - ETCD_NAME=etcd1                                             # 当前节点名称，集群中唯一
+      - ETCD_INITIAL_CLUSTER_TOKEN=gochat-etcd-cluster             # 集群引导令牌，防止不同集群混合
+      - ETCD_INITIAL_CLUSTER_STATE=new                             # 集群状态：new（新建）或 existing（加入现有）
       - ETCD_INITIAL_CLUSTER=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
-      - ETCD_INITIAL_CLUSTER_STATE=new
-      - ETCD_DATA_DIR=/etcd-data
-      - ETCD_ENABLE_V2=true
+      
+      # === 网络通信配置 ===
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380                  # 监听集群内部通信的地址
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd1:2380         # 向集群其他成员通告的地址
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379                # 监听客户端连接的地址
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd1:2379               # 向客户端通告的连接地址
+      
+      # === 数据存储配置 ===
+      - ETCD_DATA_DIR=/etcd-data                                    # 数据存储目录
+      
     volumes:
       - etcd-data-1:/etcd-data
     ports:
@@ -58,22 +88,29 @@ services:
       retries: 3
 
   etcd2:
-    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:3.5.1'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
     container_name: gochat-etcd2
     hostname: etcd2
     restart: unless-stopped
     environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
-      - ETCD_NAME=etcd2
-      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd2:2380
-      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
-      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd2:2379
-      - ETCD_INITIAL_CLUSTER_TOKEN=gochat-etcd-cluster
+      # === 认证配置 ===
+      - ALLOW_NONE_AUTHENTICATION=yes                               # 允许无密码访问（仅开发环境）
+      
+      # === 集群成员配置 ===
+      - ETCD_NAME=etcd2                                             # 当前节点名称，集群中唯一
+      - ETCD_INITIAL_CLUSTER_TOKEN=gochat-etcd-cluster             # 集群引导令牌，防止不同集群混合
+      - ETCD_INITIAL_CLUSTER_STATE=new                             # 集群状态：new（新建）或 existing（加入现有）
       - ETCD_INITIAL_CLUSTER=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
-      - ETCD_INITIAL_CLUSTER_STATE=new
-      - ETCD_DATA_DIR=/etcd-data
-      - ETCD_ENABLE_V2=true
+      
+      # === 网络通信配置 ===
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380                  # 监听集群内部通信的地址
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd2:2380         # 向集群其他成员通告的地址
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379                # 监听客户端连接的地址
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd2:2379               # 向客户端通告的连接地址
+      
+      # === 数据存储配置 ===
+      - ETCD_DATA_DIR=/etcd-data                                    # 数据存储目录
+      
     volumes:
       - etcd-data-2:/etcd-data
     ports:
@@ -90,22 +127,29 @@ services:
       retries: 3
 
   etcd3:
-    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:3.5.1'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
     container_name: gochat-etcd3
     hostname: etcd3
     restart: unless-stopped
     environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
-      - ETCD_NAME=etcd3
-      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd3:2380
-      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
-      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd3:2379
-      - ETCD_INITIAL_CLUSTER_TOKEN=gochat-etcd-cluster
+      # === 认证配置 ===
+      - ALLOW_NONE_AUTHENTICATION=yes                               # 允许无密码访问（仅开发环境）
+      
+      # === 集群成员配置 ===
+      - ETCD_NAME=etcd3                                             # 当前节点名称，集群中唯一
+      - ETCD_INITIAL_CLUSTER_TOKEN=gochat-etcd-cluster             # 集群引导令牌，防止不同集群混合
+      - ETCD_INITIAL_CLUSTER_STATE=new                             # 集群状态：new（新建）或 existing（加入现有）
       - ETCD_INITIAL_CLUSTER=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
-      - ETCD_INITIAL_CLUSTER_STATE=new
-      - ETCD_DATA_DIR=/etcd-data
-      - ETCD_ENABLE_V2=true
+      
+      # === 网络通信配置 ===
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380                  # 监听集群内部通信的地址
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd3:2380         # 向集群其他成员通告的地址
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379                # 监听客户端连接的地址
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd3:2379               # 向客户端通告的连接地址
+      
+      # === 数据存储配置 ===
+      - ETCD_DATA_DIR=/etcd-data                                    # 数据存储目录
+      
     volumes:
       - etcd-data-3:/etcd-data
     ports:
@@ -177,15 +221,23 @@ services:
     networks:
       - infra-net
     environment:
-      - KAFKA_CFG_NODE_ID=1
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      # === KRaft 模式核心配置 ===
+      - KAFKA_CFG_NODE_ID=1                                          # 节点 ID，集群中唯一
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker                    # 节点角色：控制器+代理
+      - KAFKA_CLUSTER_ID=${KAFKA_CLUSTER_ID}                        # 集群 ID（从 .env 文件读取）
+      
+      # === 网络监听配置 ===
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093     # 监听地址
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092      # 客户端连接地址
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER              # 控制器监听器名称
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT             # 代理间通信协议
+      
+      # === 集群控制器配置 ===
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      
+      # === 兼容性配置 ===
+      - KAFKA_BROKER_ID=1                                           # 向后兼容的代理 ID
     volumes:
       - kafka-data-1:/bitnami/kafka
 
@@ -201,15 +253,23 @@ services:
     depends_on:
       - kafka1
     environment:
-      - KAFKA_CFG_NODE_ID=2
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      # === KRaft 模式核心配置 ===
+      - KAFKA_CFG_NODE_ID=2                                          # 节点 ID，集群中唯一
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker                    # 节点角色：控制器+代理
+      - KAFKA_CLUSTER_ID=${KAFKA_CLUSTER_ID}                        # 集群 ID（从 .env 文件读取）
+      
+      # === 网络监听配置 ===
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093     # 监听地址
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092      # 客户端连接地址
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER              # 控制器监听器名称
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT             # 代理间通信协议
+      
+      # === 集群控制器配置 ===
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_BROKER_ID=2
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      
+      # === 兼容性配置 ===
+      - KAFKA_BROKER_ID=2                                           # 向后兼容的代理 ID
     volumes:
       - kafka-data-2:/bitnami/kafka
 
@@ -226,14 +286,22 @@ services:
       - kafka1
       - kafka2
     environment:
-      - KAFKA_CFG_NODE_ID=3
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      # === KRaft 模式核心配置 ===
+      - KAFKA_CFG_NODE_ID=3                                          # 节点 ID，集群中唯一
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker                    # 节点角色：控制器+代理
+      - KAFKA_CLUSTER_ID=${KAFKA_CLUSTER_ID}                        # 集群 ID（从 .env 文件读取）
+      
+      # === 网络监听配置 ===
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093     # 监听地址
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092      # 客户端连接地址
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER              # 控制器监听器名称
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT             # 代理间通信协议
+      
+      # === 集群控制器配置 ===
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_BROKER_ID=3
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      
+      # === 兼容性配置 ===
+      - KAFKA_BROKER_ID=3                                           # 向后兼容的代理 ID
     volumes:
       - kafka-data-3:/bitnami/kafka

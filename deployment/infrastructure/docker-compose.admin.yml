@@ -47,7 +47,7 @@ services:
     hostname: redis-insight
     restart: unless-stopped
     ports:
-      - "8001:8001"
+      - "5540:5540"
     networks:
       - infra-net
       - monitoring-net
