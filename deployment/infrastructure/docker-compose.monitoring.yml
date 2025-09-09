@@ -1,17 +1,11 @@
 # GoChat 监控 & 日志服务
 # 可选组件，用于提供监控、日志收集和告警功能
-version: '3.8'
-
 networks:
   monitoring-net:
     driver: bridge
     ipam:
       config:
         - subnet: 172.22.0.0/16
-  # 引用核心网络以实现服务发现
-  infra-net:
-    external: true
-    name: "gochat_infra-net" # 确保名称与 docker compose 默认生成的网络名一致
 
 volumes:
   prometheus-data:
@@ -20,7 +14,7 @@ volumes:
 
 services:
   prometheus:
-    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/prom-prometheus:latest
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/prom-prometheus:v2.53.1
     container_name: gochat-prometheus
     hostname: prometheus
     restart: unless-stopped
@@ -36,7 +30,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
 
   loki:
-    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-loki:latest
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-loki:3.1.0
     container_name: gochat-loki
     hostname: loki
     restart: unless-stopped
@@ -50,7 +44,7 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
 
   promtail:
-    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-promtail:latest
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-promtail:3.1.0
     container_name: gochat-promtail
     hostname: promtail
     restart: unless-stopped
@@ -62,7 +56,7 @@ services:
     command: -config.file=/etc/promtail/config.yml
 
   grafana:
-    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-grafana:latest
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/grafana-grafana:11.1.3
     container_name: gochat-grafana
     hostname: grafana
     restart: unless-stopped

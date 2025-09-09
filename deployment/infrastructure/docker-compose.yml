@@ -1,7 +1,5 @@
 # GoChat 核心基础设施
 # 包含运行应用所必需的服务: etcd, kafka, mysql, redis
-version: '3.8'
-
 networks:
   infra-net:
     driver: bridge
@@ -30,7 +28,7 @@ volumes:
 services:
   # ===== etcd 集群 =====
   etcd1:
-    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:3.5.1'
     container_name: gochat-etcd1
     hostname: etcd1
     restart: unless-stopped
@@ -60,7 +58,7 @@ services:
       retries: 3
 
   etcd2:
-    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:3.5.1'
     container_name: gochat-etcd2
     hostname: etcd2
     restart: unless-stopped
@@ -92,7 +90,7 @@ services:
       retries: 3
 
   etcd3:
-    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:latest'
+    image: 'registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-etcd:3.5.1'
     container_name: gochat-etcd3
     hostname: etcd3
     restart: unless-stopped
@@ -126,7 +124,7 @@ services:
 
   # ===== MySQL 数据库 =====
   mysql:
-    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-mysql:latest
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-mysql:8.0.39
     container_name: gochat-mysql
     hostname: mysql
     restart: unless-stopped
@@ -135,8 +133,6 @@ services:
       MYSQL_DATABASE: gochat_dev
       MYSQL_USER: gochat
       MYSQL_PASSWORD: gochat_pass_2024
-      MYSQL_CHARACTER_SET_SERVER: utf8mb4
-      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     volumes:
       - mysql-data:/var/lib/mysql
       - ./init-scripts/mysql:/docker-entrypoint-initdb.d
@@ -144,10 +140,6 @@ services:
       - "3306:3306"
     networks:
       - infra-net
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pgochat_root_2024"]
       interval: 30s
@@ -156,10 +148,12 @@ services:
 
   # ===== Redis 缓存 =====
   redis:
-    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-redis:latest
+    image: registry.cn-hangzhou.aliyuncs.com/gochat2025/bitnami-redis:7.2.5
     container_name: gochat-redis
     hostname: redis
     restart: unless-stopped
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
     volumes:
       - redis-data:/data
     ports:

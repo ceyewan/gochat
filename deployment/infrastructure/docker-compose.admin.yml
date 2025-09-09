@@ -1,15 +1,5 @@
 # GoChat 管理 & 调试工具
 # 可选组件，用于方便地管理和调试核心基础设施
-version: '3.8'
-
-networks:
-  # 引用核心和监控网络以实现服务发现
-  infra-net:
-    external: true
-    name: "gochat_infra-net"
-  monitoring-net:
-    external: true
-    name: "gochat_monitoring-net"
 
 volumes:
   redis-insight-data:

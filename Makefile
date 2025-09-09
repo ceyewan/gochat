@@ -75,13 +75,13 @@ monitoring-down:
 
 .PHONY: admin-up
 admin-up:
-	@echo "🚀 Starting admin tools..."
-	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.admin.yml up -d
+	@echo "🚀 Starting admin tools (requires core and monitoring)..."
+	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml -f deployment/infrastructure/docker-compose.admin.yml up -d
 
 .PHONY: admin-down
 admin-down:
 	@echo "🛑 Stopping admin tools..."
-	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.admin.yml down
+	@docker compose -f deployment/infrastructure/docker-compose.yml -f deployment/infrastructure/docker-compose.monitoring.yml -f deployment/infrastructure/docker-compose.admin.yml down
 
 .PHONY: app-up
 app-up:
