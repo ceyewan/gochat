@@ -7,9 +7,10 @@
 // 	protoc        (unknown)
 // source: im_logic/v1/common.proto
 
-package logicv1
+package imlogicv1
 
 import (
+	v1 "github.com/ceyewan/gochat/api/gen/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -24,245 +25,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ConversationType 会话类型
-type ConversationType int32
-
-const (
-	// 未指定类型
-	ConversationType_CONVERSATION_TYPE_UNSPECIFIED ConversationType = 0
-	// 单聊
-	ConversationType_CONVERSATION_TYPE_SINGLE ConversationType = 1
-	// 群聊
-	ConversationType_CONVERSATION_TYPE_GROUP ConversationType = 2
-	// 世界聊天室
-	ConversationType_CONVERSATION_TYPE_WORLD ConversationType = 3
-)
-
-// Enum value maps for ConversationType.
-var (
-	ConversationType_name = map[int32]string{
-		0: "CONVERSATION_TYPE_UNSPECIFIED",
-		1: "CONVERSATION_TYPE_SINGLE",
-		2: "CONVERSATION_TYPE_GROUP",
-		3: "CONVERSATION_TYPE_WORLD",
-	}
-	ConversationType_value = map[string]int32{
-		"CONVERSATION_TYPE_UNSPECIFIED": 0,
-		"CONVERSATION_TYPE_SINGLE":      1,
-		"CONVERSATION_TYPE_GROUP":       2,
-		"CONVERSATION_TYPE_WORLD":       3,
-	}
-)
-
-func (x ConversationType) Enum() *ConversationType {
-	p := new(ConversationType)
-	*p = x
-	return p
-}
-
-func (x ConversationType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (ConversationType) Descriptor() protoreflect.EnumDescriptor {
-	return file_im_logic_v1_common_proto_enumTypes[0].Descriptor()
-}
-
-func (ConversationType) Type() protoreflect.EnumType {
-	return &file_im_logic_v1_common_proto_enumTypes[0]
-}
-
-func (x ConversationType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use ConversationType.Descriptor instead.
-func (ConversationType) EnumDescriptor() ([]byte, []int) {
-	return file_im_logic_v1_common_proto_rawDescGZIP(), []int{0}
-}
-
-// MessageType 消息类型
-type MessageType int32
-
-const (
-	// 未指定类型
-	MessageType_MESSAGE_TYPE_UNSPECIFIED MessageType = 0
-	// 文本消息
-	MessageType_MESSAGE_TYPE_TEXT MessageType = 1
-	// 图片消息
-	MessageType_MESSAGE_TYPE_IMAGE MessageType = 2
-	// 文件消息
-	MessageType_MESSAGE_TYPE_FILE MessageType = 3
-	// 系统消息
-	MessageType_MESSAGE_TYPE_SYSTEM MessageType = 4
-	// 语音消息
-	MessageType_MESSAGE_TYPE_VOICE MessageType = 5
-	// 视频消息
-	MessageType_MESSAGE_TYPE_VIDEO MessageType = 6
-)
-
-// Enum value maps for MessageType.
-var (
-	MessageType_name = map[int32]string{
-		0: "MESSAGE_TYPE_UNSPECIFIED",
-		1: "MESSAGE_TYPE_TEXT",
-		2: "MESSAGE_TYPE_IMAGE",
-		3: "MESSAGE_TYPE_FILE",
-		4: "MESSAGE_TYPE_SYSTEM",
-		5: "MESSAGE_TYPE_VOICE",
-		6: "MESSAGE_TYPE_VIDEO",
-	}
-	MessageType_value = map[string]int32{
-		"MESSAGE_TYPE_UNSPECIFIED": 0,
-		"MESSAGE_TYPE_TEXT":        1,
-		"MESSAGE_TYPE_IMAGE":       2,
-		"MESSAGE_TYPE_FILE":        3,
-		"MESSAGE_TYPE_SYSTEM":      4,
-		"MESSAGE_TYPE_VOICE":       5,
-		"MESSAGE_TYPE_VIDEO":       6,
-	}
-)
-
-func (x MessageType) Enum() *MessageType {
-	p := new(MessageType)
-	*p = x
-	return p
-}
-
-func (x MessageType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (MessageType) Descriptor() protoreflect.EnumDescriptor {
-	return file_im_logic_v1_common_proto_enumTypes[1].Descriptor()
-}
-
-func (MessageType) Type() protoreflect.EnumType {
-	return &file_im_logic_v1_common_proto_enumTypes[1]
-}
-
-func (x MessageType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use MessageType.Descriptor instead.
-func (MessageType) EnumDescriptor() ([]byte, []int) {
-	return file_im_logic_v1_common_proto_rawDescGZIP(), []int{1}
-}
-
-// ErrorCode 错误码
-type ErrorCode int32
-
-const (
-	// 未指定
-	ErrorCode_ERROR_CODE_UNSPECIFIED ErrorCode = 0
-	// 成功
-	ErrorCode_ERROR_CODE_SUCCESS ErrorCode = 1
-	// 内部错误
-	ErrorCode_ERROR_CODE_INTERNAL_ERROR ErrorCode = 1000
-	// 参数无效
-	ErrorCode_ERROR_CODE_INVALID_PARAMETER ErrorCode = 1001
-	// 未授权
-	ErrorCode_ERROR_CODE_UNAUTHORIZED ErrorCode = 1002
-	// 禁止访问
-	ErrorCode_ERROR_CODE_FORBIDDEN ErrorCode = 1003
-	// 资源未找到
-	ErrorCode_ERROR_CODE_NOT_FOUND ErrorCode = 1004
-	// 用户不存在
-	ErrorCode_ERROR_CODE_USER_NOT_FOUND ErrorCode = 2000
-	// 用户已存在
-	ErrorCode_ERROR_CODE_USER_EXISTS ErrorCode = 2001
-	// 密码错误
-	ErrorCode_ERROR_CODE_INVALID_PASSWORD ErrorCode = 2002
-	// 令牌无效
-	ErrorCode_ERROR_CODE_INVALID_TOKEN ErrorCode = 2003
-	// 消息不存在
-	ErrorCode_ERROR_CODE_MESSAGE_NOT_FOUND ErrorCode = 3000
-	// 重复消息
-	ErrorCode_ERROR_CODE_DUPLICATE_MESSAGE ErrorCode = 3001
-	// 消息无效
-	ErrorCode_ERROR_CODE_INVALID_MESSAGE ErrorCode = 3002
-	// 群组不存在
-	ErrorCode_ERROR_CODE_GROUP_NOT_FOUND ErrorCode = 4000
-	// 不是群组成员
-	ErrorCode_ERROR_CODE_NOT_GROUP_MEMBER ErrorCode = 4001
-	// 群组已满
-	ErrorCode_ERROR_CODE_GROUP_FULL ErrorCode = 4002
-	// 权限不足
-	ErrorCode_ERROR_CODE_INSUFFICIENT_PERMISSION ErrorCode = 4003
-)
-
-// Enum value maps for ErrorCode.
-var (
-	ErrorCode_name = map[int32]string{
-		0:    "ERROR_CODE_UNSPECIFIED",
-		1:    "ERROR_CODE_SUCCESS",
-		1000: "ERROR_CODE_INTERNAL_ERROR",
-		1001: "ERROR_CODE_INVALID_PARAMETER",
-		1002: "ERROR_CODE_UNAUTHORIZED",
-		1003: "ERROR_CODE_FORBIDDEN",
-		1004: "ERROR_CODE_NOT_FOUND",
-		2000: "ERROR_CODE_USER_NOT_FOUND",
-		2001: "ERROR_CODE_USER_EXISTS",
-		2002: "ERROR_CODE_INVALID_PASSWORD",
-		2003: "ERROR_CODE_INVALID_TOKEN",
-		3000: "ERROR_CODE_MESSAGE_NOT_FOUND",
-		3001: "ERROR_CODE_DUPLICATE_MESSAGE",
-		3002: "ERROR_CODE_INVALID_MESSAGE",
-		4000: "ERROR_CODE_GROUP_NOT_FOUND",
-		4001: "ERROR_CODE_NOT_GROUP_MEMBER",
-		4002: "ERROR_CODE_GROUP_FULL",
-		4003: "ERROR_CODE_INSUFFICIENT_PERMISSION",
-	}
-	ErrorCode_value = map[string]int32{
-		"ERROR_CODE_UNSPECIFIED":             0,
-		"ERROR_CODE_SUCCESS":                 1,
-		"ERROR_CODE_INTERNAL_ERROR":          1000,
-		"ERROR_CODE_INVALID_PARAMETER":       1001,
-		"ERROR_CODE_UNAUTHORIZED":            1002,
-		"ERROR_CODE_FORBIDDEN":               1003,
-		"ERROR_CODE_NOT_FOUND":               1004,
-		"ERROR_CODE_USER_NOT_FOUND":          2000,
-		"ERROR_CODE_USER_EXISTS":             2001,
-		"ERROR_CODE_INVALID_PASSWORD":        2002,
-		"ERROR_CODE_INVALID_TOKEN":           2003,
-		"ERROR_CODE_MESSAGE_NOT_FOUND":       3000,
-		"ERROR_CODE_DUPLICATE_MESSAGE":       3001,
-		"ERROR_CODE_INVALID_MESSAGE":         3002,
-		"ERROR_CODE_GROUP_NOT_FOUND":         4000,
-		"ERROR_CODE_NOT_GROUP_MEMBER":        4001,
-		"ERROR_CODE_GROUP_FULL":              4002,
-		"ERROR_CODE_INSUFFICIENT_PERMISSION": 4003,
-	}
-)
-
-func (x ErrorCode) Enum() *ErrorCode {
-	p := new(ErrorCode)
-	*p = x
-	return p
-}
-
-func (x ErrorCode) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (ErrorCode) Descriptor() protoreflect.EnumDescriptor {
-	return file_im_logic_v1_common_proto_enumTypes[2].Descriptor()
-}
-
-func (ErrorCode) Type() protoreflect.EnumType {
-	return &file_im_logic_v1_common_proto_enumTypes[2]
-}
-
-func (x ErrorCode) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use ErrorCode.Descriptor instead.
-func (ErrorCode) EnumDescriptor() ([]byte, []int) {
-	return file_im_logic_v1_common_proto_rawDescGZIP(), []int{2}
-}
-
 // Message 消息信息
 type Message struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -273,7 +35,7 @@ type Message struct {
 	// 发送者 ID
 	SenderId string `protobuf:"bytes,3,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
 	// 消息类型
-	Type MessageType `protobuf:"varint,4,opt,name=type,proto3,enum=im.logic.v1.MessageType" json:"type,omitempty"`
+	Type v1.MessageType `protobuf:"varint,4,opt,name=type,proto3,enum=common.v1.MessageType" json:"type,omitempty"`
 	// 消息内容
 	Content string `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
 	// 会话内序列号
@@ -339,11 +101,11 @@ func (x *Message) GetSenderId() string {
 	return ""
 }
 
-func (x *Message) GetType() MessageType {
+func (x *Message) GetType() v1.MessageType {
 	if x != nil {
 		return x.Type
 	}
-	return MessageType_MESSAGE_TYPE_UNSPECIFIED
+	return v1.MessageType(0)
 }
 
 func (x *Message) GetContent() string {
@@ -549,7 +311,7 @@ func (x *OnlineStatus) GetLastSeen() int64 {
 type ErrorResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 错误码
-	Code ErrorCode `protobuf:"varint,1,opt,name=code,proto3,enum=im.logic.v1.ErrorCode" json:"code,omitempty"`
+	Code v1.ErrorCode `protobuf:"varint,1,opt,name=code,proto3,enum=common.v1.ErrorCode" json:"code,omitempty"`
 	// 错误消息
 	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	// 请求追踪 ID
@@ -590,11 +352,11 @@ func (*ErrorResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_common_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ErrorResponse) GetCode() ErrorCode {
+func (x *ErrorResponse) GetCode() v1.ErrorCode {
 	if x != nil {
 		return x.Code
 	}
-	return ErrorCode_ERROR_CODE_UNSPECIFIED
+	return v1.ErrorCode(0)
 }
 
 func (x *ErrorResponse) GetMessage() string {
@@ -622,12 +384,12 @@ var File_im_logic_v1_common_proto protoreflect.FileDescriptor
 
 const file_im_logic_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x18im_logic/v1/common.proto\x12\vim.logic.v1\"\x9e\x02\n" +
+	"\x18im_logic/v1/common.proto\x12\vim.logic.v1\x1a\x15common/v1/types.proto\"\x9c\x02\n" +
 	"\aMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x1b\n" +
-	"\tsender_id\x18\x03 \x01(\tR\bsenderId\x12,\n" +
-	"\x04type\x18\x04 \x01(\x0e2\x18.im.logic.v1.MessageTypeR\x04type\x12\x18\n" +
+	"\tsender_id\x18\x03 \x01(\tR\bsenderId\x12*\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x16.common.v1.MessageTypeR\x04type\x12\x18\n" +
 	"\acontent\x18\x05 \x01(\tR\acontent\x12\x15\n" +
 	"\x06seq_id\x18\x06 \x01(\x03R\x05seqId\x12\x1d\n" +
 	"\n" +
@@ -649,44 +411,12 @@ const file_im_logic_v1_common_proto_rawDesc = "" +
 	"\tis_online\x18\x02 \x01(\bR\bisOnline\x12\x1d\n" +
 	"\n" +
 	"gateway_id\x18\x03 \x01(\tR\tgatewayId\x12\x1b\n" +
-	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"\x8a\x01\n" +
-	"\rErrorResponse\x12*\n" +
-	"\x04code\x18\x01 \x01(\x0e2\x16.im.logic.v1.ErrorCodeR\x04code\x12\x18\n" +
+	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"\x88\x01\n" +
+	"\rErrorResponse\x12(\n" +
+	"\x04code\x18\x01 \x01(\x0e2\x14.common.v1.ErrorCodeR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x19\n" +
 	"\btrace_id\x18\x03 \x01(\tR\atraceId\x12\x18\n" +
-	"\adetails\x18\x04 \x01(\tR\adetails*\x8d\x01\n" +
-	"\x10ConversationType\x12!\n" +
-	"\x1dCONVERSATION_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
-	"\x18CONVERSATION_TYPE_SINGLE\x10\x01\x12\x1b\n" +
-	"\x17CONVERSATION_TYPE_GROUP\x10\x02\x12\x1b\n" +
-	"\x17CONVERSATION_TYPE_WORLD\x10\x03*\xba\x01\n" +
-	"\vMessageType\x12\x1c\n" +
-	"\x18MESSAGE_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
-	"\x11MESSAGE_TYPE_TEXT\x10\x01\x12\x16\n" +
-	"\x12MESSAGE_TYPE_IMAGE\x10\x02\x12\x15\n" +
-	"\x11MESSAGE_TYPE_FILE\x10\x03\x12\x17\n" +
-	"\x13MESSAGE_TYPE_SYSTEM\x10\x04\x12\x16\n" +
-	"\x12MESSAGE_TYPE_VOICE\x10\x05\x12\x16\n" +
-	"\x12MESSAGE_TYPE_VIDEO\x10\x06*\xc3\x04\n" +
-	"\tErrorCode\x12\x1a\n" +
-	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x16\n" +
-	"\x12ERROR_CODE_SUCCESS\x10\x01\x12\x1e\n" +
-	"\x19ERROR_CODE_INTERNAL_ERROR\x10\xe8\a\x12!\n" +
-	"\x1cERROR_CODE_INVALID_PARAMETER\x10\xe9\a\x12\x1c\n" +
-	"\x17ERROR_CODE_UNAUTHORIZED\x10\xea\a\x12\x19\n" +
-	"\x14ERROR_CODE_FORBIDDEN\x10\xeb\a\x12\x19\n" +
-	"\x14ERROR_CODE_NOT_FOUND\x10\xec\a\x12\x1e\n" +
-	"\x19ERROR_CODE_USER_NOT_FOUND\x10\xd0\x0f\x12\x1b\n" +
-	"\x16ERROR_CODE_USER_EXISTS\x10\xd1\x0f\x12 \n" +
-	"\x1bERROR_CODE_INVALID_PASSWORD\x10\xd2\x0f\x12\x1d\n" +
-	"\x18ERROR_CODE_INVALID_TOKEN\x10\xd3\x0f\x12!\n" +
-	"\x1cERROR_CODE_MESSAGE_NOT_FOUND\x10\xb8\x17\x12!\n" +
-	"\x1cERROR_CODE_DUPLICATE_MESSAGE\x10\xb9\x17\x12\x1f\n" +
-	"\x1aERROR_CODE_INVALID_MESSAGE\x10\xba\x17\x12\x1f\n" +
-	"\x1aERROR_CODE_GROUP_NOT_FOUND\x10\xa0\x1f\x12 \n" +
-	"\x1bERROR_CODE_NOT_GROUP_MEMBER\x10\xa1\x1f\x12\x1a\n" +
-	"\x15ERROR_CODE_GROUP_FULL\x10\xa2\x1f\x12'\n" +
-	"\"ERROR_CODE_INSUFFICIENT_PERMISSION\x10\xa3\x1fB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
+	"\adetails\x18\x04 \x01(\tR\adetailsB9Z7github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1b\x06proto3"
 
 var (
 	file_im_logic_v1_common_proto_rawDescOnce sync.Once
@@ -700,21 +430,19 @@ func file_im_logic_v1_common_proto_rawDescGZIP() []byte {
 	return file_im_logic_v1_common_proto_rawDescData
 }
 
-var file_im_logic_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_im_logic_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_im_logic_v1_common_proto_goTypes = []any{
-	(ConversationType)(0), // 0: im.logic.v1.ConversationType
-	(MessageType)(0),      // 1: im.logic.v1.MessageType
-	(ErrorCode)(0),        // 2: im.logic.v1.ErrorCode
-	(*Message)(nil),       // 3: im.logic.v1.Message
-	(*User)(nil),          // 4: im.logic.v1.User
-	(*OnlineStatus)(nil),  // 5: im.logic.v1.OnlineStatus
-	(*ErrorResponse)(nil), // 6: im.logic.v1.ErrorResponse
+	(*Message)(nil),       // 0: im.logic.v1.Message
+	(*User)(nil),          // 1: im.logic.v1.User
+	(*OnlineStatus)(nil),  // 2: im.logic.v1.OnlineStatus
+	(*ErrorResponse)(nil), // 3: im.logic.v1.ErrorResponse
+	(v1.MessageType)(0),   // 4: common.v1.MessageType
+	(v1.ErrorCode)(0),     // 5: common.v1.ErrorCode
 }
 var file_im_logic_v1_common_proto_depIdxs = []int32{
-	1, // 0: im.logic.v1.Message.type:type_name -> im.logic.v1.MessageType
-	4, // 1: im.logic.v1.Message.sender:type_name -> im.logic.v1.User
-	2, // 2: im.logic.v1.ErrorResponse.code:type_name -> im.logic.v1.ErrorCode
+	4, // 0: im.logic.v1.Message.type:type_name -> common.v1.MessageType
+	1, // 1: im.logic.v1.Message.sender:type_name -> im.logic.v1.User
+	5, // 2: im.logic.v1.ErrorResponse.code:type_name -> common.v1.ErrorCode
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -732,14 +460,13 @@ func file_im_logic_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_logic_v1_common_proto_rawDesc), len(file_im_logic_v1_common_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_im_logic_v1_common_proto_goTypes,
 		DependencyIndexes: file_im_logic_v1_common_proto_depIdxs,
-		EnumInfos:         file_im_logic_v1_common_proto_enumTypes,
 		MessageInfos:      file_im_logic_v1_common_proto_msgTypes,
 	}.Build()
 	File_im_logic_v1_common_proto = out.File

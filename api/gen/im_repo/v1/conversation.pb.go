@@ -7,7 +7,7 @@
 // 	protoc        (unknown)
 // source: im_repo/v1/conversation.proto
 
-package repov1
+package imrepov1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -1004,6 +1004,416 @@ func (x *BatchGetConversationsResponse) GetConversations() []*Conversation {
 	return nil
 }
 
+// GetUserConversationsWithDetailsRequest 获取用户完整会话列表请求
+type GetUserConversationsWithDetailsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 用户 ID
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// 偏移量
+	Offset int32 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	// 限制数量
+	Limit int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// 会话类型过滤（可选）
+	TypeFilter int32 `protobuf:"varint,4,opt,name=type_filter,json=typeFilter,proto3" json:"type_filter,omitempty"`
+	// 是否包含最后消息详情
+	IncludeLastMessage bool `protobuf:"varint,5,opt,name=include_last_message,json=includeLastMessage,proto3" json:"include_last_message,omitempty"`
+	// 是否包含发送者信息
+	IncludeSenderInfo bool `protobuf:"varint,6,opt,name=include_sender_info,json=includeSenderInfo,proto3" json:"include_sender_info,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetUserConversationsWithDetailsRequest) Reset() {
+	*x = GetUserConversationsWithDetailsRequest{}
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserConversationsWithDetailsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserConversationsWithDetailsRequest) ProtoMessage() {}
+
+func (x *GetUserConversationsWithDetailsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserConversationsWithDetailsRequest.ProtoReflect.Descriptor instead.
+func (*GetUserConversationsWithDetailsRequest) Descriptor() ([]byte, []int) {
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetUserConversationsWithDetailsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetUserConversationsWithDetailsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *GetUserConversationsWithDetailsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetUserConversationsWithDetailsRequest) GetTypeFilter() int32 {
+	if x != nil {
+		return x.TypeFilter
+	}
+	return 0
+}
+
+func (x *GetUserConversationsWithDetailsRequest) GetIncludeLastMessage() bool {
+	if x != nil {
+		return x.IncludeLastMessage
+	}
+	return false
+}
+
+func (x *GetUserConversationsWithDetailsRequest) GetIncludeSenderInfo() bool {
+	if x != nil {
+		return x.IncludeSenderInfo
+	}
+	return false
+}
+
+// GetUserConversationsWithDetailsResponse 获取用户完整会话列表响应
+type GetUserConversationsWithDetailsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 完整会话信息列表
+	Conversations []*ConversationWithDetails `protobuf:"bytes,1,rep,name=conversations,proto3" json:"conversations,omitempty"`
+	// 总数量
+	Total int64 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// 是否还有更多
+	HasMore       bool `protobuf:"varint,3,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserConversationsWithDetailsResponse) Reset() {
+	*x = GetUserConversationsWithDetailsResponse{}
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserConversationsWithDetailsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserConversationsWithDetailsResponse) ProtoMessage() {}
+
+func (x *GetUserConversationsWithDetailsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserConversationsWithDetailsResponse.ProtoReflect.Descriptor instead.
+func (*GetUserConversationsWithDetailsResponse) Descriptor() ([]byte, []int) {
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetUserConversationsWithDetailsResponse) GetConversations() []*ConversationWithDetails {
+	if x != nil {
+		return x.Conversations
+	}
+	return nil
+}
+
+func (x *GetUserConversationsWithDetailsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *GetUserConversationsWithDetailsResponse) GetHasMore() bool {
+	if x != nil {
+		return x.HasMore
+	}
+	return false
+}
+
+// ConversationWithDetails 包含完整信息的会话
+type ConversationWithDetails struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 会话基本信息
+	Conversation *Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
+	// 用户在此会话中的成员信息
+	UserMembership *ConversationMember `protobuf:"bytes,2,opt,name=user_membership,json=userMembership,proto3" json:"user_membership,omitempty"`
+	// 最后一条消息
+	LastMessage *LastMessage `protobuf:"bytes,3,opt,name=last_message,json=lastMessage,proto3" json:"last_message,omitempty"`
+	// 未读消息数量
+	UnreadCount int64 `protobuf:"varint,4,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
+	// 最后更新时间（用于排序）
+	LastActivityAt int64 `protobuf:"varint,5,opt,name=last_activity_at,json=lastActivityAt,proto3" json:"last_activity_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ConversationWithDetails) Reset() {
+	*x = ConversationWithDetails{}
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConversationWithDetails) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConversationWithDetails) ProtoMessage() {}
+
+func (x *ConversationWithDetails) ProtoReflect() protoreflect.Message {
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConversationWithDetails.ProtoReflect.Descriptor instead.
+func (*ConversationWithDetails) Descriptor() ([]byte, []int) {
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ConversationWithDetails) GetConversation() *Conversation {
+	if x != nil {
+		return x.Conversation
+	}
+	return nil
+}
+
+func (x *ConversationWithDetails) GetUserMembership() *ConversationMember {
+	if x != nil {
+		return x.UserMembership
+	}
+	return nil
+}
+
+func (x *ConversationWithDetails) GetLastMessage() *LastMessage {
+	if x != nil {
+		return x.LastMessage
+	}
+	return nil
+}
+
+func (x *ConversationWithDetails) GetUnreadCount() int64 {
+	if x != nil {
+		return x.UnreadCount
+	}
+	return 0
+}
+
+func (x *ConversationWithDetails) GetLastActivityAt() int64 {
+	if x != nil {
+		return x.LastActivityAt
+	}
+	return 0
+}
+
+// LastMessage 最后一条消息的轻量级信息
+type LastMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 消息 ID
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// 发送者 ID
+	SenderId string `protobuf:"bytes,2,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	// 消息类型
+	MessageType int32 `protobuf:"varint,3,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	// 消息内容
+	Content string `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
+	// 会话内序列号
+	SeqId int64 `protobuf:"varint,5,opt,name=seq_id,json=seqId,proto3" json:"seq_id,omitempty"`
+	// 创建时间
+	CreatedAt int64 `protobuf:"varint,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// 发送者信息（可选）
+	Sender        *MessageSender `protobuf:"bytes,7,opt,name=sender,proto3" json:"sender,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LastMessage) Reset() {
+	*x = LastMessage{}
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LastMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LastMessage) ProtoMessage() {}
+
+func (x *LastMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LastMessage.ProtoReflect.Descriptor instead.
+func (*LastMessage) Descriptor() ([]byte, []int) {
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *LastMessage) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *LastMessage) GetSenderId() string {
+	if x != nil {
+		return x.SenderId
+	}
+	return ""
+}
+
+func (x *LastMessage) GetMessageType() int32 {
+	if x != nil {
+		return x.MessageType
+	}
+	return 0
+}
+
+func (x *LastMessage) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *LastMessage) GetSeqId() int64 {
+	if x != nil {
+		return x.SeqId
+	}
+	return 0
+}
+
+func (x *LastMessage) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *LastMessage) GetSender() *MessageSender {
+	if x != nil {
+		return x.Sender
+	}
+	return nil
+}
+
+// MessageSender 消息发送者信息
+type MessageSender struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 用户 ID
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// 用户名
+	Username string `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	// 头像 URL
+	AvatarUrl string `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// 是否为游客
+	IsGuest       bool `protobuf:"varint,4,opt,name=is_guest,json=isGuest,proto3" json:"is_guest,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageSender) Reset() {
+	*x = MessageSender{}
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageSender) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageSender) ProtoMessage() {}
+
+func (x *MessageSender) ProtoReflect() protoreflect.Message {
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageSender.ProtoReflect.Descriptor instead.
+func (*MessageSender) Descriptor() ([]byte, []int) {
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *MessageSender) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MessageSender) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *MessageSender) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *MessageSender) GetIsGuest() bool {
+	if x != nil {
+		return x.IsGuest
+	}
+	return false
+}
+
 // ConversationMember 会话成员信息
 type ConversationMember struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1021,7 +1431,7 @@ type ConversationMember struct {
 
 func (x *ConversationMember) Reset() {
 	*x = ConversationMember{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[16]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1033,7 +1443,7 @@ func (x *ConversationMember) String() string {
 func (*ConversationMember) ProtoMessage() {}
 
 func (x *ConversationMember) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[16]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1046,7 +1456,7 @@ func (x *ConversationMember) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationMember.ProtoReflect.Descriptor instead.
 func (*ConversationMember) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{16}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ConversationMember) GetConversationId() string {
@@ -1092,7 +1502,7 @@ type AddConversationMemberRequest struct {
 
 func (x *AddConversationMemberRequest) Reset() {
 	*x = AddConversationMemberRequest{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[17]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1104,7 +1514,7 @@ func (x *AddConversationMemberRequest) String() string {
 func (*AddConversationMemberRequest) ProtoMessage() {}
 
 func (x *AddConversationMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[17]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1117,7 +1527,7 @@ func (x *AddConversationMemberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddConversationMemberRequest.ProtoReflect.Descriptor instead.
 func (*AddConversationMemberRequest) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{17}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *AddConversationMemberRequest) GetConversationId() string {
@@ -1152,7 +1562,7 @@ type AddConversationMemberResponse struct {
 
 func (x *AddConversationMemberResponse) Reset() {
 	*x = AddConversationMemberResponse{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[18]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1164,7 +1574,7 @@ func (x *AddConversationMemberResponse) String() string {
 func (*AddConversationMemberResponse) ProtoMessage() {}
 
 func (x *AddConversationMemberResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[18]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1177,7 +1587,7 @@ func (x *AddConversationMemberResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddConversationMemberResponse.ProtoReflect.Descriptor instead.
 func (*AddConversationMemberResponse) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{18}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *AddConversationMemberResponse) GetSuccess() bool {
@@ -1200,7 +1610,7 @@ type RemoveConversationMemberRequest struct {
 
 func (x *RemoveConversationMemberRequest) Reset() {
 	*x = RemoveConversationMemberRequest{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[19]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1212,7 +1622,7 @@ func (x *RemoveConversationMemberRequest) String() string {
 func (*RemoveConversationMemberRequest) ProtoMessage() {}
 
 func (x *RemoveConversationMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[19]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1225,7 +1635,7 @@ func (x *RemoveConversationMemberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveConversationMemberRequest.ProtoReflect.Descriptor instead.
 func (*RemoveConversationMemberRequest) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{19}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *RemoveConversationMemberRequest) GetConversationId() string {
@@ -1253,7 +1663,7 @@ type RemoveConversationMemberResponse struct {
 
 func (x *RemoveConversationMemberResponse) Reset() {
 	*x = RemoveConversationMemberResponse{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[20]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1265,7 +1675,7 @@ func (x *RemoveConversationMemberResponse) String() string {
 func (*RemoveConversationMemberResponse) ProtoMessage() {}
 
 func (x *RemoveConversationMemberResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[20]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1278,7 +1688,7 @@ func (x *RemoveConversationMemberResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveConversationMemberResponse.ProtoReflect.Descriptor instead.
 func (*RemoveConversationMemberResponse) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{20}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RemoveConversationMemberResponse) GetSuccess() bool {
@@ -1303,7 +1713,7 @@ type UpdateMemberRoleRequest struct {
 
 func (x *UpdateMemberRoleRequest) Reset() {
 	*x = UpdateMemberRoleRequest{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[21]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1315,7 +1725,7 @@ func (x *UpdateMemberRoleRequest) String() string {
 func (*UpdateMemberRoleRequest) ProtoMessage() {}
 
 func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[21]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1328,7 +1738,7 @@ func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMemberRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMemberRoleRequest) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{21}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *UpdateMemberRoleRequest) GetConversationId() string {
@@ -1363,7 +1773,7 @@ type UpdateMemberRoleResponse struct {
 
 func (x *UpdateMemberRoleResponse) Reset() {
 	*x = UpdateMemberRoleResponse{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[22]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1375,7 +1785,7 @@ func (x *UpdateMemberRoleResponse) String() string {
 func (*UpdateMemberRoleResponse) ProtoMessage() {}
 
 func (x *UpdateMemberRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[22]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1388,7 +1798,7 @@ func (x *UpdateMemberRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMemberRoleResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMemberRoleResponse) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{22}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UpdateMemberRoleResponse) GetSuccess() bool {
@@ -1415,7 +1825,7 @@ type GetConversationMembersRequest struct {
 
 func (x *GetConversationMembersRequest) Reset() {
 	*x = GetConversationMembersRequest{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[23]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1427,7 +1837,7 @@ func (x *GetConversationMembersRequest) String() string {
 func (*GetConversationMembersRequest) ProtoMessage() {}
 
 func (x *GetConversationMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[23]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1440,7 +1850,7 @@ func (x *GetConversationMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConversationMembersRequest.ProtoReflect.Descriptor instead.
 func (*GetConversationMembersRequest) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{23}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetConversationMembersRequest) GetConversationId() string {
@@ -1486,7 +1896,7 @@ type GetConversationMembersResponse struct {
 
 func (x *GetConversationMembersResponse) Reset() {
 	*x = GetConversationMembersResponse{}
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[24]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1498,7 +1908,7 @@ func (x *GetConversationMembersResponse) String() string {
 func (*GetConversationMembersResponse) ProtoMessage() {}
 
 func (x *GetConversationMembersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_repo_v1_conversation_proto_msgTypes[24]
+	mi := &file_im_repo_v1_conversation_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1511,7 +1921,7 @@ func (x *GetConversationMembersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConversationMembersResponse.ProtoReflect.Descriptor instead.
 func (*GetConversationMembersResponse) Descriptor() ([]byte, []int) {
-	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{24}
+	return file_im_repo_v1_conversation_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetConversationMembersResponse) GetMembers() []*ConversationMember {
@@ -1609,7 +2019,40 @@ const file_im_repo_v1_conversation_proto_rawDesc = "" +
 	"\x1cBatchGetConversationsRequest\x12)\n" +
 	"\x10conversation_ids\x18\x01 \x03(\tR\x0fconversationIds\"_\n" +
 	"\x1dBatchGetConversationsResponse\x12>\n" +
-	"\rconversations\x18\x01 \x03(\v2\x18.im.repo.v1.ConversationR\rconversations\"\x87\x01\n" +
+	"\rconversations\x18\x01 \x03(\v2\x18.im.repo.v1.ConversationR\rconversations\"\xf2\x01\n" +
+	"&GetUserConversationsWithDetailsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x05R\x06offset\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x1f\n" +
+	"\vtype_filter\x18\x04 \x01(\x05R\n" +
+	"typeFilter\x120\n" +
+	"\x14include_last_message\x18\x05 \x01(\bR\x12includeLastMessage\x12.\n" +
+	"\x13include_sender_info\x18\x06 \x01(\bR\x11includeSenderInfo\"\xa5\x01\n" +
+	"'GetUserConversationsWithDetailsResponse\x12I\n" +
+	"\rconversations\x18\x01 \x03(\v2#.im.repo.v1.ConversationWithDetailsR\rconversations\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x19\n" +
+	"\bhas_more\x18\x03 \x01(\bR\ahasMore\"\xa9\x02\n" +
+	"\x17ConversationWithDetails\x12<\n" +
+	"\fconversation\x18\x01 \x01(\v2\x18.im.repo.v1.ConversationR\fconversation\x12G\n" +
+	"\x0fuser_membership\x18\x02 \x01(\v2\x1e.im.repo.v1.ConversationMemberR\x0euserMembership\x12:\n" +
+	"\flast_message\x18\x03 \x01(\v2\x17.im.repo.v1.LastMessageR\vlastMessage\x12!\n" +
+	"\funread_count\x18\x04 \x01(\x03R\vunreadCount\x12(\n" +
+	"\x10last_activity_at\x18\x05 \x01(\x03R\x0elastActivityAt\"\xe0\x01\n" +
+	"\vLastMessage\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tsender_id\x18\x02 \x01(\tR\bsenderId\x12!\n" +
+	"\fmessage_type\x18\x03 \x01(\x05R\vmessageType\x12\x18\n" +
+	"\acontent\x18\x04 \x01(\tR\acontent\x12\x15\n" +
+	"\x06seq_id\x18\x05 \x01(\x03R\x05seqId\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\x03R\tcreatedAt\x121\n" +
+	"\x06sender\x18\a \x01(\v2\x19.im.repo.v1.MessageSenderR\x06sender\"u\n" +
+	"\rMessageSender\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\x12\x19\n" +
+	"\bis_guest\x18\x04 \x01(\bR\aisGuest\"\x87\x01\n" +
 	"\x12ConversationMember\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
@@ -1641,19 +2084,21 @@ const file_im_repo_v1_conversation_proto_rawDesc = "" +
 	"\x1eGetConversationMembersResponse\x128\n" +
 	"\amembers\x18\x01 \x03(\v2\x1e.im.repo.v1.ConversationMemberR\amembers\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x19\n" +
-	"\bhas_more\x18\x03 \x01(\bR\ahasMore2\x87\t\n" +
+	"\bhas_more\x18\x03 \x01(\bR\ahasMore2\x94\n" +
+	"\n" +
 	"\x13ConversationService\x12i\n" +
 	"\x14GetUserConversations\x12'.im.repo.v1.GetUserConversationsRequest\x1a(.im.repo.v1.GetUserConversationsResponse\x12`\n" +
 	"\x11UpdateReadPointer\x12$.im.repo.v1.UpdateReadPointerRequest\x1a%.im.repo.v1.UpdateReadPointerResponse\x12W\n" +
 	"\x0eGetUnreadCount\x12!.im.repo.v1.GetUnreadCountRequest\x1a\".im.repo.v1.GetUnreadCountResponse\x12W\n" +
 	"\x0eGetReadPointer\x12!.im.repo.v1.GetReadPointerRequest\x1a\".im.repo.v1.GetReadPointerResponse\x12i\n" +
 	"\x14BatchGetUnreadCounts\x12'.im.repo.v1.BatchGetUnreadCountsRequest\x1a(.im.repo.v1.BatchGetUnreadCountsResponse\x12c\n" +
-	"\x12CreateConversation\x12%.im.repo.v1.CreateConversationRequest\x1a&.im.repo.v1.CreateConversationResponse\x12l\n" +
+	"\x12CreateConversation\x12%.im.repo.v1.CreateConversationRequest\x1a&.im.repo.v1.CreateConversationResponse\x12\x8a\x01\n" +
+	"\x1fGetUserConversationsWithDetails\x122.im.repo.v1.GetUserConversationsWithDetailsRequest\x1a3.im.repo.v1.GetUserConversationsWithDetailsResponse\x12l\n" +
 	"\x15BatchGetConversations\x12(.im.repo.v1.BatchGetConversationsRequest\x1a).im.repo.v1.BatchGetConversationsResponse\x12l\n" +
 	"\x15AddConversationMember\x12(.im.repo.v1.AddConversationMemberRequest\x1a).im.repo.v1.AddConversationMemberResponse\x12u\n" +
 	"\x18RemoveConversationMember\x12+.im.repo.v1.RemoveConversationMemberRequest\x1a,.im.repo.v1.RemoveConversationMemberResponse\x12]\n" +
 	"\x10UpdateMemberRole\x12#.im.repo.v1.UpdateMemberRoleRequest\x1a$.im.repo.v1.UpdateMemberRoleResponse\x12o\n" +
-	"\x16GetConversationMembers\x12).im.repo.v1.GetConversationMembersRequest\x1a*.im.repo.v1.GetConversationMembersResponseB7Z5github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1b\x06proto3"
+	"\x16GetConversationMembers\x12).im.repo.v1.GetConversationMembersRequest\x1a*.im.repo.v1.GetConversationMembersResponseB7Z5github.com/ceyewan/gochat/api/gen/im_repo/v1;imrepov1b\x06proto3"
 
 var (
 	file_im_repo_v1_conversation_proto_rawDescOnce sync.Once
@@ -1667,68 +2112,80 @@ func file_im_repo_v1_conversation_proto_rawDescGZIP() []byte {
 	return file_im_repo_v1_conversation_proto_rawDescData
 }
 
-var file_im_repo_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_im_repo_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_im_repo_v1_conversation_proto_goTypes = []any{
-	(*GetUserConversationsRequest)(nil),      // 0: im.repo.v1.GetUserConversationsRequest
-	(*GetUserConversationsResponse)(nil),     // 1: im.repo.v1.GetUserConversationsResponse
-	(*UpdateReadPointerRequest)(nil),         // 2: im.repo.v1.UpdateReadPointerRequest
-	(*UpdateReadPointerResponse)(nil),        // 3: im.repo.v1.UpdateReadPointerResponse
-	(*GetUnreadCountRequest)(nil),            // 4: im.repo.v1.GetUnreadCountRequest
-	(*GetUnreadCountResponse)(nil),           // 5: im.repo.v1.GetUnreadCountResponse
-	(*GetReadPointerRequest)(nil),            // 6: im.repo.v1.GetReadPointerRequest
-	(*GetReadPointerResponse)(nil),           // 7: im.repo.v1.GetReadPointerResponse
-	(*BatchGetUnreadCountsRequest)(nil),      // 8: im.repo.v1.BatchGetUnreadCountsRequest
-	(*BatchGetUnreadCountsResponse)(nil),     // 9: im.repo.v1.BatchGetUnreadCountsResponse
-	(*ReadPointer)(nil),                      // 10: im.repo.v1.ReadPointer
-	(*CreateConversationRequest)(nil),        // 11: im.repo.v1.CreateConversationRequest
-	(*CreateConversationResponse)(nil),       // 12: im.repo.v1.CreateConversationResponse
-	(*Conversation)(nil),                     // 13: im.repo.v1.Conversation
-	(*BatchGetConversationsRequest)(nil),     // 14: im.repo.v1.BatchGetConversationsRequest
-	(*BatchGetConversationsResponse)(nil),    // 15: im.repo.v1.BatchGetConversationsResponse
-	(*ConversationMember)(nil),               // 16: im.repo.v1.ConversationMember
-	(*AddConversationMemberRequest)(nil),     // 17: im.repo.v1.AddConversationMemberRequest
-	(*AddConversationMemberResponse)(nil),    // 18: im.repo.v1.AddConversationMemberResponse
-	(*RemoveConversationMemberRequest)(nil),  // 19: im.repo.v1.RemoveConversationMemberRequest
-	(*RemoveConversationMemberResponse)(nil), // 20: im.repo.v1.RemoveConversationMemberResponse
-	(*UpdateMemberRoleRequest)(nil),          // 21: im.repo.v1.UpdateMemberRoleRequest
-	(*UpdateMemberRoleResponse)(nil),         // 22: im.repo.v1.UpdateMemberRoleResponse
-	(*GetConversationMembersRequest)(nil),    // 23: im.repo.v1.GetConversationMembersRequest
-	(*GetConversationMembersResponse)(nil),   // 24: im.repo.v1.GetConversationMembersResponse
-	nil,                                      // 25: im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
+	(*GetUserConversationsRequest)(nil),             // 0: im.repo.v1.GetUserConversationsRequest
+	(*GetUserConversationsResponse)(nil),            // 1: im.repo.v1.GetUserConversationsResponse
+	(*UpdateReadPointerRequest)(nil),                // 2: im.repo.v1.UpdateReadPointerRequest
+	(*UpdateReadPointerResponse)(nil),               // 3: im.repo.v1.UpdateReadPointerResponse
+	(*GetUnreadCountRequest)(nil),                   // 4: im.repo.v1.GetUnreadCountRequest
+	(*GetUnreadCountResponse)(nil),                  // 5: im.repo.v1.GetUnreadCountResponse
+	(*GetReadPointerRequest)(nil),                   // 6: im.repo.v1.GetReadPointerRequest
+	(*GetReadPointerResponse)(nil),                  // 7: im.repo.v1.GetReadPointerResponse
+	(*BatchGetUnreadCountsRequest)(nil),             // 8: im.repo.v1.BatchGetUnreadCountsRequest
+	(*BatchGetUnreadCountsResponse)(nil),            // 9: im.repo.v1.BatchGetUnreadCountsResponse
+	(*ReadPointer)(nil),                             // 10: im.repo.v1.ReadPointer
+	(*CreateConversationRequest)(nil),               // 11: im.repo.v1.CreateConversationRequest
+	(*CreateConversationResponse)(nil),              // 12: im.repo.v1.CreateConversationResponse
+	(*Conversation)(nil),                            // 13: im.repo.v1.Conversation
+	(*BatchGetConversationsRequest)(nil),            // 14: im.repo.v1.BatchGetConversationsRequest
+	(*BatchGetConversationsResponse)(nil),           // 15: im.repo.v1.BatchGetConversationsResponse
+	(*GetUserConversationsWithDetailsRequest)(nil),  // 16: im.repo.v1.GetUserConversationsWithDetailsRequest
+	(*GetUserConversationsWithDetailsResponse)(nil), // 17: im.repo.v1.GetUserConversationsWithDetailsResponse
+	(*ConversationWithDetails)(nil),                 // 18: im.repo.v1.ConversationWithDetails
+	(*LastMessage)(nil),                             // 19: im.repo.v1.LastMessage
+	(*MessageSender)(nil),                           // 20: im.repo.v1.MessageSender
+	(*ConversationMember)(nil),                      // 21: im.repo.v1.ConversationMember
+	(*AddConversationMemberRequest)(nil),            // 22: im.repo.v1.AddConversationMemberRequest
+	(*AddConversationMemberResponse)(nil),           // 23: im.repo.v1.AddConversationMemberResponse
+	(*RemoveConversationMemberRequest)(nil),         // 24: im.repo.v1.RemoveConversationMemberRequest
+	(*RemoveConversationMemberResponse)(nil),        // 25: im.repo.v1.RemoveConversationMemberResponse
+	(*UpdateMemberRoleRequest)(nil),                 // 26: im.repo.v1.UpdateMemberRoleRequest
+	(*UpdateMemberRoleResponse)(nil),                // 27: im.repo.v1.UpdateMemberRoleResponse
+	(*GetConversationMembersRequest)(nil),           // 28: im.repo.v1.GetConversationMembersRequest
+	(*GetConversationMembersResponse)(nil),          // 29: im.repo.v1.GetConversationMembersResponse
+	nil,                                             // 30: im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
 }
 var file_im_repo_v1_conversation_proto_depIdxs = []int32{
 	10, // 0: im.repo.v1.GetReadPointerResponse.read_pointer:type_name -> im.repo.v1.ReadPointer
-	25, // 1: im.repo.v1.BatchGetUnreadCountsResponse.unread_counts:type_name -> im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
+	30, // 1: im.repo.v1.BatchGetUnreadCountsResponse.unread_counts:type_name -> im.repo.v1.BatchGetUnreadCountsResponse.UnreadCountsEntry
 	13, // 2: im.repo.v1.CreateConversationResponse.conversation:type_name -> im.repo.v1.Conversation
 	13, // 3: im.repo.v1.BatchGetConversationsResponse.conversations:type_name -> im.repo.v1.Conversation
-	16, // 4: im.repo.v1.GetConversationMembersResponse.members:type_name -> im.repo.v1.ConversationMember
-	0,  // 5: im.repo.v1.ConversationService.GetUserConversations:input_type -> im.repo.v1.GetUserConversationsRequest
-	2,  // 6: im.repo.v1.ConversationService.UpdateReadPointer:input_type -> im.repo.v1.UpdateReadPointerRequest
-	4,  // 7: im.repo.v1.ConversationService.GetUnreadCount:input_type -> im.repo.v1.GetUnreadCountRequest
-	6,  // 8: im.repo.v1.ConversationService.GetReadPointer:input_type -> im.repo.v1.GetReadPointerRequest
-	8,  // 9: im.repo.v1.ConversationService.BatchGetUnreadCounts:input_type -> im.repo.v1.BatchGetUnreadCountsRequest
-	11, // 10: im.repo.v1.ConversationService.CreateConversation:input_type -> im.repo.v1.CreateConversationRequest
-	14, // 11: im.repo.v1.ConversationService.BatchGetConversations:input_type -> im.repo.v1.BatchGetConversationsRequest
-	17, // 12: im.repo.v1.ConversationService.AddConversationMember:input_type -> im.repo.v1.AddConversationMemberRequest
-	19, // 13: im.repo.v1.ConversationService.RemoveConversationMember:input_type -> im.repo.v1.RemoveConversationMemberRequest
-	21, // 14: im.repo.v1.ConversationService.UpdateMemberRole:input_type -> im.repo.v1.UpdateMemberRoleRequest
-	23, // 15: im.repo.v1.ConversationService.GetConversationMembers:input_type -> im.repo.v1.GetConversationMembersRequest
-	1,  // 16: im.repo.v1.ConversationService.GetUserConversations:output_type -> im.repo.v1.GetUserConversationsResponse
-	3,  // 17: im.repo.v1.ConversationService.UpdateReadPointer:output_type -> im.repo.v1.UpdateReadPointerResponse
-	5,  // 18: im.repo.v1.ConversationService.GetUnreadCount:output_type -> im.repo.v1.GetUnreadCountResponse
-	7,  // 19: im.repo.v1.ConversationService.GetReadPointer:output_type -> im.repo.v1.GetReadPointerResponse
-	9,  // 20: im.repo.v1.ConversationService.BatchGetUnreadCounts:output_type -> im.repo.v1.BatchGetUnreadCountsResponse
-	12, // 21: im.repo.v1.ConversationService.CreateConversation:output_type -> im.repo.v1.CreateConversationResponse
-	15, // 22: im.repo.v1.ConversationService.BatchGetConversations:output_type -> im.repo.v1.BatchGetConversationsResponse
-	18, // 23: im.repo.v1.ConversationService.AddConversationMember:output_type -> im.repo.v1.AddConversationMemberResponse
-	20, // 24: im.repo.v1.ConversationService.RemoveConversationMember:output_type -> im.repo.v1.RemoveConversationMemberResponse
-	22, // 25: im.repo.v1.ConversationService.UpdateMemberRole:output_type -> im.repo.v1.UpdateMemberRoleResponse
-	24, // 26: im.repo.v1.ConversationService.GetConversationMembers:output_type -> im.repo.v1.GetConversationMembersResponse
-	16, // [16:27] is the sub-list for method output_type
-	5,  // [5:16] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	18, // 4: im.repo.v1.GetUserConversationsWithDetailsResponse.conversations:type_name -> im.repo.v1.ConversationWithDetails
+	13, // 5: im.repo.v1.ConversationWithDetails.conversation:type_name -> im.repo.v1.Conversation
+	21, // 6: im.repo.v1.ConversationWithDetails.user_membership:type_name -> im.repo.v1.ConversationMember
+	19, // 7: im.repo.v1.ConversationWithDetails.last_message:type_name -> im.repo.v1.LastMessage
+	20, // 8: im.repo.v1.LastMessage.sender:type_name -> im.repo.v1.MessageSender
+	21, // 9: im.repo.v1.GetConversationMembersResponse.members:type_name -> im.repo.v1.ConversationMember
+	0,  // 10: im.repo.v1.ConversationService.GetUserConversations:input_type -> im.repo.v1.GetUserConversationsRequest
+	2,  // 11: im.repo.v1.ConversationService.UpdateReadPointer:input_type -> im.repo.v1.UpdateReadPointerRequest
+	4,  // 12: im.repo.v1.ConversationService.GetUnreadCount:input_type -> im.repo.v1.GetUnreadCountRequest
+	6,  // 13: im.repo.v1.ConversationService.GetReadPointer:input_type -> im.repo.v1.GetReadPointerRequest
+	8,  // 14: im.repo.v1.ConversationService.BatchGetUnreadCounts:input_type -> im.repo.v1.BatchGetUnreadCountsRequest
+	11, // 15: im.repo.v1.ConversationService.CreateConversation:input_type -> im.repo.v1.CreateConversationRequest
+	16, // 16: im.repo.v1.ConversationService.GetUserConversationsWithDetails:input_type -> im.repo.v1.GetUserConversationsWithDetailsRequest
+	14, // 17: im.repo.v1.ConversationService.BatchGetConversations:input_type -> im.repo.v1.BatchGetConversationsRequest
+	22, // 18: im.repo.v1.ConversationService.AddConversationMember:input_type -> im.repo.v1.AddConversationMemberRequest
+	24, // 19: im.repo.v1.ConversationService.RemoveConversationMember:input_type -> im.repo.v1.RemoveConversationMemberRequest
+	26, // 20: im.repo.v1.ConversationService.UpdateMemberRole:input_type -> im.repo.v1.UpdateMemberRoleRequest
+	28, // 21: im.repo.v1.ConversationService.GetConversationMembers:input_type -> im.repo.v1.GetConversationMembersRequest
+	1,  // 22: im.repo.v1.ConversationService.GetUserConversations:output_type -> im.repo.v1.GetUserConversationsResponse
+	3,  // 23: im.repo.v1.ConversationService.UpdateReadPointer:output_type -> im.repo.v1.UpdateReadPointerResponse
+	5,  // 24: im.repo.v1.ConversationService.GetUnreadCount:output_type -> im.repo.v1.GetUnreadCountResponse
+	7,  // 25: im.repo.v1.ConversationService.GetReadPointer:output_type -> im.repo.v1.GetReadPointerResponse
+	9,  // 26: im.repo.v1.ConversationService.BatchGetUnreadCounts:output_type -> im.repo.v1.BatchGetUnreadCountsResponse
+	12, // 27: im.repo.v1.ConversationService.CreateConversation:output_type -> im.repo.v1.CreateConversationResponse
+	17, // 28: im.repo.v1.ConversationService.GetUserConversationsWithDetails:output_type -> im.repo.v1.GetUserConversationsWithDetailsResponse
+	15, // 29: im.repo.v1.ConversationService.BatchGetConversations:output_type -> im.repo.v1.BatchGetConversationsResponse
+	23, // 30: im.repo.v1.ConversationService.AddConversationMember:output_type -> im.repo.v1.AddConversationMemberResponse
+	25, // 31: im.repo.v1.ConversationService.RemoveConversationMember:output_type -> im.repo.v1.RemoveConversationMemberResponse
+	27, // 32: im.repo.v1.ConversationService.UpdateMemberRole:output_type -> im.repo.v1.UpdateMemberRoleResponse
+	29, // 33: im.repo.v1.ConversationService.GetConversationMembers:output_type -> im.repo.v1.GetConversationMembersResponse
+	22, // [22:34] is the sub-list for method output_type
+	10, // [10:22] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_im_repo_v1_conversation_proto_init() }
@@ -1742,7 +2199,7 @@ func file_im_repo_v1_conversation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_repo_v1_conversation_proto_rawDesc), len(file_im_repo_v1_conversation_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

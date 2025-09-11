@@ -7,7 +7,7 @@
 // - protoc             (unknown)
 // source: im_repo/v1/message.proto
 
-package repov1
+package imrepov1
 
 import (
 	context "context"

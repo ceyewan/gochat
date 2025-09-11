@@ -7,7 +7,7 @@
 // - protoc             (unknown)
 // source: im_repo/v1/conversation.proto
 
-package repov1
+package imrepov1
 
 import (
 	context "context"
@@ -22,17 +22,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConversationService_GetUserConversations_FullMethodName     = "/im.repo.v1.ConversationService/GetUserConversations"
-	ConversationService_UpdateReadPointer_FullMethodName        = "/im.repo.v1.ConversationService/UpdateReadPointer"
-	ConversationService_GetUnreadCount_FullMethodName           = "/im.repo.v1.ConversationService/GetUnreadCount"
-	ConversationService_GetReadPointer_FullMethodName           = "/im.repo.v1.ConversationService/GetReadPointer"
-	ConversationService_BatchGetUnreadCounts_FullMethodName     = "/im.repo.v1.ConversationService/BatchGetUnreadCounts"
-	ConversationService_CreateConversation_FullMethodName       = "/im.repo.v1.ConversationService/CreateConversation"
-	ConversationService_BatchGetConversations_FullMethodName    = "/im.repo.v1.ConversationService/BatchGetConversations"
-	ConversationService_AddConversationMember_FullMethodName    = "/im.repo.v1.ConversationService/AddConversationMember"
-	ConversationService_RemoveConversationMember_FullMethodName = "/im.repo.v1.ConversationService/RemoveConversationMember"
-	ConversationService_UpdateMemberRole_FullMethodName         = "/im.repo.v1.ConversationService/UpdateMemberRole"
-	ConversationService_GetConversationMembers_FullMethodName   = "/im.repo.v1.ConversationService/GetConversationMembers"
+	ConversationService_GetUserConversations_FullMethodName            = "/im.repo.v1.ConversationService/GetUserConversations"
+	ConversationService_UpdateReadPointer_FullMethodName               = "/im.repo.v1.ConversationService/UpdateReadPointer"
+	ConversationService_GetUnreadCount_FullMethodName                  = "/im.repo.v1.ConversationService/GetUnreadCount"
+	ConversationService_GetReadPointer_FullMethodName                  = "/im.repo.v1.ConversationService/GetReadPointer"
+	ConversationService_BatchGetUnreadCounts_FullMethodName            = "/im.repo.v1.ConversationService/BatchGetUnreadCounts"
+	ConversationService_CreateConversation_FullMethodName              = "/im.repo.v1.ConversationService/CreateConversation"
+	ConversationService_GetUserConversationsWithDetails_FullMethodName = "/im.repo.v1.ConversationService/GetUserConversationsWithDetails"
+	ConversationService_BatchGetConversations_FullMethodName           = "/im.repo.v1.ConversationService/BatchGetConversations"
+	ConversationService_AddConversationMember_FullMethodName           = "/im.repo.v1.ConversationService/AddConversationMember"
+	ConversationService_RemoveConversationMember_FullMethodName        = "/im.repo.v1.ConversationService/RemoveConversationMember"
+	ConversationService_UpdateMemberRole_FullMethodName                = "/im.repo.v1.ConversationService/UpdateMemberRole"
+	ConversationService_GetConversationMembers_FullMethodName          = "/im.repo.v1.ConversationService/GetConversationMembers"
 )
 
 // ConversationServiceClient is the client API for ConversationService service.
@@ -60,6 +61,9 @@ type ConversationServiceClient interface {
 	// CreateConversation 创建会话
 	// 在数据库中创建新的会话记录
 	CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error)
+	// GetUserConversationsWithDetails 获取用户会话列表（含完整信息）
+	// 一次性查询获取用户所有会话的完整信息，包含最后消息、未读数等，解决N+1问题
+	GetUserConversationsWithDetails(ctx context.Context, in *GetUserConversationsWithDetailsRequest, opts ...grpc.CallOption) (*GetUserConversationsWithDetailsResponse, error)
 	// BatchGetConversations 批量获取会话信息
 	// 解决 N+1 查询问题，im-logic 获取会话列表后，可通过此接口一次性获取所有会话的详细信息
 	BatchGetConversations(ctx context.Context, in *BatchGetConversationsRequest, opts ...grpc.CallOption) (*BatchGetConversationsResponse, error)
@@ -145,6 +149,16 @@ func (c *conversationServiceClient) CreateConversation(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *conversationServiceClient) GetUserConversationsWithDetails(ctx context.Context, in *GetUserConversationsWithDetailsRequest, opts ...grpc.CallOption) (*GetUserConversationsWithDetailsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserConversationsWithDetailsResponse)
+	err := c.cc.Invoke(ctx, ConversationService_GetUserConversationsWithDetails_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *conversationServiceClient) BatchGetConversations(ctx context.Context, in *BatchGetConversationsRequest, opts ...grpc.CallOption) (*BatchGetConversationsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BatchGetConversationsResponse)
@@ -220,6 +234,9 @@ type ConversationServiceServer interface {
 	// CreateConversation 创建会话
 	// 在数据库中创建新的会话记录
 	CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error)
+	// GetUserConversationsWithDetails 获取用户会话列表（含完整信息）
+	// 一次性查询获取用户所有会话的完整信息，包含最后消息、未读数等，解决N+1问题
+	GetUserConversationsWithDetails(context.Context, *GetUserConversationsWithDetailsRequest) (*GetUserConversationsWithDetailsResponse, error)
 	// BatchGetConversations 批量获取会话信息
 	// 解决 N+1 查询问题，im-logic 获取会话列表后，可通过此接口一次性获取所有会话的详细信息
 	BatchGetConversations(context.Context, *BatchGetConversationsRequest) (*BatchGetConversationsResponse, error)
@@ -262,6 +279,9 @@ func (UnimplementedConversationServiceServer) BatchGetUnreadCounts(context.Conte
 }
 func (UnimplementedConversationServiceServer) CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateConversation not implemented")
+}
+func (UnimplementedConversationServiceServer) GetUserConversationsWithDetails(context.Context, *GetUserConversationsWithDetailsRequest) (*GetUserConversationsWithDetailsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserConversationsWithDetails not implemented")
 }
 func (UnimplementedConversationServiceServer) BatchGetConversations(context.Context, *BatchGetConversationsRequest) (*BatchGetConversationsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchGetConversations not implemented")
@@ -407,6 +427,24 @@ func _ConversationService_CreateConversation_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConversationService_GetUserConversationsWithDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserConversationsWithDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).GetUserConversationsWithDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_GetUserConversationsWithDetails_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).GetUserConversationsWithDetails(ctx, req.(*GetUserConversationsWithDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ConversationService_BatchGetConversations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BatchGetConversationsRequest)
 	if err := dec(in); err != nil {
@@ -527,6 +565,10 @@ var ConversationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateConversation",
 			Handler:    _ConversationService_CreateConversation_Handler,
+		},
+		{
+			MethodName: "GetUserConversationsWithDetails",
+			Handler:    _ConversationService_GetUserConversationsWithDetails_Handler,
 		},
 		{
 			MethodName: "BatchGetConversations",

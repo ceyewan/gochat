@@ -5,7 +5,7 @@ syntax = "proto3";
 
 package im.repo.v1;
 
-option go_package = "github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1";
+option go_package = "github.com/ceyewan/gochat/api/gen/im_repo/v1;imrepov1";
 
 // UserService 用户数据服务
 // 提供用户数据的 CRUD 操作和缓存管理

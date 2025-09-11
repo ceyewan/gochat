@@ -3,9 +3,8 @@
 
 syntax = "proto3";
 
+option go_package = "github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1";
 package im.logic.v1;
-
-option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
 
 import "im_logic/v1/common.proto";
 import "common/v1/types.proto";

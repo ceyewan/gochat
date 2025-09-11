@@ -10,7 +10,8 @@
 
 ## 2. API 和接口定义
 
--   **[HTTP 和 WebSocket API](./02_apis/01_http_ws_api.md)**：定义客户端应用程序的外部 API。
+-   **[OpenAPI 规范](./02_apis/00_openapi.yaml)**: **(设计优先)** 定义了所有面向客户端的 HTTP API 的核心规范。
+-   **[HTTP 和 WebSocket API](./02_apis/01_http_ws_api.md)**：对 OpenAPI 规范的补充说明，并定义了 WebSocket 的事件协议。
 -   **[内部 gRPC 服务](./02_apis/02_grpc_services.md)**：记录微服务之间的内部 RPC 通信。
 -   **[消息队列主题](./02_apis/03_mq_topics.md)**：定义 Kafka 主题和消息模式。
 
@@ -38,6 +39,8 @@
 
 -   **[数据库架构](./06_data_models/01_db_schema.md)**：关于 MySQL 数据库表和关系的详细信息。
 -   **[核心业务流程](./06_data_models/02_core_im_flows.md)**：详细阐述 IM 核心功能（如消息收发、在线状态）的实现流程。
+-   **[认证与同步流程](./06_data_models/03_auth_and_sync_flows.md)**: 详细描述了用户从认证到消息同步的完整流程。
+-   **[世界频道扩展性](./06_data_models/04_world_chat_scalability.md)**: 探讨了世界频道（超大规模群组）的架构设计与挑战。
 
 ## 7. 近期重构计划 (Roadmap)
 

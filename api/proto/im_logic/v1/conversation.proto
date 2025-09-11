@@ -3,10 +3,9 @@
 // 统一处理单聊、群聊、世界聊天室的所有操作
 
 syntax = "proto3";
+option go_package = "github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1";
 
 package im.logic.v1;
-
-option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
 
 import "im_logic/v1/common.proto";
 import "common/v1/types.proto";
@@ -147,7 +146,7 @@ message GetConversationsOptimizedResponse {
 message ConversationOptimized {
   // 会话基本信息
   string id = 1;
-  ConversationType type = 2;
+  common.v1.ConversationType type = 2;
   string name = 3;
   string avatar_url = 4;
   string description = 5;

@@ -8,9 +8,10 @@
 // 	protoc        (unknown)
 // source: im_logic/v1/conversation.proto
 
-package logicv1
+package imlogicv1
 
 import (
+	v1 "github.com/ceyewan/gochat/api/gen/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -25,70 +26,13 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 会话成员角色
-type ConversationMemberRole int32
-
-const (
-	// 未指定角色
-	ConversationMemberRole_CONVERSATION_MEMBER_ROLE_UNSPECIFIED ConversationMemberRole = 0
-	// 普通成员
-	ConversationMemberRole_CONVERSATION_MEMBER_ROLE_MEMBER ConversationMemberRole = 1
-	// 管理员
-	ConversationMemberRole_CONVERSATION_MEMBER_ROLE_ADMIN ConversationMemberRole = 2
-	// 群主/所有者
-	ConversationMemberRole_CONVERSATION_MEMBER_ROLE_OWNER ConversationMemberRole = 3
-)
-
-// Enum value maps for ConversationMemberRole.
-var (
-	ConversationMemberRole_name = map[int32]string{
-		0: "CONVERSATION_MEMBER_ROLE_UNSPECIFIED",
-		1: "CONVERSATION_MEMBER_ROLE_MEMBER",
-		2: "CONVERSATION_MEMBER_ROLE_ADMIN",
-		3: "CONVERSATION_MEMBER_ROLE_OWNER",
-	}
-	ConversationMemberRole_value = map[string]int32{
-		"CONVERSATION_MEMBER_ROLE_UNSPECIFIED": 0,
-		"CONVERSATION_MEMBER_ROLE_MEMBER":      1,
-		"CONVERSATION_MEMBER_ROLE_ADMIN":       2,
-		"CONVERSATION_MEMBER_ROLE_OWNER":       3,
-	}
-)
-
-func (x ConversationMemberRole) Enum() *ConversationMemberRole {
-	p := new(ConversationMemberRole)
-	*p = x
-	return p
-}
-
-func (x ConversationMemberRole) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (ConversationMemberRole) Descriptor() protoreflect.EnumDescriptor {
-	return file_im_logic_v1_conversation_proto_enumTypes[0].Descriptor()
-}
-
-func (ConversationMemberRole) Type() protoreflect.EnumType {
-	return &file_im_logic_v1_conversation_proto_enumTypes[0]
-}
-
-func (x ConversationMemberRole) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use ConversationMemberRole.Descriptor instead.
-func (ConversationMemberRole) EnumDescriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{0}
-}
-
 // CreateConversationRequest 创建会话请求
 type CreateConversationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 创建者用户 ID
 	CreatorId string `protobuf:"bytes,1,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
 	// 会话类型
-	Type ConversationType `protobuf:"varint,2,opt,name=type,proto3,enum=im.logic.v1.ConversationType" json:"type,omitempty"`
+	Type v1.ConversationType `protobuf:"varint,2,opt,name=type,proto3,enum=common.v1.ConversationType" json:"type,omitempty"`
 	// 会话名称（群聊时必填）
 	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// 会话头像 URL（可选）
@@ -140,11 +84,11 @@ func (x *CreateConversationRequest) GetCreatorId() string {
 	return ""
 }
 
-func (x *CreateConversationRequest) GetType() ConversationType {
+func (x *CreateConversationRequest) GetType() v1.ConversationType {
 	if x != nil {
 		return x.Type
 	}
-	return ConversationType_CONVERSATION_TYPE_UNSPECIFIED
+	return v1.ConversationType(0)
 }
 
 func (x *CreateConversationRequest) GetName() string {
@@ -357,7 +301,7 @@ type GetConversationsRequest struct {
 	// 每页大小
 	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// 会话类型过滤（可选）
-	TypeFilter ConversationType `protobuf:"varint,4,opt,name=type_filter,json=typeFilter,proto3,enum=im.logic.v1.ConversationType" json:"type_filter,omitempty"`
+	TypeFilter v1.ConversationType `protobuf:"varint,4,opt,name=type_filter,json=typeFilter,proto3,enum=common.v1.ConversationType" json:"type_filter,omitempty"`
 	// 排序方式（默认按更新时间倒序）
 	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -415,11 +359,11 @@ func (x *GetConversationsRequest) GetPageSize() int32 {
 	return 0
 }
 
-func (x *GetConversationsRequest) GetTypeFilter() ConversationType {
+func (x *GetConversationsRequest) GetTypeFilter() v1.ConversationType {
 	if x != nil {
 		return x.TypeFilter
 	}
-	return ConversationType_CONVERSATION_TYPE_UNSPECIFIED
+	return v1.ConversationType(0)
 }
 
 func (x *GetConversationsRequest) GetOrderBy() string {
@@ -511,6 +455,344 @@ func (x *GetConversationsResponse) GetHasMore() bool {
 	return false
 }
 
+// GetConversationsOptimizedRequest 获取优化会话列表请求
+// 使用一次查询获取所有必要信息，避免N+1问题
+type GetConversationsOptimizedRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 用户 ID
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// 页码（从 1 开始）
+	Page int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
+	// 每页大小
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// 会话类型过滤（可选）
+	TypeFilter v1.ConversationType `protobuf:"varint,4,opt,name=type_filter,json=typeFilter,proto3,enum=common.v1.ConversationType" json:"type_filter,omitempty"`
+	// 排序方式（默认按更新时间倒序）
+	OrderBy string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// 是否包含最后消息
+	IncludeLastMessage bool `protobuf:"varint,6,opt,name=include_last_message,json=includeLastMessage,proto3" json:"include_last_message,omitempty"`
+	// 是否包含未读数
+	IncludeUnreadCount bool `protobuf:"varint,7,opt,name=include_unread_count,json=includeUnreadCount,proto3" json:"include_unread_count,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetConversationsOptimizedRequest) Reset() {
+	*x = GetConversationsOptimizedRequest{}
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetConversationsOptimizedRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetConversationsOptimizedRequest) ProtoMessage() {}
+
+func (x *GetConversationsOptimizedRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetConversationsOptimizedRequest.ProtoReflect.Descriptor instead.
+func (*GetConversationsOptimizedRequest) Descriptor() ([]byte, []int) {
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetConversationsOptimizedRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetConversationsOptimizedRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *GetConversationsOptimizedRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *GetConversationsOptimizedRequest) GetTypeFilter() v1.ConversationType {
+	if x != nil {
+		return x.TypeFilter
+	}
+	return v1.ConversationType(0)
+}
+
+func (x *GetConversationsOptimizedRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *GetConversationsOptimizedRequest) GetIncludeLastMessage() bool {
+	if x != nil {
+		return x.IncludeLastMessage
+	}
+	return false
+}
+
+func (x *GetConversationsOptimizedRequest) GetIncludeUnreadCount() bool {
+	if x != nil {
+		return x.IncludeUnreadCount
+	}
+	return false
+}
+
+// GetConversationsOptimizedResponse 获取优化会话列表响应
+type GetConversationsOptimizedResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 优化的会话列表（包含完整信息）
+	Conversations []*ConversationOptimized `protobuf:"bytes,1,rep,name=conversations,proto3" json:"conversations,omitempty"`
+	// 总数量
+	Total int64 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// 当前页码
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// 每页大小
+	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// 是否还有更多
+	HasMore       bool `protobuf:"varint,5,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetConversationsOptimizedResponse) Reset() {
+	*x = GetConversationsOptimizedResponse{}
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetConversationsOptimizedResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetConversationsOptimizedResponse) ProtoMessage() {}
+
+func (x *GetConversationsOptimizedResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetConversationsOptimizedResponse.ProtoReflect.Descriptor instead.
+func (*GetConversationsOptimizedResponse) Descriptor() ([]byte, []int) {
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetConversationsOptimizedResponse) GetConversations() []*ConversationOptimized {
+	if x != nil {
+		return x.Conversations
+	}
+	return nil
+}
+
+func (x *GetConversationsOptimizedResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *GetConversationsOptimizedResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *GetConversationsOptimizedResponse) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *GetConversationsOptimizedResponse) GetHasMore() bool {
+	if x != nil {
+		return x.HasMore
+	}
+	return false
+}
+
+// ConversationOptimized 优化的会话信息
+// 包含会话列表所需的所有信息，避免额外查询
+type ConversationOptimized struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 会话基本信息
+	Id          string                `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type        v1.ConversationType   `protobuf:"varint,2,opt,name=type,proto3,enum=common.v1.ConversationType" json:"type,omitempty"`
+	Name        string                `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	AvatarUrl   string                `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Description string                `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	OwnerId     string                `protobuf:"bytes,6,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	MemberCount int32                 `protobuf:"varint,7,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
+	Settings    *ConversationSettings `protobuf:"bytes,8,opt,name=settings,proto3" json:"settings,omitempty"`
+	UpdatedAt   int64                 `protobuf:"varint,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CreatedAt   int64                 `protobuf:"varint,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// 当前用户在此会话中的信息
+	MyMembership *ConversationMember `protobuf:"bytes,13,opt,name=my_membership,json=myMembership,proto3" json:"my_membership,omitempty"`
+	// 最后一条消息（可选）
+	LastMessage *Message `protobuf:"bytes,9,opt,name=last_message,json=lastMessage,proto3" json:"last_message,omitempty"`
+	// 未读消息数量（可选）
+	UnreadCount int64 `protobuf:"varint,10,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
+	// 最后活动时间（用于排序）
+	LastActivityAt int64 `protobuf:"varint,14,opt,name=last_activity_at,json=lastActivityAt,proto3" json:"last_activity_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ConversationOptimized) Reset() {
+	*x = ConversationOptimized{}
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConversationOptimized) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConversationOptimized) ProtoMessage() {}
+
+func (x *ConversationOptimized) ProtoReflect() protoreflect.Message {
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConversationOptimized.ProtoReflect.Descriptor instead.
+func (*ConversationOptimized) Descriptor() ([]byte, []int) {
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ConversationOptimized) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ConversationOptimized) GetType() v1.ConversationType {
+	if x != nil {
+		return x.Type
+	}
+	return v1.ConversationType(0)
+}
+
+func (x *ConversationOptimized) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ConversationOptimized) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *ConversationOptimized) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ConversationOptimized) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *ConversationOptimized) GetMemberCount() int32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
+}
+
+func (x *ConversationOptimized) GetSettings() *ConversationSettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+func (x *ConversationOptimized) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
+}
+
+func (x *ConversationOptimized) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *ConversationOptimized) GetMyMembership() *ConversationMember {
+	if x != nil {
+		return x.MyMembership
+	}
+	return nil
+}
+
+func (x *ConversationOptimized) GetLastMessage() *Message {
+	if x != nil {
+		return x.LastMessage
+	}
+	return nil
+}
+
+func (x *ConversationOptimized) GetUnreadCount() int64 {
+	if x != nil {
+		return x.UnreadCount
+	}
+	return 0
+}
+
+func (x *ConversationOptimized) GetLastActivityAt() int64 {
+	if x != nil {
+		return x.LastActivityAt
+	}
+	return 0
+}
+
 // UpdateConversationRequest 更新会话信息请求
 type UpdateConversationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -534,7 +816,7 @@ type UpdateConversationRequest struct {
 
 func (x *UpdateConversationRequest) Reset() {
 	*x = UpdateConversationRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[6]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -546,7 +828,7 @@ func (x *UpdateConversationRequest) String() string {
 func (*UpdateConversationRequest) ProtoMessage() {}
 
 func (x *UpdateConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[6]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -559,7 +841,7 @@ func (x *UpdateConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateConversationRequest.ProtoReflect.Descriptor instead.
 func (*UpdateConversationRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{6}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateConversationRequest) GetUserId() string {
@@ -622,7 +904,7 @@ type UpdateConversationResponse struct {
 
 func (x *UpdateConversationResponse) Reset() {
 	*x = UpdateConversationResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[7]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +916,7 @@ func (x *UpdateConversationResponse) String() string {
 func (*UpdateConversationResponse) ProtoMessage() {}
 
 func (x *UpdateConversationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[7]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +929,7 @@ func (x *UpdateConversationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateConversationResponse.ProtoReflect.Descriptor instead.
 func (*UpdateConversationResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{7}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateConversationResponse) GetConversation() *Conversation {
@@ -672,7 +954,7 @@ type DeleteConversationRequest struct {
 
 func (x *DeleteConversationRequest) Reset() {
 	*x = DeleteConversationRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[8]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -684,7 +966,7 @@ func (x *DeleteConversationRequest) String() string {
 func (*DeleteConversationRequest) ProtoMessage() {}
 
 func (x *DeleteConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[8]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,7 +979,7 @@ func (x *DeleteConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteConversationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteConversationRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{8}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteConversationRequest) GetUserId() string {
@@ -732,7 +1014,7 @@ type DeleteConversationResponse struct {
 
 func (x *DeleteConversationResponse) Reset() {
 	*x = DeleteConversationResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[9]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -744,7 +1026,7 @@ func (x *DeleteConversationResponse) String() string {
 func (*DeleteConversationResponse) ProtoMessage() {}
 
 func (x *DeleteConversationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[9]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -757,7 +1039,7 @@ func (x *DeleteConversationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteConversationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteConversationResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{9}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteConversationResponse) GetSuccess() bool {
@@ -777,14 +1059,14 @@ type AddMembersRequest struct {
 	// 要添加的用户 ID 列表
 	UserIds []string `protobuf:"bytes,3,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
 	// 新成员角色（默认为普通成员）
-	Role          ConversationMemberRole `protobuf:"varint,4,opt,name=role,proto3,enum=im.logic.v1.ConversationMemberRole" json:"role,omitempty"`
+	Role          v1.ConversationMemberRole `protobuf:"varint,4,opt,name=role,proto3,enum=common.v1.ConversationMemberRole" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AddMembersRequest) Reset() {
 	*x = AddMembersRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[10]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -796,7 +1078,7 @@ func (x *AddMembersRequest) String() string {
 func (*AddMembersRequest) ProtoMessage() {}
 
 func (x *AddMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[10]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -809,7 +1091,7 @@ func (x *AddMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddMembersRequest.ProtoReflect.Descriptor instead.
 func (*AddMembersRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{10}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AddMembersRequest) GetOperatorId() string {
@@ -833,11 +1115,11 @@ func (x *AddMembersRequest) GetUserIds() []string {
 	return nil
 }
 
-func (x *AddMembersRequest) GetRole() ConversationMemberRole {
+func (x *AddMembersRequest) GetRole() v1.ConversationMemberRole {
 	if x != nil {
 		return x.Role
 	}
-	return ConversationMemberRole_CONVERSATION_MEMBER_ROLE_UNSPECIFIED
+	return v1.ConversationMemberRole(0)
 }
 
 // AddMembersResponse 添加成员响应
@@ -855,7 +1137,7 @@ type AddMembersResponse struct {
 
 func (x *AddMembersResponse) Reset() {
 	*x = AddMembersResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -867,7 +1149,7 @@ func (x *AddMembersResponse) String() string {
 func (*AddMembersResponse) ProtoMessage() {}
 
 func (x *AddMembersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[11]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -880,7 +1162,7 @@ func (x *AddMembersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddMembersResponse.ProtoReflect.Descriptor instead.
 func (*AddMembersResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{11}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AddMembersResponse) GetSuccess() bool {
@@ -921,7 +1203,7 @@ type RemoveMembersRequest struct {
 
 func (x *RemoveMembersRequest) Reset() {
 	*x = RemoveMembersRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[12]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -933,7 +1215,7 @@ func (x *RemoveMembersRequest) String() string {
 func (*RemoveMembersRequest) ProtoMessage() {}
 
 func (x *RemoveMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[12]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -946,7 +1228,7 @@ func (x *RemoveMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveMembersRequest.ProtoReflect.Descriptor instead.
 func (*RemoveMembersRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{12}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RemoveMembersRequest) GetOperatorId() string {
@@ -992,7 +1274,7 @@ type RemoveMembersResponse struct {
 
 func (x *RemoveMembersResponse) Reset() {
 	*x = RemoveMembersResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[13]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1004,7 +1286,7 @@ func (x *RemoveMembersResponse) String() string {
 func (*RemoveMembersResponse) ProtoMessage() {}
 
 func (x *RemoveMembersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[13]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1017,7 +1299,7 @@ func (x *RemoveMembersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveMembersResponse.ProtoReflect.Descriptor instead.
 func (*RemoveMembersResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{13}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RemoveMembersResponse) GetSuccess() bool {
@@ -1051,14 +1333,14 @@ type UpdateMemberRoleRequest struct {
 	// 目标用户 ID
 	TargetUserId string `protobuf:"bytes,3,opt,name=target_user_id,json=targetUserId,proto3" json:"target_user_id,omitempty"`
 	// 新角色
-	NewRole       ConversationMemberRole `protobuf:"varint,4,opt,name=new_role,json=newRole,proto3,enum=im.logic.v1.ConversationMemberRole" json:"new_role,omitempty"`
+	NewRole       v1.ConversationMemberRole `protobuf:"varint,4,opt,name=new_role,json=newRole,proto3,enum=common.v1.ConversationMemberRole" json:"new_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateMemberRoleRequest) Reset() {
 	*x = UpdateMemberRoleRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[14]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1070,7 +1352,7 @@ func (x *UpdateMemberRoleRequest) String() string {
 func (*UpdateMemberRoleRequest) ProtoMessage() {}
 
 func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[14]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1083,7 +1365,7 @@ func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMemberRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMemberRoleRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{14}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdateMemberRoleRequest) GetOperatorId() string {
@@ -1107,11 +1389,11 @@ func (x *UpdateMemberRoleRequest) GetTargetUserId() string {
 	return ""
 }
 
-func (x *UpdateMemberRoleRequest) GetNewRole() ConversationMemberRole {
+func (x *UpdateMemberRoleRequest) GetNewRole() v1.ConversationMemberRole {
 	if x != nil {
 		return x.NewRole
 	}
-	return ConversationMemberRole_CONVERSATION_MEMBER_ROLE_UNSPECIFIED
+	return v1.ConversationMemberRole(0)
 }
 
 // UpdateMemberRoleResponse 更新成员角色响应
@@ -1125,7 +1407,7 @@ type UpdateMemberRoleResponse struct {
 
 func (x *UpdateMemberRoleResponse) Reset() {
 	*x = UpdateMemberRoleResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[15]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1137,7 +1419,7 @@ func (x *UpdateMemberRoleResponse) String() string {
 func (*UpdateMemberRoleResponse) ProtoMessage() {}
 
 func (x *UpdateMemberRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[15]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1150,7 +1432,7 @@ func (x *UpdateMemberRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMemberRoleResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMemberRoleResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{15}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UpdateMemberRoleResponse) GetSuccess() bool {
@@ -1172,14 +1454,14 @@ type GetMembersRequest struct {
 	// 每页大小
 	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// 角色过滤（可选）
-	RoleFilter    ConversationMemberRole `protobuf:"varint,5,opt,name=role_filter,json=roleFilter,proto3,enum=im.logic.v1.ConversationMemberRole" json:"role_filter,omitempty"`
+	RoleFilter    v1.ConversationMemberRole `protobuf:"varint,5,opt,name=role_filter,json=roleFilter,proto3,enum=common.v1.ConversationMemberRole" json:"role_filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetMembersRequest) Reset() {
 	*x = GetMembersRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[16]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1191,7 +1473,7 @@ func (x *GetMembersRequest) String() string {
 func (*GetMembersRequest) ProtoMessage() {}
 
 func (x *GetMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[16]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1204,7 +1486,7 @@ func (x *GetMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMembersRequest.ProtoReflect.Descriptor instead.
 func (*GetMembersRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{16}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetMembersRequest) GetUserId() string {
@@ -1235,11 +1517,11 @@ func (x *GetMembersRequest) GetPageSize() int32 {
 	return 0
 }
 
-func (x *GetMembersRequest) GetRoleFilter() ConversationMemberRole {
+func (x *GetMembersRequest) GetRoleFilter() v1.ConversationMemberRole {
 	if x != nil {
 		return x.RoleFilter
 	}
-	return ConversationMemberRole_CONVERSATION_MEMBER_ROLE_UNSPECIFIED
+	return v1.ConversationMemberRole(0)
 }
 
 // GetMembersResponse 获取成员列表响应
@@ -1261,7 +1543,7 @@ type GetMembersResponse struct {
 
 func (x *GetMembersResponse) Reset() {
 	*x = GetMembersResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[17]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1273,7 +1555,7 @@ func (x *GetMembersResponse) String() string {
 func (*GetMembersResponse) ProtoMessage() {}
 
 func (x *GetMembersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[17]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1286,7 +1568,7 @@ func (x *GetMembersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMembersResponse.ProtoReflect.Descriptor instead.
 func (*GetMembersResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{17}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetMembersResponse) GetMembers() []*ConversationMember {
@@ -1337,7 +1619,7 @@ type LeaveConversationRequest struct {
 
 func (x *LeaveConversationRequest) Reset() {
 	*x = LeaveConversationRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[18]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1349,7 +1631,7 @@ func (x *LeaveConversationRequest) String() string {
 func (*LeaveConversationRequest) ProtoMessage() {}
 
 func (x *LeaveConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[18]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1362,7 +1644,7 @@ func (x *LeaveConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaveConversationRequest.ProtoReflect.Descriptor instead.
 func (*LeaveConversationRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{18}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *LeaveConversationRequest) GetUserId() string {
@@ -1390,7 +1672,7 @@ type LeaveConversationResponse struct {
 
 func (x *LeaveConversationResponse) Reset() {
 	*x = LeaveConversationResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[19]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1402,7 +1684,7 @@ func (x *LeaveConversationResponse) String() string {
 func (*LeaveConversationResponse) ProtoMessage() {}
 
 func (x *LeaveConversationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[19]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1415,7 +1697,7 @@ func (x *LeaveConversationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaveConversationResponse.ProtoReflect.Descriptor instead.
 func (*LeaveConversationResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{19}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *LeaveConversationResponse) GetSuccess() bool {
@@ -1441,14 +1723,14 @@ type GetMessagesRequest struct {
 	// 排序方向（true: 升序, false: 降序）
 	Ascending bool `protobuf:"varint,6,opt,name=ascending,proto3" json:"ascending,omitempty"`
 	// 消息类型过滤（可选）
-	TypeFilter    []MessageType `protobuf:"varint,7,rep,packed,name=type_filter,json=typeFilter,proto3,enum=im.logic.v1.MessageType" json:"type_filter,omitempty"`
+	TypeFilter    []v1.MessageType `protobuf:"varint,7,rep,packed,name=type_filter,json=typeFilter,proto3,enum=common.v1.MessageType" json:"type_filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetMessagesRequest) Reset() {
 	*x = GetMessagesRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[20]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1460,7 +1742,7 @@ func (x *GetMessagesRequest) String() string {
 func (*GetMessagesRequest) ProtoMessage() {}
 
 func (x *GetMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[20]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1473,7 +1755,7 @@ func (x *GetMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMessagesRequest.ProtoReflect.Descriptor instead.
 func (*GetMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{20}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetMessagesRequest) GetUserId() string {
@@ -1518,7 +1800,7 @@ func (x *GetMessagesRequest) GetAscending() bool {
 	return false
 }
 
-func (x *GetMessagesRequest) GetTypeFilter() []MessageType {
+func (x *GetMessagesRequest) GetTypeFilter() []v1.MessageType {
 	if x != nil {
 		return x.TypeFilter
 	}
@@ -1542,7 +1824,7 @@ type GetMessagesResponse struct {
 
 func (x *GetMessagesResponse) Reset() {
 	*x = GetMessagesResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[21]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1554,7 +1836,7 @@ func (x *GetMessagesResponse) String() string {
 func (*GetMessagesResponse) ProtoMessage() {}
 
 func (x *GetMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[21]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1567,7 +1849,7 @@ func (x *GetMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMessagesResponse.ProtoReflect.Descriptor instead.
 func (*GetMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{21}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetMessagesResponse) GetMessages() []*Message {
@@ -1613,7 +1895,7 @@ type MarkAsReadRequest struct {
 
 func (x *MarkAsReadRequest) Reset() {
 	*x = MarkAsReadRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[22]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1625,7 +1907,7 @@ func (x *MarkAsReadRequest) String() string {
 func (*MarkAsReadRequest) ProtoMessage() {}
 
 func (x *MarkAsReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[22]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1638,7 +1920,7 @@ func (x *MarkAsReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkAsReadRequest.ProtoReflect.Descriptor instead.
 func (*MarkAsReadRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{22}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *MarkAsReadRequest) GetUserId() string {
@@ -1675,7 +1957,7 @@ type MarkAsReadResponse struct {
 
 func (x *MarkAsReadResponse) Reset() {
 	*x = MarkAsReadResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[23]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1687,7 +1969,7 @@ func (x *MarkAsReadResponse) String() string {
 func (*MarkAsReadResponse) ProtoMessage() {}
 
 func (x *MarkAsReadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[23]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1700,7 +1982,7 @@ func (x *MarkAsReadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkAsReadResponse.ProtoReflect.Descriptor instead.
 func (*MarkAsReadResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{23}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *MarkAsReadResponse) GetSuccess() bool {
@@ -1730,7 +2012,7 @@ type GetUnreadCountRequest struct {
 
 func (x *GetUnreadCountRequest) Reset() {
 	*x = GetUnreadCountRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[24]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1742,7 +2024,7 @@ func (x *GetUnreadCountRequest) String() string {
 func (*GetUnreadCountRequest) ProtoMessage() {}
 
 func (x *GetUnreadCountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[24]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1755,7 +2037,7 @@ func (x *GetUnreadCountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUnreadCountRequest.ProtoReflect.Descriptor instead.
 func (*GetUnreadCountRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{24}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetUnreadCountRequest) GetUserId() string {
@@ -1785,7 +2067,7 @@ type GetUnreadCountResponse struct {
 
 func (x *GetUnreadCountResponse) Reset() {
 	*x = GetUnreadCountResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[25]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1797,7 +2079,7 @@ func (x *GetUnreadCountResponse) String() string {
 func (*GetUnreadCountResponse) ProtoMessage() {}
 
 func (x *GetUnreadCountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[25]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1810,7 +2092,7 @@ func (x *GetUnreadCountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUnreadCountResponse.ProtoReflect.Descriptor instead.
 func (*GetUnreadCountResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{25}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetUnreadCountResponse) GetUnreadCount() int64 {
@@ -1838,7 +2120,7 @@ type JoinWorldChatRequest struct {
 
 func (x *JoinWorldChatRequest) Reset() {
 	*x = JoinWorldChatRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[26]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1850,7 +2132,7 @@ func (x *JoinWorldChatRequest) String() string {
 func (*JoinWorldChatRequest) ProtoMessage() {}
 
 func (x *JoinWorldChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[26]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1863,7 +2145,7 @@ func (x *JoinWorldChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinWorldChatRequest.ProtoReflect.Descriptor instead.
 func (*JoinWorldChatRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{26}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *JoinWorldChatRequest) GetUserId() string {
@@ -1886,7 +2168,7 @@ type JoinWorldChatResponse struct {
 
 func (x *JoinWorldChatResponse) Reset() {
 	*x = JoinWorldChatResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[27]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1898,7 +2180,7 @@ func (x *JoinWorldChatResponse) String() string {
 func (*JoinWorldChatResponse) ProtoMessage() {}
 
 func (x *JoinWorldChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[27]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1911,7 +2193,7 @@ func (x *JoinWorldChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinWorldChatResponse.ProtoReflect.Descriptor instead.
 func (*JoinWorldChatResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{27}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *JoinWorldChatResponse) GetSuccess() bool {
@@ -1936,7 +2218,7 @@ type SearchConversationsRequest struct {
 	// 搜索关键词
 	Query string `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
 	// 会话类型过滤（可选）
-	TypeFilter ConversationType `protobuf:"varint,3,opt,name=type_filter,json=typeFilter,proto3,enum=im.logic.v1.ConversationType" json:"type_filter,omitempty"`
+	TypeFilter v1.ConversationType `protobuf:"varint,3,opt,name=type_filter,json=typeFilter,proto3,enum=common.v1.ConversationType" json:"type_filter,omitempty"`
 	// 限制数量
 	Limit         int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1945,7 +2227,7 @@ type SearchConversationsRequest struct {
 
 func (x *SearchConversationsRequest) Reset() {
 	*x = SearchConversationsRequest{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[28]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1957,7 +2239,7 @@ func (x *SearchConversationsRequest) String() string {
 func (*SearchConversationsRequest) ProtoMessage() {}
 
 func (x *SearchConversationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[28]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1970,7 +2252,7 @@ func (x *SearchConversationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchConversationsRequest.ProtoReflect.Descriptor instead.
 func (*SearchConversationsRequest) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{28}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SearchConversationsRequest) GetUserId() string {
@@ -1987,11 +2269,11 @@ func (x *SearchConversationsRequest) GetQuery() string {
 	return ""
 }
 
-func (x *SearchConversationsRequest) GetTypeFilter() ConversationType {
+func (x *SearchConversationsRequest) GetTypeFilter() v1.ConversationType {
 	if x != nil {
 		return x.TypeFilter
 	}
-	return ConversationType_CONVERSATION_TYPE_UNSPECIFIED
+	return v1.ConversationType(0)
 }
 
 func (x *SearchConversationsRequest) GetLimit() int32 {
@@ -2012,7 +2294,7 @@ type SearchConversationsResponse struct {
 
 func (x *SearchConversationsResponse) Reset() {
 	*x = SearchConversationsResponse{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[29]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2024,7 +2306,7 @@ func (x *SearchConversationsResponse) String() string {
 func (*SearchConversationsResponse) ProtoMessage() {}
 
 func (x *SearchConversationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[29]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2037,7 +2319,7 @@ func (x *SearchConversationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchConversationsResponse.ProtoReflect.Descriptor instead.
 func (*SearchConversationsResponse) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{29}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *SearchConversationsResponse) GetConversations() []*Conversation {
@@ -2053,7 +2335,7 @@ type Conversation struct {
 	// 会话 ID
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// 会话类型
-	Type ConversationType `protobuf:"varint,2,opt,name=type,proto3,enum=im.logic.v1.ConversationType" json:"type,omitempty"`
+	Type v1.ConversationType `protobuf:"varint,2,opt,name=type,proto3,enum=common.v1.ConversationType" json:"type,omitempty"`
 	// 会话名称
 	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// 会话头像 URL
@@ -2082,7 +2364,7 @@ type Conversation struct {
 
 func (x *Conversation) Reset() {
 	*x = Conversation{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[30]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2094,7 +2376,7 @@ func (x *Conversation) String() string {
 func (*Conversation) ProtoMessage() {}
 
 func (x *Conversation) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[30]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2107,7 +2389,7 @@ func (x *Conversation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Conversation.ProtoReflect.Descriptor instead.
 func (*Conversation) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{30}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *Conversation) GetId() string {
@@ -2117,11 +2399,11 @@ func (x *Conversation) GetId() string {
 	return ""
 }
 
-func (x *Conversation) GetType() ConversationType {
+func (x *Conversation) GetType() v1.ConversationType {
 	if x != nil {
 		return x.Type
 	}
-	return ConversationType_CONVERSATION_TYPE_UNSPECIFIED
+	return v1.ConversationType(0)
 }
 
 func (x *Conversation) GetName() string {
@@ -2216,7 +2498,7 @@ type ConversationSettings struct {
 
 func (x *ConversationSettings) Reset() {
 	*x = ConversationSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[31]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2228,7 +2510,7 @@ func (x *ConversationSettings) String() string {
 func (*ConversationSettings) ProtoMessage() {}
 
 func (x *ConversationSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[31]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2241,7 +2523,7 @@ func (x *ConversationSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationSettings.ProtoReflect.Descriptor instead.
 func (*ConversationSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{31}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ConversationSettings) GetGroupSettings() *GroupSettings {
@@ -2286,7 +2568,7 @@ type GroupSettings struct {
 
 func (x *GroupSettings) Reset() {
 	*x = GroupSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[32]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2298,7 +2580,7 @@ func (x *GroupSettings) String() string {
 func (*GroupSettings) ProtoMessage() {}
 
 func (x *GroupSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[32]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2311,7 +2593,7 @@ func (x *GroupSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupSettings.ProtoReflect.Descriptor instead.
 func (*GroupSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{32}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GroupSettings) GetJoinApprovalRequired() bool {
@@ -2373,7 +2655,7 @@ type WorldChatSettings struct {
 
 func (x *WorldChatSettings) Reset() {
 	*x = WorldChatSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2385,7 +2667,7 @@ func (x *WorldChatSettings) String() string {
 func (*WorldChatSettings) ProtoMessage() {}
 
 func (x *WorldChatSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2398,7 +2680,7 @@ func (x *WorldChatSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorldChatSettings.ProtoReflect.Descriptor instead.
 func (*WorldChatSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{33}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *WorldChatSettings) GetGuestAllowed() bool {
@@ -2444,7 +2726,7 @@ type SingleChatSettings struct {
 
 func (x *SingleChatSettings) Reset() {
 	*x = SingleChatSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2456,7 +2738,7 @@ func (x *SingleChatSettings) String() string {
 func (*SingleChatSettings) ProtoMessage() {}
 
 func (x *SingleChatSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2469,7 +2751,7 @@ func (x *SingleChatSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SingleChatSettings.ProtoReflect.Descriptor instead.
 func (*SingleChatSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{34}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *SingleChatSettings) GetAllowRecall() bool {
@@ -2501,7 +2783,7 @@ type ConversationMember struct {
 	// 会话 ID
 	ConversationId string `protobuf:"bytes,2,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
 	// 成员角色
-	Role ConversationMemberRole `protobuf:"varint,3,opt,name=role,proto3,enum=im.logic.v1.ConversationMemberRole" json:"role,omitempty"`
+	Role v1.ConversationMemberRole `protobuf:"varint,3,opt,name=role,proto3,enum=common.v1.ConversationMemberRole" json:"role,omitempty"`
 	// 是否被禁言
 	Muted bool `protobuf:"varint,4,opt,name=muted,proto3" json:"muted,omitempty"`
 	// 禁言到期时间（Unix 时间戳，0表示未被禁言）
@@ -2518,7 +2800,7 @@ type ConversationMember struct {
 
 func (x *ConversationMember) Reset() {
 	*x = ConversationMember{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[35]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2530,7 +2812,7 @@ func (x *ConversationMember) String() string {
 func (*ConversationMember) ProtoMessage() {}
 
 func (x *ConversationMember) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[35]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2543,7 +2825,7 @@ func (x *ConversationMember) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationMember.ProtoReflect.Descriptor instead.
 func (*ConversationMember) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{35}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ConversationMember) GetUserId() string {
@@ -2560,11 +2842,11 @@ func (x *ConversationMember) GetConversationId() string {
 	return ""
 }
 
-func (x *ConversationMember) GetRole() ConversationMemberRole {
+func (x *ConversationMember) GetRole() v1.ConversationMemberRole {
 	if x != nil {
 		return x.Role
 	}
-	return ConversationMemberRole_CONVERSATION_MEMBER_ROLE_UNSPECIFIED
+	return v1.ConversationMemberRole(0)
 }
 
 func (x *ConversationMember) GetMuted() bool {
@@ -2615,7 +2897,7 @@ type ConversationUnreadCount struct {
 
 func (x *ConversationUnreadCount) Reset() {
 	*x = ConversationUnreadCount{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[36]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2627,7 +2909,7 @@ func (x *ConversationUnreadCount) String() string {
 func (*ConversationUnreadCount) ProtoMessage() {}
 
 func (x *ConversationUnreadCount) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[36]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2640,7 +2922,7 @@ func (x *ConversationUnreadCount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationUnreadCount.ProtoReflect.Descriptor instead.
 func (*ConversationUnreadCount) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{36}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ConversationUnreadCount) GetConversationId() string {
@@ -2665,14 +2947,14 @@ type FailedUser struct {
 	// 失败原因
 	Reason string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	// 错误码
-	ErrorCode     ErrorCode `protobuf:"varint,3,opt,name=error_code,json=errorCode,proto3,enum=im.logic.v1.ErrorCode" json:"error_code,omitempty"`
+	ErrorCode     v1.ErrorCode `protobuf:"varint,3,opt,name=error_code,json=errorCode,proto3,enum=common.v1.ErrorCode" json:"error_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FailedUser) Reset() {
 	*x = FailedUser{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[37]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2684,7 +2966,7 @@ func (x *FailedUser) String() string {
 func (*FailedUser) ProtoMessage() {}
 
 func (x *FailedUser) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[37]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2697,7 +2979,7 @@ func (x *FailedUser) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailedUser.ProtoReflect.Descriptor instead.
 func (*FailedUser) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{37}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *FailedUser) GetUserId() string {
@@ -2714,22 +2996,22 @@ func (x *FailedUser) GetReason() string {
 	return ""
 }
 
-func (x *FailedUser) GetErrorCode() ErrorCode {
+func (x *FailedUser) GetErrorCode() v1.ErrorCode {
 	if x != nil {
 		return x.ErrorCode
 	}
-	return ErrorCode_ERROR_CODE_UNSPECIFIED
+	return v1.ErrorCode(0)
 }
 
 var File_im_logic_v1_conversation_proto protoreflect.FileDescriptor
 
 const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\n" +
-	"\x1eim_logic/v1/conversation.proto\x12\vim.logic.v1\x1a\x18im_logic/v1/common.proto\"\xa0\x02\n" +
+	"\x1eim_logic/v1/conversation.proto\x12\vim.logic.v1\x1a\x18im_logic/v1/common.proto\x1a\x15common/v1/types.proto\"\x9e\x02\n" +
 	"\x19CreateConversationRequest\x12\x1d\n" +
 	"\n" +
-	"creator_id\x18\x01 \x01(\tR\tcreatorId\x121\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x1d.im.logic.v1.ConversationTypeR\x04type\x12\x12\n" +
+	"creator_id\x18\x01 \x01(\tR\tcreatorId\x12/\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x1b.common.v1.ConversationTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12 \n" +
@@ -2745,12 +3027,12 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x0finclude_members\x18\x03 \x01(\bR\x0eincludeMembers\"\x93\x01\n" +
 	"\x17GetConversationResponse\x12=\n" +
 	"\fconversation\x18\x01 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\x129\n" +
-	"\amembers\x18\x02 \x03(\v2\x1f.im.logic.v1.ConversationMemberR\amembers\"\xbe\x01\n" +
+	"\amembers\x18\x02 \x03(\v2\x1f.im.logic.v1.ConversationMemberR\amembers\"\xbc\x01\n" +
 	"\x17GetConversationsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12>\n" +
-	"\vtype_filter\x18\x04 \x01(\x0e2\x1d.im.logic.v1.ConversationTypeR\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12<\n" +
+	"\vtype_filter\x18\x04 \x01(\x0e2\x1b.common.v1.ConversationTypeR\n" +
 	"typeFilter\x12\x19\n" +
 	"\border_by\x18\x05 \x01(\tR\aorderBy\"\xbd\x01\n" +
 	"\x18GetConversationsResponse\x12?\n" +
@@ -2758,7 +3040,41 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x19\n" +
-	"\bhas_more\x18\x05 \x01(\bR\ahasMore\"\x92\x02\n" +
+	"\bhas_more\x18\x05 \x01(\bR\ahasMore\"\xa9\x02\n" +
+	" GetConversationsOptimizedRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12<\n" +
+	"\vtype_filter\x18\x04 \x01(\x0e2\x1b.common.v1.ConversationTypeR\n" +
+	"typeFilter\x12\x19\n" +
+	"\border_by\x18\x05 \x01(\tR\aorderBy\x120\n" +
+	"\x14include_last_message\x18\x06 \x01(\bR\x12includeLastMessage\x120\n" +
+	"\x14include_unread_count\x18\a \x01(\bR\x12includeUnreadCount\"\xcf\x01\n" +
+	"!GetConversationsOptimizedResponse\x12H\n" +
+	"\rconversations\x18\x01 \x03(\v2\".im.logic.v1.ConversationOptimizedR\rconversations\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x19\n" +
+	"\bhas_more\x18\x05 \x01(\bR\ahasMore\"\xb4\x04\n" +
+	"\x15ConversationOptimized\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12/\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x1b.common.v1.ConversationTypeR\x04type\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x19\n" +
+	"\bowner_id\x18\x06 \x01(\tR\aownerId\x12!\n" +
+	"\fmember_count\x18\a \x01(\x05R\vmemberCount\x12=\n" +
+	"\bsettings\x18\b \x01(\v2!.im.logic.v1.ConversationSettingsR\bsettings\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\v \x01(\x03R\tupdatedAt\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\f \x01(\x03R\tcreatedAt\x12D\n" +
+	"\rmy_membership\x18\r \x01(\v2\x1f.im.logic.v1.ConversationMemberR\fmyMembership\x127\n" +
+	"\flast_message\x18\t \x01(\v2\x14.im.logic.v1.MessageR\vlastMessage\x12!\n" +
+	"\funread_count\x18\n" +
+	" \x01(\x03R\vunreadCount\x12(\n" +
+	"\x10last_activity_at\x18\x0e \x01(\x03R\x0elastActivityAt\"\x92\x02\n" +
 	"\x19UpdateConversationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x12\n" +
@@ -2776,13 +3092,13 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\"6\n" +
 	"\x1aDeleteConversationResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xb1\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xaf\x01\n" +
 	"\x11AddMembersRequest\x12\x1f\n" +
 	"\voperator_id\x18\x01 \x01(\tR\n" +
 	"operatorId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x19\n" +
-	"\buser_ids\x18\x03 \x03(\tR\auserIds\x127\n" +
-	"\x04role\x18\x04 \x01(\x0e2#.im.logic.v1.ConversationMemberRoleR\x04role\"\x90\x01\n" +
+	"\buser_ids\x18\x03 \x03(\tR\auserIds\x125\n" +
+	"\x04role\x18\x04 \x01(\x0e2!.common.v1.ConversationMemberRoleR\x04role\"\x90\x01\n" +
 	"\x12AddMembersResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12$\n" +
 	"\x0eadded_user_ids\x18\x02 \x03(\tR\faddedUserIds\x12:\n" +
@@ -2796,21 +3112,21 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x15RemoveMembersResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12(\n" +
 	"\x10removed_user_ids\x18\x02 \x03(\tR\x0eremovedUserIds\x12:\n" +
-	"\ffailed_users\x18\x03 \x03(\v2\x17.im.logic.v1.FailedUserR\vfailedUsers\"\xc9\x01\n" +
+	"\ffailed_users\x18\x03 \x03(\v2\x17.im.logic.v1.FailedUserR\vfailedUsers\"\xc7\x01\n" +
 	"\x17UpdateMemberRoleRequest\x12\x1f\n" +
 	"\voperator_id\x18\x01 \x01(\tR\n" +
 	"operatorId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12$\n" +
-	"\x0etarget_user_id\x18\x03 \x01(\tR\ftargetUserId\x12>\n" +
-	"\bnew_role\x18\x04 \x01(\x0e2#.im.logic.v1.ConversationMemberRoleR\anewRole\"4\n" +
+	"\x0etarget_user_id\x18\x03 \x01(\tR\ftargetUserId\x12<\n" +
+	"\bnew_role\x18\x04 \x01(\x0e2!.common.v1.ConversationMemberRoleR\anewRole\"4\n" +
 	"\x18UpdateMemberRoleResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xcc\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xca\x01\n" +
 	"\x11GetMembersRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12D\n" +
-	"\vrole_filter\x18\x05 \x01(\x0e2#.im.logic.v1.ConversationMemberRoleR\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12B\n" +
+	"\vrole_filter\x18\x05 \x01(\x0e2!.common.v1.ConversationMemberRoleR\n" +
 	"roleFilter\"\xb1\x01\n" +
 	"\x12GetMembersResponse\x129\n" +
 	"\amembers\x18\x01 \x03(\v2\x1f.im.logic.v1.ConversationMemberR\amembers\x12\x14\n" +
@@ -2822,7 +3138,7 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\"5\n" +
 	"\x19LeaveConversationResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x85\x02\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x83\x02\n" +
 	"\x12GetMessagesRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12 \n" +
@@ -2831,8 +3147,8 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\n" +
 	"end_seq_id\x18\x04 \x01(\x03R\bendSeqId\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x1c\n" +
-	"\tascending\x18\x06 \x01(\bR\tascending\x129\n" +
-	"\vtype_filter\x18\a \x03(\x0e2\x18.im.logic.v1.MessageTypeR\n" +
+	"\tascending\x18\x06 \x01(\bR\tascending\x127\n" +
+	"\vtype_filter\x18\a \x03(\x0e2\x16.common.v1.MessageTypeR\n" +
 	"typeFilter\"\xa2\x01\n" +
 	"\x13GetMessagesResponse\x120\n" +
 	"\bmessages\x18\x01 \x03(\v2\x14.im.logic.v1.MessageR\bmessages\x12\x19\n" +
@@ -2856,18 +3172,18 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"p\n" +
 	"\x15JoinWorldChatResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12=\n" +
-	"\fconversation\x18\x02 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\"\xa1\x01\n" +
+	"\fconversation\x18\x02 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\"\x9f\x01\n" +
 	"\x1aSearchConversationsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
-	"\x05query\x18\x02 \x01(\tR\x05query\x12>\n" +
-	"\vtype_filter\x18\x03 \x01(\x0e2\x1d.im.logic.v1.ConversationTypeR\n" +
+	"\x05query\x18\x02 \x01(\tR\x05query\x12<\n" +
+	"\vtype_filter\x18\x03 \x01(\x0e2\x1b.common.v1.ConversationTypeR\n" +
 	"typeFilter\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\"^\n" +
 	"\x1bSearchConversationsResponse\x12?\n" +
-	"\rconversations\x18\x01 \x03(\v2\x19.im.logic.v1.ConversationR\rconversations\"\x83\x04\n" +
+	"\rconversations\x18\x01 \x03(\v2\x19.im.logic.v1.ConversationR\rconversations\"\x81\x04\n" +
 	"\fConversation\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x1d.im.logic.v1.ConversationTypeR\x04type\x12\x12\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12/\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x1b.common.v1.ConversationTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12 \n" +
@@ -2903,11 +3219,11 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x12SingleChatSettings\x12!\n" +
 	"\fallow_recall\x18\x01 \x01(\bR\vallowRecall\x12*\n" +
 	"\x11recall_time_limit\x18\x02 \x01(\x05R\x0frecallTimeLimit\x12(\n" +
-	"\x10show_read_status\x18\x03 \x01(\bR\x0eshowReadStatus\"\xa9\x02\n" +
+	"\x10show_read_status\x18\x03 \x01(\bR\x0eshowReadStatus\"\xa7\x02\n" +
 	"\x12ConversationMember\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
-	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x127\n" +
-	"\x04role\x18\x03 \x01(\x0e2#.im.logic.v1.ConversationMemberRoleR\x04role\x12\x14\n" +
+	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x125\n" +
+	"\x04role\x18\x03 \x01(\x0e2!.common.v1.ConversationMemberRoleR\x04role\x12\x14\n" +
 	"\x05muted\x18\x04 \x01(\bR\x05muted\x12\x1f\n" +
 	"\vmuted_until\x18\x05 \x01(\x03R\n" +
 	"mutedUntil\x12\x1b\n" +
@@ -2917,22 +3233,18 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x04user\x18\b \x01(\v2\x11.im.logic.v1.UserR\x04user\"e\n" +
 	"\x17ConversationUnreadCount\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId\x12!\n" +
-	"\funread_count\x18\x02 \x01(\x03R\vunreadCount\"t\n" +
+	"\funread_count\x18\x02 \x01(\x03R\vunreadCount\"r\n" +
 	"\n" +
 	"FailedUser\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\x125\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x123\n" +
 	"\n" +
-	"error_code\x18\x03 \x01(\x0e2\x16.im.logic.v1.ErrorCodeR\terrorCode*\xaf\x01\n" +
-	"\x16ConversationMemberRole\x12(\n" +
-	"$CONVERSATION_MEMBER_ROLE_UNSPECIFIED\x10\x00\x12#\n" +
-	"\x1fCONVERSATION_MEMBER_ROLE_MEMBER\x10\x01\x12\"\n" +
-	"\x1eCONVERSATION_MEMBER_ROLE_ADMIN\x10\x02\x12\"\n" +
-	"\x1eCONVERSATION_MEMBER_ROLE_OWNER\x10\x032\x82\v\n" +
+	"error_code\x18\x03 \x01(\x0e2\x14.common.v1.ErrorCodeR\terrorCode2\xfe\v\n" +
 	"\x13ConversationService\x12e\n" +
 	"\x12CreateConversation\x12&.im.logic.v1.CreateConversationRequest\x1a'.im.logic.v1.CreateConversationResponse\x12\\\n" +
 	"\x0fGetConversation\x12#.im.logic.v1.GetConversationRequest\x1a$.im.logic.v1.GetConversationResponse\x12_\n" +
-	"\x10GetConversations\x12$.im.logic.v1.GetConversationsRequest\x1a%.im.logic.v1.GetConversationsResponse\x12e\n" +
+	"\x10GetConversations\x12$.im.logic.v1.GetConversationsRequest\x1a%.im.logic.v1.GetConversationsResponse\x12z\n" +
+	"\x19GetConversationsOptimized\x12-.im.logic.v1.GetConversationsOptimizedRequest\x1a..im.logic.v1.GetConversationsOptimizedResponse\x12e\n" +
 	"\x12UpdateConversation\x12&.im.logic.v1.UpdateConversationRequest\x1a'.im.logic.v1.UpdateConversationResponse\x12e\n" +
 	"\x12DeleteConversation\x12&.im.logic.v1.DeleteConversationRequest\x1a'.im.logic.v1.DeleteConversationResponse\x12M\n" +
 	"\n" +
@@ -2947,7 +3259,7 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"MarkAsRead\x12\x1e.im.logic.v1.MarkAsReadRequest\x1a\x1f.im.logic.v1.MarkAsReadResponse\x12Y\n" +
 	"\x0eGetUnreadCount\x12\".im.logic.v1.GetUnreadCountRequest\x1a#.im.logic.v1.GetUnreadCountResponse\x12V\n" +
 	"\rJoinWorldChat\x12!.im.logic.v1.JoinWorldChatRequest\x1a\".im.logic.v1.JoinWorldChatResponse\x12h\n" +
-	"\x13SearchConversations\x12'.im.logic.v1.SearchConversationsRequest\x1a(.im.logic.v1.SearchConversationsResponseB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
+	"\x13SearchConversations\x12'.im.logic.v1.SearchConversationsRequest\x1a(.im.logic.v1.SearchConversationsResponseB9Z7github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1b\x06proto3"
 
 var (
 	file_im_logic_v1_conversation_proto_rawDescOnce sync.Once
@@ -2961,121 +3273,131 @@ func file_im_logic_v1_conversation_proto_rawDescGZIP() []byte {
 	return file_im_logic_v1_conversation_proto_rawDescData
 }
 
-var file_im_logic_v1_conversation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_im_logic_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_im_logic_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_im_logic_v1_conversation_proto_goTypes = []any{
-	(ConversationMemberRole)(0),         // 0: im.logic.v1.ConversationMemberRole
-	(*CreateConversationRequest)(nil),   // 1: im.logic.v1.CreateConversationRequest
-	(*CreateConversationResponse)(nil),  // 2: im.logic.v1.CreateConversationResponse
-	(*GetConversationRequest)(nil),      // 3: im.logic.v1.GetConversationRequest
-	(*GetConversationResponse)(nil),     // 4: im.logic.v1.GetConversationResponse
-	(*GetConversationsRequest)(nil),     // 5: im.logic.v1.GetConversationsRequest
-	(*GetConversationsResponse)(nil),    // 6: im.logic.v1.GetConversationsResponse
-	(*UpdateConversationRequest)(nil),   // 7: im.logic.v1.UpdateConversationRequest
-	(*UpdateConversationResponse)(nil),  // 8: im.logic.v1.UpdateConversationResponse
-	(*DeleteConversationRequest)(nil),   // 9: im.logic.v1.DeleteConversationRequest
-	(*DeleteConversationResponse)(nil),  // 10: im.logic.v1.DeleteConversationResponse
-	(*AddMembersRequest)(nil),           // 11: im.logic.v1.AddMembersRequest
-	(*AddMembersResponse)(nil),          // 12: im.logic.v1.AddMembersResponse
-	(*RemoveMembersRequest)(nil),        // 13: im.logic.v1.RemoveMembersRequest
-	(*RemoveMembersResponse)(nil),       // 14: im.logic.v1.RemoveMembersResponse
-	(*UpdateMemberRoleRequest)(nil),     // 15: im.logic.v1.UpdateMemberRoleRequest
-	(*UpdateMemberRoleResponse)(nil),    // 16: im.logic.v1.UpdateMemberRoleResponse
-	(*GetMembersRequest)(nil),           // 17: im.logic.v1.GetMembersRequest
-	(*GetMembersResponse)(nil),          // 18: im.logic.v1.GetMembersResponse
-	(*LeaveConversationRequest)(nil),    // 19: im.logic.v1.LeaveConversationRequest
-	(*LeaveConversationResponse)(nil),   // 20: im.logic.v1.LeaveConversationResponse
-	(*GetMessagesRequest)(nil),          // 21: im.logic.v1.GetMessagesRequest
-	(*GetMessagesResponse)(nil),         // 22: im.logic.v1.GetMessagesResponse
-	(*MarkAsReadRequest)(nil),           // 23: im.logic.v1.MarkAsReadRequest
-	(*MarkAsReadResponse)(nil),          // 24: im.logic.v1.MarkAsReadResponse
-	(*GetUnreadCountRequest)(nil),       // 25: im.logic.v1.GetUnreadCountRequest
-	(*GetUnreadCountResponse)(nil),      // 26: im.logic.v1.GetUnreadCountResponse
-	(*JoinWorldChatRequest)(nil),        // 27: im.logic.v1.JoinWorldChatRequest
-	(*JoinWorldChatResponse)(nil),       // 28: im.logic.v1.JoinWorldChatResponse
-	(*SearchConversationsRequest)(nil),  // 29: im.logic.v1.SearchConversationsRequest
-	(*SearchConversationsResponse)(nil), // 30: im.logic.v1.SearchConversationsResponse
-	(*Conversation)(nil),                // 31: im.logic.v1.Conversation
-	(*ConversationSettings)(nil),        // 32: im.logic.v1.ConversationSettings
-	(*GroupSettings)(nil),               // 33: im.logic.v1.GroupSettings
-	(*WorldChatSettings)(nil),           // 34: im.logic.v1.WorldChatSettings
-	(*SingleChatSettings)(nil),          // 35: im.logic.v1.SingleChatSettings
-	(*ConversationMember)(nil),          // 36: im.logic.v1.ConversationMember
-	(*ConversationUnreadCount)(nil),     // 37: im.logic.v1.ConversationUnreadCount
-	(*FailedUser)(nil),                  // 38: im.logic.v1.FailedUser
-	(ConversationType)(0),               // 39: im.logic.v1.ConversationType
-	(MessageType)(0),                    // 40: im.logic.v1.MessageType
-	(*Message)(nil),                     // 41: im.logic.v1.Message
-	(*User)(nil),                        // 42: im.logic.v1.User
-	(ErrorCode)(0),                      // 43: im.logic.v1.ErrorCode
+	(*CreateConversationRequest)(nil),         // 0: im.logic.v1.CreateConversationRequest
+	(*CreateConversationResponse)(nil),        // 1: im.logic.v1.CreateConversationResponse
+	(*GetConversationRequest)(nil),            // 2: im.logic.v1.GetConversationRequest
+	(*GetConversationResponse)(nil),           // 3: im.logic.v1.GetConversationResponse
+	(*GetConversationsRequest)(nil),           // 4: im.logic.v1.GetConversationsRequest
+	(*GetConversationsResponse)(nil),          // 5: im.logic.v1.GetConversationsResponse
+	(*GetConversationsOptimizedRequest)(nil),  // 6: im.logic.v1.GetConversationsOptimizedRequest
+	(*GetConversationsOptimizedResponse)(nil), // 7: im.logic.v1.GetConversationsOptimizedResponse
+	(*ConversationOptimized)(nil),             // 8: im.logic.v1.ConversationOptimized
+	(*UpdateConversationRequest)(nil),         // 9: im.logic.v1.UpdateConversationRequest
+	(*UpdateConversationResponse)(nil),        // 10: im.logic.v1.UpdateConversationResponse
+	(*DeleteConversationRequest)(nil),         // 11: im.logic.v1.DeleteConversationRequest
+	(*DeleteConversationResponse)(nil),        // 12: im.logic.v1.DeleteConversationResponse
+	(*AddMembersRequest)(nil),                 // 13: im.logic.v1.AddMembersRequest
+	(*AddMembersResponse)(nil),                // 14: im.logic.v1.AddMembersResponse
+	(*RemoveMembersRequest)(nil),              // 15: im.logic.v1.RemoveMembersRequest
+	(*RemoveMembersResponse)(nil),             // 16: im.logic.v1.RemoveMembersResponse
+	(*UpdateMemberRoleRequest)(nil),           // 17: im.logic.v1.UpdateMemberRoleRequest
+	(*UpdateMemberRoleResponse)(nil),          // 18: im.logic.v1.UpdateMemberRoleResponse
+	(*GetMembersRequest)(nil),                 // 19: im.logic.v1.GetMembersRequest
+	(*GetMembersResponse)(nil),                // 20: im.logic.v1.GetMembersResponse
+	(*LeaveConversationRequest)(nil),          // 21: im.logic.v1.LeaveConversationRequest
+	(*LeaveConversationResponse)(nil),         // 22: im.logic.v1.LeaveConversationResponse
+	(*GetMessagesRequest)(nil),                // 23: im.logic.v1.GetMessagesRequest
+	(*GetMessagesResponse)(nil),               // 24: im.logic.v1.GetMessagesResponse
+	(*MarkAsReadRequest)(nil),                 // 25: im.logic.v1.MarkAsReadRequest
+	(*MarkAsReadResponse)(nil),                // 26: im.logic.v1.MarkAsReadResponse
+	(*GetUnreadCountRequest)(nil),             // 27: im.logic.v1.GetUnreadCountRequest
+	(*GetUnreadCountResponse)(nil),            // 28: im.logic.v1.GetUnreadCountResponse
+	(*JoinWorldChatRequest)(nil),              // 29: im.logic.v1.JoinWorldChatRequest
+	(*JoinWorldChatResponse)(nil),             // 30: im.logic.v1.JoinWorldChatResponse
+	(*SearchConversationsRequest)(nil),        // 31: im.logic.v1.SearchConversationsRequest
+	(*SearchConversationsResponse)(nil),       // 32: im.logic.v1.SearchConversationsResponse
+	(*Conversation)(nil),                      // 33: im.logic.v1.Conversation
+	(*ConversationSettings)(nil),              // 34: im.logic.v1.ConversationSettings
+	(*GroupSettings)(nil),                     // 35: im.logic.v1.GroupSettings
+	(*WorldChatSettings)(nil),                 // 36: im.logic.v1.WorldChatSettings
+	(*SingleChatSettings)(nil),                // 37: im.logic.v1.SingleChatSettings
+	(*ConversationMember)(nil),                // 38: im.logic.v1.ConversationMember
+	(*ConversationUnreadCount)(nil),           // 39: im.logic.v1.ConversationUnreadCount
+	(*FailedUser)(nil),                        // 40: im.logic.v1.FailedUser
+	(v1.ConversationType)(0),                  // 41: common.v1.ConversationType
+	(*Message)(nil),                           // 42: im.logic.v1.Message
+	(v1.ConversationMemberRole)(0),            // 43: common.v1.ConversationMemberRole
+	(v1.MessageType)(0),                       // 44: common.v1.MessageType
+	(*User)(nil),                              // 45: im.logic.v1.User
+	(v1.ErrorCode)(0),                         // 46: common.v1.ErrorCode
 }
 var file_im_logic_v1_conversation_proto_depIdxs = []int32{
-	39, // 0: im.logic.v1.CreateConversationRequest.type:type_name -> im.logic.v1.ConversationType
-	32, // 1: im.logic.v1.CreateConversationRequest.settings:type_name -> im.logic.v1.ConversationSettings
-	31, // 2: im.logic.v1.CreateConversationResponse.conversation:type_name -> im.logic.v1.Conversation
-	31, // 3: im.logic.v1.GetConversationResponse.conversation:type_name -> im.logic.v1.Conversation
-	36, // 4: im.logic.v1.GetConversationResponse.members:type_name -> im.logic.v1.ConversationMember
-	39, // 5: im.logic.v1.GetConversationsRequest.type_filter:type_name -> im.logic.v1.ConversationType
-	31, // 6: im.logic.v1.GetConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
-	32, // 7: im.logic.v1.UpdateConversationRequest.settings:type_name -> im.logic.v1.ConversationSettings
-	31, // 8: im.logic.v1.UpdateConversationResponse.conversation:type_name -> im.logic.v1.Conversation
-	0,  // 9: im.logic.v1.AddMembersRequest.role:type_name -> im.logic.v1.ConversationMemberRole
-	38, // 10: im.logic.v1.AddMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
-	38, // 11: im.logic.v1.RemoveMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
-	0,  // 12: im.logic.v1.UpdateMemberRoleRequest.new_role:type_name -> im.logic.v1.ConversationMemberRole
-	0,  // 13: im.logic.v1.GetMembersRequest.role_filter:type_name -> im.logic.v1.ConversationMemberRole
-	36, // 14: im.logic.v1.GetMembersResponse.members:type_name -> im.logic.v1.ConversationMember
-	40, // 15: im.logic.v1.GetMessagesRequest.type_filter:type_name -> im.logic.v1.MessageType
-	41, // 16: im.logic.v1.GetMessagesResponse.messages:type_name -> im.logic.v1.Message
-	37, // 17: im.logic.v1.GetUnreadCountResponse.conversation_counts:type_name -> im.logic.v1.ConversationUnreadCount
-	31, // 18: im.logic.v1.JoinWorldChatResponse.conversation:type_name -> im.logic.v1.Conversation
-	39, // 19: im.logic.v1.SearchConversationsRequest.type_filter:type_name -> im.logic.v1.ConversationType
-	31, // 20: im.logic.v1.SearchConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
-	39, // 21: im.logic.v1.Conversation.type:type_name -> im.logic.v1.ConversationType
-	32, // 22: im.logic.v1.Conversation.settings:type_name -> im.logic.v1.ConversationSettings
-	41, // 23: im.logic.v1.Conversation.last_message:type_name -> im.logic.v1.Message
-	36, // 24: im.logic.v1.Conversation.my_membership:type_name -> im.logic.v1.ConversationMember
-	33, // 25: im.logic.v1.ConversationSettings.group_settings:type_name -> im.logic.v1.GroupSettings
-	34, // 26: im.logic.v1.ConversationSettings.world_settings:type_name -> im.logic.v1.WorldChatSettings
-	35, // 27: im.logic.v1.ConversationSettings.single_settings:type_name -> im.logic.v1.SingleChatSettings
-	0,  // 28: im.logic.v1.ConversationMember.role:type_name -> im.logic.v1.ConversationMemberRole
-	42, // 29: im.logic.v1.ConversationMember.user:type_name -> im.logic.v1.User
-	43, // 30: im.logic.v1.FailedUser.error_code:type_name -> im.logic.v1.ErrorCode
-	1,  // 31: im.logic.v1.ConversationService.CreateConversation:input_type -> im.logic.v1.CreateConversationRequest
-	3,  // 32: im.logic.v1.ConversationService.GetConversation:input_type -> im.logic.v1.GetConversationRequest
-	5,  // 33: im.logic.v1.ConversationService.GetConversations:input_type -> im.logic.v1.GetConversationsRequest
-	7,  // 34: im.logic.v1.ConversationService.UpdateConversation:input_type -> im.logic.v1.UpdateConversationRequest
-	9,  // 35: im.logic.v1.ConversationService.DeleteConversation:input_type -> im.logic.v1.DeleteConversationRequest
-	11, // 36: im.logic.v1.ConversationService.AddMembers:input_type -> im.logic.v1.AddMembersRequest
-	13, // 37: im.logic.v1.ConversationService.RemoveMembers:input_type -> im.logic.v1.RemoveMembersRequest
-	15, // 38: im.logic.v1.ConversationService.UpdateMemberRole:input_type -> im.logic.v1.UpdateMemberRoleRequest
-	17, // 39: im.logic.v1.ConversationService.GetMembers:input_type -> im.logic.v1.GetMembersRequest
-	19, // 40: im.logic.v1.ConversationService.LeaveConversation:input_type -> im.logic.v1.LeaveConversationRequest
-	21, // 41: im.logic.v1.ConversationService.GetMessages:input_type -> im.logic.v1.GetMessagesRequest
-	23, // 42: im.logic.v1.ConversationService.MarkAsRead:input_type -> im.logic.v1.MarkAsReadRequest
-	25, // 43: im.logic.v1.ConversationService.GetUnreadCount:input_type -> im.logic.v1.GetUnreadCountRequest
-	27, // 44: im.logic.v1.ConversationService.JoinWorldChat:input_type -> im.logic.v1.JoinWorldChatRequest
-	29, // 45: im.logic.v1.ConversationService.SearchConversations:input_type -> im.logic.v1.SearchConversationsRequest
-	2,  // 46: im.logic.v1.ConversationService.CreateConversation:output_type -> im.logic.v1.CreateConversationResponse
-	4,  // 47: im.logic.v1.ConversationService.GetConversation:output_type -> im.logic.v1.GetConversationResponse
-	6,  // 48: im.logic.v1.ConversationService.GetConversations:output_type -> im.logic.v1.GetConversationsResponse
-	8,  // 49: im.logic.v1.ConversationService.UpdateConversation:output_type -> im.logic.v1.UpdateConversationResponse
-	10, // 50: im.logic.v1.ConversationService.DeleteConversation:output_type -> im.logic.v1.DeleteConversationResponse
-	12, // 51: im.logic.v1.ConversationService.AddMembers:output_type -> im.logic.v1.AddMembersResponse
-	14, // 52: im.logic.v1.ConversationService.RemoveMembers:output_type -> im.logic.v1.RemoveMembersResponse
-	16, // 53: im.logic.v1.ConversationService.UpdateMemberRole:output_type -> im.logic.v1.UpdateMemberRoleResponse
-	18, // 54: im.logic.v1.ConversationService.GetMembers:output_type -> im.logic.v1.GetMembersResponse
-	20, // 55: im.logic.v1.ConversationService.LeaveConversation:output_type -> im.logic.v1.LeaveConversationResponse
-	22, // 56: im.logic.v1.ConversationService.GetMessages:output_type -> im.logic.v1.GetMessagesResponse
-	24, // 57: im.logic.v1.ConversationService.MarkAsRead:output_type -> im.logic.v1.MarkAsReadResponse
-	26, // 58: im.logic.v1.ConversationService.GetUnreadCount:output_type -> im.logic.v1.GetUnreadCountResponse
-	28, // 59: im.logic.v1.ConversationService.JoinWorldChat:output_type -> im.logic.v1.JoinWorldChatResponse
-	30, // 60: im.logic.v1.ConversationService.SearchConversations:output_type -> im.logic.v1.SearchConversationsResponse
-	46, // [46:61] is the sub-list for method output_type
-	31, // [31:46] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	41, // 0: im.logic.v1.CreateConversationRequest.type:type_name -> common.v1.ConversationType
+	34, // 1: im.logic.v1.CreateConversationRequest.settings:type_name -> im.logic.v1.ConversationSettings
+	33, // 2: im.logic.v1.CreateConversationResponse.conversation:type_name -> im.logic.v1.Conversation
+	33, // 3: im.logic.v1.GetConversationResponse.conversation:type_name -> im.logic.v1.Conversation
+	38, // 4: im.logic.v1.GetConversationResponse.members:type_name -> im.logic.v1.ConversationMember
+	41, // 5: im.logic.v1.GetConversationsRequest.type_filter:type_name -> common.v1.ConversationType
+	33, // 6: im.logic.v1.GetConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
+	41, // 7: im.logic.v1.GetConversationsOptimizedRequest.type_filter:type_name -> common.v1.ConversationType
+	8,  // 8: im.logic.v1.GetConversationsOptimizedResponse.conversations:type_name -> im.logic.v1.ConversationOptimized
+	41, // 9: im.logic.v1.ConversationOptimized.type:type_name -> common.v1.ConversationType
+	34, // 10: im.logic.v1.ConversationOptimized.settings:type_name -> im.logic.v1.ConversationSettings
+	38, // 11: im.logic.v1.ConversationOptimized.my_membership:type_name -> im.logic.v1.ConversationMember
+	42, // 12: im.logic.v1.ConversationOptimized.last_message:type_name -> im.logic.v1.Message
+	34, // 13: im.logic.v1.UpdateConversationRequest.settings:type_name -> im.logic.v1.ConversationSettings
+	33, // 14: im.logic.v1.UpdateConversationResponse.conversation:type_name -> im.logic.v1.Conversation
+	43, // 15: im.logic.v1.AddMembersRequest.role:type_name -> common.v1.ConversationMemberRole
+	40, // 16: im.logic.v1.AddMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
+	40, // 17: im.logic.v1.RemoveMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
+	43, // 18: im.logic.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ConversationMemberRole
+	43, // 19: im.logic.v1.GetMembersRequest.role_filter:type_name -> common.v1.ConversationMemberRole
+	38, // 20: im.logic.v1.GetMembersResponse.members:type_name -> im.logic.v1.ConversationMember
+	44, // 21: im.logic.v1.GetMessagesRequest.type_filter:type_name -> common.v1.MessageType
+	42, // 22: im.logic.v1.GetMessagesResponse.messages:type_name -> im.logic.v1.Message
+	39, // 23: im.logic.v1.GetUnreadCountResponse.conversation_counts:type_name -> im.logic.v1.ConversationUnreadCount
+	33, // 24: im.logic.v1.JoinWorldChatResponse.conversation:type_name -> im.logic.v1.Conversation
+	41, // 25: im.logic.v1.SearchConversationsRequest.type_filter:type_name -> common.v1.ConversationType
+	33, // 26: im.logic.v1.SearchConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
+	41, // 27: im.logic.v1.Conversation.type:type_name -> common.v1.ConversationType
+	34, // 28: im.logic.v1.Conversation.settings:type_name -> im.logic.v1.ConversationSettings
+	42, // 29: im.logic.v1.Conversation.last_message:type_name -> im.logic.v1.Message
+	38, // 30: im.logic.v1.Conversation.my_membership:type_name -> im.logic.v1.ConversationMember
+	35, // 31: im.logic.v1.ConversationSettings.group_settings:type_name -> im.logic.v1.GroupSettings
+	36, // 32: im.logic.v1.ConversationSettings.world_settings:type_name -> im.logic.v1.WorldChatSettings
+	37, // 33: im.logic.v1.ConversationSettings.single_settings:type_name -> im.logic.v1.SingleChatSettings
+	43, // 34: im.logic.v1.ConversationMember.role:type_name -> common.v1.ConversationMemberRole
+	45, // 35: im.logic.v1.ConversationMember.user:type_name -> im.logic.v1.User
+	46, // 36: im.logic.v1.FailedUser.error_code:type_name -> common.v1.ErrorCode
+	0,  // 37: im.logic.v1.ConversationService.CreateConversation:input_type -> im.logic.v1.CreateConversationRequest
+	2,  // 38: im.logic.v1.ConversationService.GetConversation:input_type -> im.logic.v1.GetConversationRequest
+	4,  // 39: im.logic.v1.ConversationService.GetConversations:input_type -> im.logic.v1.GetConversationsRequest
+	6,  // 40: im.logic.v1.ConversationService.GetConversationsOptimized:input_type -> im.logic.v1.GetConversationsOptimizedRequest
+	9,  // 41: im.logic.v1.ConversationService.UpdateConversation:input_type -> im.logic.v1.UpdateConversationRequest
+	11, // 42: im.logic.v1.ConversationService.DeleteConversation:input_type -> im.logic.v1.DeleteConversationRequest
+	13, // 43: im.logic.v1.ConversationService.AddMembers:input_type -> im.logic.v1.AddMembersRequest
+	15, // 44: im.logic.v1.ConversationService.RemoveMembers:input_type -> im.logic.v1.RemoveMembersRequest
+	17, // 45: im.logic.v1.ConversationService.UpdateMemberRole:input_type -> im.logic.v1.UpdateMemberRoleRequest
+	19, // 46: im.logic.v1.ConversationService.GetMembers:input_type -> im.logic.v1.GetMembersRequest
+	21, // 47: im.logic.v1.ConversationService.LeaveConversation:input_type -> im.logic.v1.LeaveConversationRequest
+	23, // 48: im.logic.v1.ConversationService.GetMessages:input_type -> im.logic.v1.GetMessagesRequest
+	25, // 49: im.logic.v1.ConversationService.MarkAsRead:input_type -> im.logic.v1.MarkAsReadRequest
+	27, // 50: im.logic.v1.ConversationService.GetUnreadCount:input_type -> im.logic.v1.GetUnreadCountRequest
+	29, // 51: im.logic.v1.ConversationService.JoinWorldChat:input_type -> im.logic.v1.JoinWorldChatRequest
+	31, // 52: im.logic.v1.ConversationService.SearchConversations:input_type -> im.logic.v1.SearchConversationsRequest
+	1,  // 53: im.logic.v1.ConversationService.CreateConversation:output_type -> im.logic.v1.CreateConversationResponse
+	3,  // 54: im.logic.v1.ConversationService.GetConversation:output_type -> im.logic.v1.GetConversationResponse
+	5,  // 55: im.logic.v1.ConversationService.GetConversations:output_type -> im.logic.v1.GetConversationsResponse
+	7,  // 56: im.logic.v1.ConversationService.GetConversationsOptimized:output_type -> im.logic.v1.GetConversationsOptimizedResponse
+	10, // 57: im.logic.v1.ConversationService.UpdateConversation:output_type -> im.logic.v1.UpdateConversationResponse
+	12, // 58: im.logic.v1.ConversationService.DeleteConversation:output_type -> im.logic.v1.DeleteConversationResponse
+	14, // 59: im.logic.v1.ConversationService.AddMembers:output_type -> im.logic.v1.AddMembersResponse
+	16, // 60: im.logic.v1.ConversationService.RemoveMembers:output_type -> im.logic.v1.RemoveMembersResponse
+	18, // 61: im.logic.v1.ConversationService.UpdateMemberRole:output_type -> im.logic.v1.UpdateMemberRoleResponse
+	20, // 62: im.logic.v1.ConversationService.GetMembers:output_type -> im.logic.v1.GetMembersResponse
+	22, // 63: im.logic.v1.ConversationService.LeaveConversation:output_type -> im.logic.v1.LeaveConversationResponse
+	24, // 64: im.logic.v1.ConversationService.GetMessages:output_type -> im.logic.v1.GetMessagesResponse
+	26, // 65: im.logic.v1.ConversationService.MarkAsRead:output_type -> im.logic.v1.MarkAsReadResponse
+	28, // 66: im.logic.v1.ConversationService.GetUnreadCount:output_type -> im.logic.v1.GetUnreadCountResponse
+	30, // 67: im.logic.v1.ConversationService.JoinWorldChat:output_type -> im.logic.v1.JoinWorldChatResponse
+	32, // 68: im.logic.v1.ConversationService.SearchConversations:output_type -> im.logic.v1.SearchConversationsResponse
+	53, // [53:69] is the sub-list for method output_type
+	37, // [37:53] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_im_logic_v1_conversation_proto_init() }
@@ -3089,14 +3411,13 @@ func file_im_logic_v1_conversation_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_logic_v1_conversation_proto_rawDesc), len(file_im_logic_v1_conversation_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   38,
+			NumEnums:      0,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_im_logic_v1_conversation_proto_goTypes,
 		DependencyIndexes: file_im_logic_v1_conversation_proto_depIdxs,
-		EnumInfos:         file_im_logic_v1_conversation_proto_enumTypes,
 		MessageInfos:      file_im_logic_v1_conversation_proto_msgTypes,
 	}.Build()
 	File_im_logic_v1_conversation_proto = out.File

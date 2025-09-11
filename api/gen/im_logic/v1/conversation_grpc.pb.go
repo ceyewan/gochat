@@ -8,7 +8,7 @@
 // - protoc             (unknown)
 // source: im_logic/v1/conversation.proto
 
-package logicv1
+package imlogicv1
 
 import (
 	context "context"
@@ -23,21 +23,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConversationService_CreateConversation_FullMethodName  = "/im.logic.v1.ConversationService/CreateConversation"
-	ConversationService_GetConversation_FullMethodName     = "/im.logic.v1.ConversationService/GetConversation"
-	ConversationService_GetConversations_FullMethodName    = "/im.logic.v1.ConversationService/GetConversations"
-	ConversationService_UpdateConversation_FullMethodName  = "/im.logic.v1.ConversationService/UpdateConversation"
-	ConversationService_DeleteConversation_FullMethodName  = "/im.logic.v1.ConversationService/DeleteConversation"
-	ConversationService_AddMembers_FullMethodName          = "/im.logic.v1.ConversationService/AddMembers"
-	ConversationService_RemoveMembers_FullMethodName       = "/im.logic.v1.ConversationService/RemoveMembers"
-	ConversationService_UpdateMemberRole_FullMethodName    = "/im.logic.v1.ConversationService/UpdateMemberRole"
-	ConversationService_GetMembers_FullMethodName          = "/im.logic.v1.ConversationService/GetMembers"
-	ConversationService_LeaveConversation_FullMethodName   = "/im.logic.v1.ConversationService/LeaveConversation"
-	ConversationService_GetMessages_FullMethodName         = "/im.logic.v1.ConversationService/GetMessages"
-	ConversationService_MarkAsRead_FullMethodName          = "/im.logic.v1.ConversationService/MarkAsRead"
-	ConversationService_GetUnreadCount_FullMethodName      = "/im.logic.v1.ConversationService/GetUnreadCount"
-	ConversationService_JoinWorldChat_FullMethodName       = "/im.logic.v1.ConversationService/JoinWorldChat"
-	ConversationService_SearchConversations_FullMethodName = "/im.logic.v1.ConversationService/SearchConversations"
+	ConversationService_CreateConversation_FullMethodName        = "/im.logic.v1.ConversationService/CreateConversation"
+	ConversationService_GetConversation_FullMethodName           = "/im.logic.v1.ConversationService/GetConversation"
+	ConversationService_GetConversations_FullMethodName          = "/im.logic.v1.ConversationService/GetConversations"
+	ConversationService_GetConversationsOptimized_FullMethodName = "/im.logic.v1.ConversationService/GetConversationsOptimized"
+	ConversationService_UpdateConversation_FullMethodName        = "/im.logic.v1.ConversationService/UpdateConversation"
+	ConversationService_DeleteConversation_FullMethodName        = "/im.logic.v1.ConversationService/DeleteConversation"
+	ConversationService_AddMembers_FullMethodName                = "/im.logic.v1.ConversationService/AddMembers"
+	ConversationService_RemoveMembers_FullMethodName             = "/im.logic.v1.ConversationService/RemoveMembers"
+	ConversationService_UpdateMemberRole_FullMethodName          = "/im.logic.v1.ConversationService/UpdateMemberRole"
+	ConversationService_GetMembers_FullMethodName                = "/im.logic.v1.ConversationService/GetMembers"
+	ConversationService_LeaveConversation_FullMethodName         = "/im.logic.v1.ConversationService/LeaveConversation"
+	ConversationService_GetMessages_FullMethodName               = "/im.logic.v1.ConversationService/GetMessages"
+	ConversationService_MarkAsRead_FullMethodName                = "/im.logic.v1.ConversationService/MarkAsRead"
+	ConversationService_GetUnreadCount_FullMethodName            = "/im.logic.v1.ConversationService/GetUnreadCount"
+	ConversationService_JoinWorldChat_FullMethodName             = "/im.logic.v1.ConversationService/JoinWorldChat"
+	ConversationService_SearchConversations_FullMethodName       = "/im.logic.v1.ConversationService/SearchConversations"
 )
 
 // ConversationServiceClient is the client API for ConversationService service.
@@ -51,6 +52,7 @@ type ConversationServiceClient interface {
 	CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error)
 	GetConversation(ctx context.Context, in *GetConversationRequest, opts ...grpc.CallOption) (*GetConversationResponse, error)
 	GetConversations(ctx context.Context, in *GetConversationsRequest, opts ...grpc.CallOption) (*GetConversationsResponse, error)
+	GetConversationsOptimized(ctx context.Context, in *GetConversationsOptimizedRequest, opts ...grpc.CallOption) (*GetConversationsOptimizedResponse, error)
 	UpdateConversation(ctx context.Context, in *UpdateConversationRequest, opts ...grpc.CallOption) (*UpdateConversationResponse, error)
 	DeleteConversation(ctx context.Context, in *DeleteConversationRequest, opts ...grpc.CallOption) (*DeleteConversationResponse, error)
 	// 成员管理
@@ -100,6 +102,16 @@ func (c *conversationServiceClient) GetConversations(ctx context.Context, in *Ge
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetConversationsResponse)
 	err := c.cc.Invoke(ctx, ConversationService_GetConversations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *conversationServiceClient) GetConversationsOptimized(ctx context.Context, in *GetConversationsOptimizedRequest, opts ...grpc.CallOption) (*GetConversationsOptimizedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetConversationsOptimizedResponse)
+	err := c.cc.Invoke(ctx, ConversationService_GetConversationsOptimized_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -237,6 +249,7 @@ type ConversationServiceServer interface {
 	CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error)
 	GetConversation(context.Context, *GetConversationRequest) (*GetConversationResponse, error)
 	GetConversations(context.Context, *GetConversationsRequest) (*GetConversationsResponse, error)
+	GetConversationsOptimized(context.Context, *GetConversationsOptimizedRequest) (*GetConversationsOptimizedResponse, error)
 	UpdateConversation(context.Context, *UpdateConversationRequest) (*UpdateConversationResponse, error)
 	DeleteConversation(context.Context, *DeleteConversationRequest) (*DeleteConversationResponse, error)
 	// 成员管理
@@ -270,6 +283,9 @@ func (UnimplementedConversationServiceServer) GetConversation(context.Context, *
 }
 func (UnimplementedConversationServiceServer) GetConversations(context.Context, *GetConversationsRequest) (*GetConversationsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConversations not implemented")
+}
+func (UnimplementedConversationServiceServer) GetConversationsOptimized(context.Context, *GetConversationsOptimizedRequest) (*GetConversationsOptimizedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetConversationsOptimized not implemented")
 }
 func (UnimplementedConversationServiceServer) UpdateConversation(context.Context, *UpdateConversationRequest) (*UpdateConversationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateConversation not implemented")
@@ -378,6 +394,24 @@ func _ConversationService_GetConversations_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConversationServiceServer).GetConversations(ctx, req.(*GetConversationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConversationService_GetConversationsOptimized_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConversationsOptimizedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).GetConversationsOptimized(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_GetConversationsOptimized_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).GetConversationsOptimized(ctx, req.(*GetConversationsOptimizedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -616,6 +650,10 @@ var ConversationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConversations",
 			Handler:    _ConversationService_GetConversations_Handler,
+		},
+		{
+			MethodName: "GetConversationsOptimized",
+			Handler:    _ConversationService_GetConversationsOptimized_Handler,
 		},
 		{
 			MethodName: "UpdateConversation",

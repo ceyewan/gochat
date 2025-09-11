@@ -7,7 +7,7 @@
 // 	protoc        (unknown)
 // source: im_repo/v1/user.proto
 
-package repov1
+package imrepov1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -799,7 +799,7 @@ const file_im_repo_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"UpdateUser\x12\x1d.im.repo.v1.UpdateUserRequest\x1a\x1e.im.repo.v1.UpdateUserResponse\x12W\n" +
 	"\x0eVerifyPassword\x12!.im.repo.v1.VerifyPasswordRequest\x1a\".im.repo.v1.VerifyPasswordResponse\x12`\n" +
-	"\x11GetUserByUsername\x12$.im.repo.v1.GetUserByUsernameRequest\x1a%.im.repo.v1.GetUserByUsernameResponseB7Z5github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1b\x06proto3"
+	"\x11GetUserByUsername\x12$.im.repo.v1.GetUserByUsernameRequest\x1a%.im.repo.v1.GetUserByUsernameResponseB7Z5github.com/ceyewan/gochat/api/gen/im_repo/v1;imrepov1b\x06proto3"
 
 var (
 	file_im_repo_v1_user_proto_rawDescOnce sync.Once

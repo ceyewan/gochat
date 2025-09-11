@@ -1,11 +1,10 @@
 // common/v1/types.proto
 // 定义跨服务共享的通用类型和枚举
-
 syntax = "proto3";
 
 package common.v1;
 
-option go_package = "github.com/ceyewan/gochat/api/proto/common/v1;commonv1";
+option go_package = "github.com/ceyewan/gochat/api/gen/common/v1;commonv1";
 
 // ConversationType 会话类型
 // 统一定义，避免各服务间类型不一致
@@ -95,8 +94,8 @@ enum OnlineStatus {
 // ErrorCode 统一错误码
 // 定义系统通用的错误码
 enum ErrorCode {
-  // 成功
-  ERROR_CODE_SUCCESS = 0;
+  // 未指定错误码，通常表示成功
+  ERROR_CODE_UNSPECIFIED = 0;
 
   // === 通用错误 1000-1999 ===
   // 内部错误

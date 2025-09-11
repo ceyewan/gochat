@@ -7,7 +7,7 @@
 // 	protoc        (unknown)
 // source: im_logic/v1/auth.proto
 
-package logicv1
+package imlogicv1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -769,7 +769,7 @@ const file_im_logic_v1_auth_proto_rawDesc = "" +
 	"\x06Logout\x12\x1a.im.logic.v1.LogoutRequest\x1a\x1b.im.logic.v1.LogoutResponse\x12V\n" +
 	"\rValidateToken\x12!.im.logic.v1.ValidateTokenRequest\x1a\".im.logic.v1.ValidateTokenResponse\x12M\n" +
 	"\n" +
-	"GuestLogin\x12\x1e.im.logic.v1.GuestLoginRequest\x1a\x1f.im.logic.v1.GuestLoginResponseB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
+	"GuestLogin\x12\x1e.im.logic.v1.GuestLoginRequest\x1a\x1f.im.logic.v1.GuestLoginResponseB9Z7github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1b\x06proto3"
 
 var (
 	file_im_logic_v1_auth_proto_rawDescOnce sync.Once

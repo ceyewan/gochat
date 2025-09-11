@@ -7,7 +7,7 @@
 // 	protoc        (unknown)
 // source: im_repo/v1/message.proto
 
-package repov1
+package imrepov1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -994,7 +994,7 @@ const file_im_repo_v1_message_proto_rawDesc = "" +
 	"\x17GetConversationMessages\x12*.im.repo.v1.GetConversationMessagesRequest\x1a+.im.repo.v1.GetConversationMessagesResponse\x12r\n" +
 	"\x17CheckMessageIdempotency\x12*.im.repo.v1.CheckMessageIdempotencyRequest\x1a+.im.repo.v1.CheckMessageIdempotencyResponse\x12`\n" +
 	"\x11GetLatestMessages\x12$.im.repo.v1.GetLatestMessagesRequest\x1a%.im.repo.v1.GetLatestMessagesResponse\x12T\n" +
-	"\rDeleteMessage\x12 .im.repo.v1.DeleteMessageRequest\x1a!.im.repo.v1.DeleteMessageResponseB7Z5github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1b\x06proto3"
+	"\rDeleteMessage\x12 .im.repo.v1.DeleteMessageRequest\x1a!.im.repo.v1.DeleteMessageResponseB7Z5github.com/ceyewan/gochat/api/gen/im_repo/v1;imrepov1b\x06proto3"
 
 var (
 	file_im_repo_v1_message_proto_rawDescOnce sync.Once

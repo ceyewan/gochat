@@ -5,7 +5,7 @@ syntax = "proto3";
 
 package im.repo.v1;
 
-option go_package = "github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1";
+option go_package = "github.com/ceyewan/gochat/api/gen/im_repo/v1;imrepov1";
 
 // ConversationService 会话数据服务
 // 提供会话数据的存储和查询

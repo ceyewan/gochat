@@ -7,9 +7,10 @@
 // 	protoc        (unknown)
 // source: im_logic/v1/message.proto
 
-package logicv1
+package imlogicv1
 
 import (
+	v1 "github.com/ceyewan/gochat/api/gen/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -34,7 +35,7 @@ type SendMessageRequest struct {
 	// The content of the message.
 	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	// The type of the message.
-	Type MessageType `protobuf:"varint,4,opt,name=type,proto3,enum=im.logic.v1.MessageType" json:"type,omitempty"`
+	Type v1.MessageType `protobuf:"varint,4,opt,name=type,proto3,enum=common.v1.MessageType" json:"type,omitempty"`
 	// A temporary client-side ID for idempotency.
 	ClientMsgId   string `protobuf:"bytes,5,opt,name=client_msg_id,json=clientMsgId,proto3" json:"client_msg_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -92,11 +93,11 @@ func (x *SendMessageRequest) GetContent() string {
 	return ""
 }
 
-func (x *SendMessageRequest) GetType() MessageType {
+func (x *SendMessageRequest) GetType() v1.MessageType {
 	if x != nil {
 		return x.Type
 	}
-	return MessageType_MESSAGE_TYPE_UNSPECIFIED
+	return v1.MessageType(0)
 }
 
 func (x *SendMessageRequest) GetClientMsgId() string {
@@ -165,18 +166,18 @@ var File_im_logic_v1_message_proto protoreflect.FileDescriptor
 
 const file_im_logic_v1_message_proto_rawDesc = "" +
 	"\n" +
-	"\x19im_logic/v1/message.proto\x12\vim.logic.v1\x1a\x18im_logic/v1/common.proto\"\xc2\x01\n" +
+	"\x19im_logic/v1/message.proto\x12\vim.logic.v1\x1a\x18im_logic/v1/common.proto\x1a\x15common/v1/types.proto\"\xc0\x01\n" +
 	"\x12SendMessageRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\tR\acontent\x12,\n" +
-	"\x04type\x18\x04 \x01(\x0e2\x18.im.logic.v1.MessageTypeR\x04type\x12\"\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12*\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x16.common.v1.MessageTypeR\x04type\x12\"\n" +
 	"\rclient_msg_id\x18\x05 \x01(\tR\vclientMsgId\"i\n" +
 	"\x13SendMessageResponse\x12.\n" +
 	"\amessage\x18\x01 \x01(\v2\x14.im.logic.v1.MessageR\amessage\x12\"\n" +
 	"\rclient_msg_id\x18\x02 \x01(\tR\vclientMsgId2b\n" +
 	"\x0eMessageService\x12P\n" +
-	"\vSendMessage\x12\x1f.im.logic.v1.SendMessageRequest\x1a .im.logic.v1.SendMessageResponseB9Z7github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1b\x06proto3"
+	"\vSendMessage\x12\x1f.im.logic.v1.SendMessageRequest\x1a .im.logic.v1.SendMessageResponseB9Z7github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1b\x06proto3"
 
 var (
 	file_im_logic_v1_message_proto_rawDescOnce sync.Once
@@ -194,11 +195,11 @@ var file_im_logic_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_im_logic_v1_message_proto_goTypes = []any{
 	(*SendMessageRequest)(nil),  // 0: im.logic.v1.SendMessageRequest
 	(*SendMessageResponse)(nil), // 1: im.logic.v1.SendMessageResponse
-	(MessageType)(0),            // 2: im.logic.v1.MessageType
+	(v1.MessageType)(0),         // 2: common.v1.MessageType
 	(*Message)(nil),             // 3: im.logic.v1.Message
 }
 var file_im_logic_v1_message_proto_depIdxs = []int32{
-	2, // 0: im.logic.v1.SendMessageRequest.type:type_name -> im.logic.v1.MessageType
+	2, // 0: im.logic.v1.SendMessageRequest.type:type_name -> common.v1.MessageType
 	3, // 1: im.logic.v1.SendMessageResponse.message:type_name -> im.logic.v1.Message
 	0, // 2: im.logic.v1.MessageService.SendMessage:input_type -> im.logic.v1.SendMessageRequest
 	1, // 3: im.logic.v1.MessageService.SendMessage:output_type -> im.logic.v1.SendMessageResponse

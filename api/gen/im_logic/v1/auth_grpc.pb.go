@@ -7,7 +7,7 @@
 // - protoc             (unknown)
 // source: im_logic/v1/auth.proto
 
-package logicv1
+package imlogicv1
 
 import (
 	context "context"

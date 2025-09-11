@@ -7,7 +7,7 @@
 // 	protoc        (unknown)
 // source: im_repo/v1/online_status.proto
 
-package repov1
+package imrepov1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -777,7 +777,7 @@ const file_im_repo_v1_online_status_proto_rawDesc = "" +
 	"\x13GetUserOnlineStatus\x12&.im.repo.v1.GetUserOnlineStatusRequest\x1a'.im.repo.v1.GetUserOnlineStatusResponse\x12i\n" +
 	"\x14GetUsersOnlineStatus\x12'.im.repo.v1.GetUsersOnlineStatusRequest\x1a(.im.repo.v1.GetUsersOnlineStatusResponse\x12Z\n" +
 	"\x0fUpdateHeartbeat\x12\".im.repo.v1.UpdateHeartbeatRequest\x1a#.im.repo.v1.UpdateHeartbeatResponse\x12i\n" +
-	"\x14CleanupExpiredStatus\x12'.im.repo.v1.CleanupExpiredStatusRequest\x1a(.im.repo.v1.CleanupExpiredStatusResponseB7Z5github.com/ceyewan/gochat/api/proto/im_repo/v1;repov1b\x06proto3"
+	"\x14CleanupExpiredStatus\x12'.im.repo.v1.CleanupExpiredStatusRequest\x1a(.im.repo.v1.CleanupExpiredStatusResponseB7Z5github.com/ceyewan/gochat/api/gen/im_repo/v1;imrepov1b\x06proto3"
 
 var (
 	file_im_repo_v1_online_status_proto_rawDescOnce sync.Once
