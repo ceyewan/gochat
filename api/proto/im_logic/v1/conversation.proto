@@ -9,6 +9,7 @@ package im.logic.v1;
 option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
 
 import "im_logic/v1/common.proto";
+import "common/v1/types.proto";
 
 // ConversationService 统一会话管理服务
 // 提供所有类型会话的创建、管理、消息处理等功能
@@ -17,6 +18,7 @@ service ConversationService {
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
   rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
   rpc GetConversations(GetConversationsRequest) returns (GetConversationsResponse);
+  rpc GetConversationsOptimized(GetConversationsOptimizedRequest) returns (GetConversationsOptimizedResponse);
   rpc UpdateConversation(UpdateConversationRequest) returns (UpdateConversationResponse);
   rpc DeleteConversation(DeleteConversationRequest) returns (DeleteConversationResponse);
 
@@ -42,7 +44,7 @@ message CreateConversationRequest {
   // 创建者用户 ID
   string creator_id = 1;
   // 会话类型
-  ConversationType type = 2;
+  common.v1.ConversationType type = 2;
   // 会话名称（群聊时必填）
   string name = 3;
   // 会话头像 URL（可选）
@@ -88,7 +90,7 @@ message GetConversationsRequest {
   // 每页大小
   int32 page_size = 3;
   // 会话类型过滤（可选）
-  ConversationType type_filter = 4;
+  common.v1.ConversationType type_filter = 4;
   // 排序方式（默认按更新时间倒序）
   string order_by = 5;
 }
@@ -105,6 +107,67 @@ message GetConversationsResponse {
   int32 page_size = 4;
   // 是否还有更多
   bool has_more = 5;
+}
+
+// GetConversationsOptimizedRequest 获取优化会话列表请求
+// 使用一次查询获取所有必要信息，避免N+1问题
+message GetConversationsOptimizedRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 页码（从 1 开始）
+  int32 page = 2;
+  // 每页大小
+  int32 page_size = 3;
+  // 会话类型过滤（可选）
+  common.v1.ConversationType type_filter = 4;
+  // 排序方式（默认按更新时间倒序）
+  string order_by = 5;
+  // 是否包含最后消息
+  bool include_last_message = 6;
+  // 是否包含未读数
+  bool include_unread_count = 7;
+}
+
+// GetConversationsOptimizedResponse 获取优化会话列表响应
+message GetConversationsOptimizedResponse {
+  // 优化的会话列表（包含完整信息）
+  repeated ConversationOptimized conversations = 1;
+  // 总数量
+  int64 total = 2;
+  // 当前页码
+  int32 page = 3;
+  // 每页大小
+  int32 page_size = 4;
+  // 是否还有更多
+  bool has_more = 5;
+}
+
+// ConversationOptimized 优化的会话信息
+// 包含会话列表所需的所有信息，避免额外查询
+message ConversationOptimized {
+  // 会话基本信息
+  string id = 1;
+  ConversationType type = 2;
+  string name = 3;
+  string avatar_url = 4;
+  string description = 5;
+  string owner_id = 6;
+  int32 member_count = 7;
+  ConversationSettings settings = 8;
+  int64 updated_at = 11;
+  int64 created_at = 12;
+
+  // 当前用户在此会话中的信息
+  ConversationMember my_membership = 13;
+
+  // 最后一条消息（可选）
+  Message last_message = 9;
+
+  // 未读消息数量（可选）
+  int64 unread_count = 10;
+
+  // 最后活动时间（用于排序）
+  int64 last_activity_at = 14;
 }
 
 // UpdateConversationRequest 更新会话信息请求
@@ -156,7 +219,7 @@ message AddMembersRequest {
   // 要添加的用户 ID 列表
   repeated string user_ids = 3;
   // 新成员角色（默认为普通成员）
-  ConversationMemberRole role = 4;
+  common.v1.ConversationMemberRole role = 4;
 }
 
 // AddMembersResponse 添加成员响应
@@ -200,7 +263,7 @@ message UpdateMemberRoleRequest {
   // 目标用户 ID
   string target_user_id = 3;
   // 新角色
-  ConversationMemberRole new_role = 4;
+  common.v1.ConversationMemberRole new_role = 4;
 }
 
 // UpdateMemberRoleResponse 更新成员角色响应
@@ -220,7 +283,7 @@ message GetMembersRequest {
   // 每页大小
   int32 page_size = 4;
   // 角色过滤（可选）
-  ConversationMemberRole role_filter = 5;
+  common.v1.ConversationMemberRole role_filter = 5;
 }
 
 // GetMembersResponse 获取成员列表响应
@@ -266,7 +329,7 @@ message GetMessagesRequest {
   // 排序方向（true: 升序, false: 降序）
   bool ascending = 6;
   // 消息类型过滤（可选）
-  repeated MessageType type_filter = 7;
+  repeated common.v1.MessageType type_filter = 7;
 }
 
 // GetMessagesResponse 获取历史消息响应
@@ -336,7 +399,7 @@ message SearchConversationsRequest {
   // 搜索关键词
   string query = 2;
   // 会话类型过滤（可选）
-  ConversationType type_filter = 3;
+  common.v1.ConversationType type_filter = 3;
   // 限制数量
   int32 limit = 4;
 }
@@ -352,7 +415,7 @@ message Conversation {
   // 会话 ID
   string id = 1;
   // 会话类型
-  ConversationType type = 2;
+  common.v1.ConversationType type = 2;
   // 会话名称
   string name = 3;
   // 会话头像 URL
@@ -433,7 +496,7 @@ message ConversationMember {
   // 会话 ID
   string conversation_id = 2;
   // 成员角色
-  ConversationMemberRole role = 3;
+  common.v1.ConversationMemberRole role = 3;
   // 是否被禁言
   bool muted = 4;
   // 禁言到期时间（Unix 时间戳，0表示未被禁言）
@@ -447,17 +510,7 @@ message ConversationMember {
   User user = 8;
 }
 
-// 会话成员角色
-enum ConversationMemberRole {
-  // 未指定角色
-  CONVERSATION_MEMBER_ROLE_UNSPECIFIED = 0;
-  // 普通成员
-  CONVERSATION_MEMBER_ROLE_MEMBER = 1;
-  // 管理员
-  CONVERSATION_MEMBER_ROLE_ADMIN = 2;
-  // 群主/所有者
-  CONVERSATION_MEMBER_ROLE_OWNER = 3;
-}
+
 
 // 会话未读数
 message ConversationUnreadCount {
@@ -474,5 +527,5 @@ message FailedUser {
   // 失败原因
   string reason = 2;
   // 错误码
-  ErrorCode error_code = 3;
+  common.v1.ErrorCode error_code = 3;
 }

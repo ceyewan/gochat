@@ -39,7 +39,8 @@ GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语�
 -   **描述**: 管理会话相关逻辑，例如获取会话列表和消息。
 -   **Proto 文件**: [`conversation.proto`](../../../api/proto/im_logic/v1/conversation.proto)
 -   **主要 RPC**:
-    -   `GetConversations`: 检索用户的会话列表。
+    -   `GetConversations`: 检索用户的会话列表（传统方式，可能存在N+1查询）。
+    -   `GetConversationsOptimized`: **[推荐]** 优化的会话列表查询，一次性获取所有必要信息，避免N+1问题。
     -   `CreateConversation`: 创建新的私人会话。
     -   `GetMessages`: 获取会话的消息历史记录。
     -   `MarkAsRead`: 更新用户在会话中的已读指针。
@@ -74,7 +75,9 @@ GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语�
 -   **主要 RPC**:
     -   `CreateConversation`: 创建新的会话记录。
     -   `GetUserConversations`: 检索用户所属的会话 ID。
+    -   `GetUserConversationsWithDetails`: **[核心优化]** 一次性查询获取用户会话的完整信息，包括会话详情、最后消息、未读数等，彻底解决N+1查询问题。
     -   `UpdateReadPointer`: 在数据库中更新用户的已读进度。
+    -   `BatchGetUnreadCounts`: 批量获取多个会话的未读消息数。
     -   `AddConversationMember`: 向会话中添加一个或多个成员。
     -   `RemoveConversationMember`: 从会话中移除成员。
     -   `GetConversationMembers`: 获取会话的成员列表。

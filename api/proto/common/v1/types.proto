@@ -1,0 +1,310 @@
+// common/v1/types.proto
+// 定义跨服务共享的通用类型和枚举
+
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/ceyewan/gochat/api/proto/common/v1;commonv1";
+
+// ConversationType 会话类型
+// 统一定义，避免各服务间类型不一致
+enum ConversationType {
+  // 未指定类型
+  CONVERSATION_TYPE_UNSPECIFIED = 0;
+  // 单聊
+  CONVERSATION_TYPE_SINGLE = 1;
+  // 群聊
+  CONVERSATION_TYPE_GROUP = 2;
+  // 世界聊天室
+  CONVERSATION_TYPE_WORLD = 3;
+}
+
+// MessageType 消息类型
+// 统一定义消息的类型枚举
+enum MessageType {
+  // 未指定类型
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  // 文本消息
+  MESSAGE_TYPE_TEXT = 1;
+  // 图片消息
+  MESSAGE_TYPE_IMAGE = 2;
+  // 文件消息
+  MESSAGE_TYPE_FILE = 3;
+  // 系统消息
+  MESSAGE_TYPE_SYSTEM = 4;
+  // 语音消息
+  MESSAGE_TYPE_VOICE = 5;
+  // 视频消息
+  MESSAGE_TYPE_VIDEO = 6;
+  // 位置消息
+  MESSAGE_TYPE_LOCATION = 7;
+  // 链接消息
+  MESSAGE_TYPE_LINK = 8;
+  // 表情消息
+  MESSAGE_TYPE_EMOJI = 9;
+  // 转发消息
+  MESSAGE_TYPE_FORWARD = 10;
+}
+
+// ConversationMemberRole 会话成员角色
+// 统一定义成员在会话中的角色
+enum ConversationMemberRole {
+  // 未指定角色
+  CONVERSATION_MEMBER_ROLE_UNSPECIFIED = 0;
+  // 普通成员
+  CONVERSATION_MEMBER_ROLE_MEMBER = 1;
+  // 管理员
+  CONVERSATION_MEMBER_ROLE_ADMIN = 2;
+  // 群主/所有者
+  CONVERSATION_MEMBER_ROLE_OWNER = 3;
+}
+
+// UserStatus 用户状态
+// 定义用户账户的状态
+enum UserStatus {
+  // 未指定状态
+  USER_STATUS_UNSPECIFIED = 0;
+  // 正常状态
+  USER_STATUS_NORMAL = 1;
+  // 已禁用
+  USER_STATUS_DISABLED = 2;
+  // 待删除/回收
+  USER_STATUS_PENDING_DELETE = 3;
+  // 已删除
+  USER_STATUS_DELETED = 4;
+}
+
+// OnlineStatus 在线状态
+// 定义用户的在线状态
+enum OnlineStatus {
+  // 未指定状态
+  ONLINE_STATUS_UNSPECIFIED = 0;
+  // 离线
+  ONLINE_STATUS_OFFLINE = 1;
+  // 在线
+  ONLINE_STATUS_ONLINE = 2;
+  // 忙碌
+  ONLINE_STATUS_BUSY = 3;
+  // 离开
+  ONLINE_STATUS_AWAY = 4;
+  // 隐身
+  ONLINE_STATUS_INVISIBLE = 5;
+}
+
+// ErrorCode 统一错误码
+// 定义系统通用的错误码
+enum ErrorCode {
+  // 成功
+  ERROR_CODE_SUCCESS = 0;
+
+  // === 通用错误 1000-1999 ===
+  // 内部错误
+  ERROR_CODE_INTERNAL_ERROR = 1000;
+  // 参数无效
+  ERROR_CODE_INVALID_PARAMETER = 1001;
+  // 未授权
+  ERROR_CODE_UNAUTHORIZED = 1002;
+  // 禁止访问
+  ERROR_CODE_FORBIDDEN = 1003;
+  // 资源未找到
+  ERROR_CODE_NOT_FOUND = 1004;
+  // 请求过于频繁
+  ERROR_CODE_RATE_LIMITED = 1005;
+  // 服务不可用
+  ERROR_CODE_SERVICE_UNAVAILABLE = 1006;
+  // 请求超时
+  ERROR_CODE_TIMEOUT = 1007;
+
+  // === 用户相关错误 2000-2999 ===
+  // 用户不存在
+  ERROR_CODE_USER_NOT_FOUND = 2000;
+  // 用户已存在
+  ERROR_CODE_USER_ALREADY_EXISTS = 2001;
+  // 密码错误
+  ERROR_CODE_INVALID_PASSWORD = 2002;
+  // 令牌无效
+  ERROR_CODE_INVALID_TOKEN = 2003;
+  // 令牌已过期
+  ERROR_CODE_TOKEN_EXPIRED = 2004;
+  // 用户已被禁用
+  ERROR_CODE_USER_DISABLED = 2005;
+  // 用户名格式无效
+  ERROR_CODE_INVALID_USERNAME = 2006;
+  // 密码强度不够
+  ERROR_CODE_WEAK_PASSWORD = 2007;
+
+  // === 消息相关错误 3000-3999 ===
+  // 消息不存在
+  ERROR_CODE_MESSAGE_NOT_FOUND = 3000;
+  // 重复消息
+  ERROR_CODE_DUPLICATE_MESSAGE = 3001;
+  // 消息格式无效
+  ERROR_CODE_INVALID_MESSAGE_FORMAT = 3002;
+  // 消息内容过长
+  ERROR_CODE_MESSAGE_TOO_LONG = 3003;
+  // 消息内容为空
+  ERROR_CODE_MESSAGE_EMPTY = 3004;
+  // 不支持的消息类型
+  ERROR_CODE_UNSUPPORTED_MESSAGE_TYPE = 3005;
+  // 消息已被撤回
+  ERROR_CODE_MESSAGE_RECALLED = 3006;
+  // 消息撤回时间超限
+  ERROR_CODE_RECALL_TIME_EXCEEDED = 3007;
+
+  // === 会话相关错误 4000-4999 ===
+  // 会话不存在
+  ERROR_CODE_CONVERSATION_NOT_FOUND = 4000;
+  // 不是会话成员
+  ERROR_CODE_NOT_CONVERSATION_MEMBER = 4001;
+  // 会话成员已满
+  ERROR_CODE_CONVERSATION_FULL = 4002;
+  // 权限不足
+  ERROR_CODE_INSUFFICIENT_PERMISSION = 4003;
+  // 会话已被解散
+  ERROR_CODE_CONVERSATION_DISSOLVED = 4004;
+  // 用户已在会话中
+  ERROR_CODE_USER_ALREADY_IN_CONVERSATION = 4005;
+  // 会话名称无效
+  ERROR_CODE_INVALID_CONVERSATION_NAME = 4006;
+  // 无法离开会话（如群主）
+  ERROR_CODE_CANNOT_LEAVE_CONVERSATION = 4007;
+
+  // === 好友相关错误 5000-5999 ===
+  // 好友申请不存在
+  ERROR_CODE_FRIEND_REQUEST_NOT_FOUND = 5000;
+  // 好友申请已存在
+  ERROR_CODE_FRIEND_REQUEST_ALREADY_EXISTS = 5001;
+  // 已经是好友关系
+  ERROR_CODE_ALREADY_FRIENDS = 5002;
+  // 不是好友关系
+  ERROR_CODE_NOT_FRIENDS = 5003;
+  // 无法添加自己为好友
+  ERROR_CODE_CANNOT_ADD_SELF_AS_FRIEND = 5004;
+  // 好友申请已处理
+  ERROR_CODE_FRIEND_REQUEST_ALREADY_HANDLED = 5005;
+
+  // === 文件相关错误 6000-6999 ===
+  // 文件不存在
+  ERROR_CODE_FILE_NOT_FOUND = 6000;
+  // 文件格式不支持
+  ERROR_CODE_UNSUPPORTED_FILE_FORMAT = 6001;
+  // 文件大小超限
+  ERROR_CODE_FILE_TOO_LARGE = 6002;
+  // 文件上传失败
+  ERROR_CODE_FILE_UPLOAD_FAILED = 6003;
+  // 文件下载失败
+  ERROR_CODE_FILE_DOWNLOAD_FAILED = 6004;
+}
+
+// Pagination 分页信息
+// 统一的分页参数定义
+message Pagination {
+  // 页码（从 1 开始）
+  int32 page = 1;
+  // 每页大小
+  int32 page_size = 2;
+  // 总数量
+  int64 total = 3;
+  // 总页数
+  int32 total_pages = 4;
+  // 是否有下一页
+  bool has_next = 5;
+  // 是否有上一页
+  bool has_prev = 6;
+}
+
+// Cursor 游标分页信息
+// 用于高性能的游标分页
+message Cursor {
+  // 游标值（通常是时间戳或序列号）
+  string cursor = 1;
+  // 限制数量
+  int32 limit = 2;
+  // 是否还有更多数据
+  bool has_more = 3;
+  // 下一页游标
+  string next_cursor = 4;
+}
+
+// UserInfo 轻量级用户信息
+// 用于在其他对象中嵌入基本用户信息
+message UserInfo {
+  // 用户 ID
+  string id = 1;
+  // 用户名
+  string username = 2;
+  // 头像 URL
+  string avatar_url = 3;
+  // 是否为游客
+  bool is_guest = 4;
+  // 在线状态
+  OnlineStatus online_status = 5;
+}
+
+// ConversationInfo 轻量级会话信息
+// 用于在其他对象中嵌入基本会话信息
+message ConversationInfo {
+  // 会话 ID
+  string id = 1;
+  // 会话类型
+  ConversationType type = 2;
+  // 会话名称
+  string name = 3;
+  // 会话头像 URL
+  string avatar_url = 4;
+  // 成员数量
+  int32 member_count = 5;
+}
+
+// Timestamp 时间戳
+// 统一的时间表示
+message Timestamp {
+  // Unix 时间戳（秒）
+  int64 seconds = 1;
+  // 纳秒部分
+  int32 nanos = 2;
+}
+
+// Location 地理位置信息
+// 用于位置消息
+message Location {
+  // 纬度
+  double latitude = 1;
+  // 经度
+  double longitude = 2;
+  // 地址描述
+  string address = 3;
+  // 精度（米）
+  double accuracy = 4;
+}
+
+// FileInfo 文件信息
+// 用于文件类型的消息
+message FileInfo {
+  // 文件名
+  string filename = 1;
+  // 文件大小（字节）
+  int64 size = 2;
+  // MIME 类型
+  string mime_type = 3;
+  // 文件 URL
+  string url = 4;
+  // 文件哈希值（用于去重和校验）
+  string hash = 5;
+  // 缩略图 URL（图片/视频文件）
+  string thumbnail_url = 6;
+  // 持续时间（音频/视频文件，单位：秒）
+  int32 duration = 7;
+}
+
+// Metadata 通用元数据
+// 用于扩展其他消息的元数据信息
+message Metadata {
+  // 键值对形式的元数据
+  map<string, string> fields = 1;
+  // 创建时间
+  int64 created_at = 2;
+  // 更新时间
+  int64 updated_at = 3;
+}

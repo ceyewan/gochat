@@ -8,6 +8,7 @@ package im.logic.v1;
 option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
 
 import "im_logic/v1/common.proto";
+import "common/v1/types.proto";
 
 // MessageService is responsible for handling message-related operations.
 service MessageService {
@@ -24,7 +25,7 @@ message SendMessageRequest {
   // The content of the message.
   string content = 3;
   // The type of the message.
-  MessageType type = 4;
+  common.v1.MessageType type = 4;
   // A temporary client-side ID for idempotency.
   string client_msg_id = 5;
 }

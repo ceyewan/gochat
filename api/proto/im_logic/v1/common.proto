@@ -7,35 +7,9 @@ package im.logic.v1;
 
 option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
 
-// ConversationType 会话类型
-enum ConversationType {
-  // 未指定类型
-  CONVERSATION_TYPE_UNSPECIFIED = 0;
-  // 单聊
-  CONVERSATION_TYPE_SINGLE = 1;
-  // 群聊
-  CONVERSATION_TYPE_GROUP = 2;
-  // 世界聊天室
-  CONVERSATION_TYPE_WORLD = 3;
-}
+import "common/v1/types.proto";
 
-// MessageType 消息类型
-enum MessageType {
-  // 未指定类型
-  MESSAGE_TYPE_UNSPECIFIED = 0;
-  // 文本消息
-  MESSAGE_TYPE_TEXT = 1;
-  // 图片消息
-  MESSAGE_TYPE_IMAGE = 2;
-  // 文件消息
-  MESSAGE_TYPE_FILE = 3;
-  // 系统消息
-  MESSAGE_TYPE_SYSTEM = 4;
-  // 语音消息
-  MESSAGE_TYPE_VOICE = 5;
-  // 视频消息
-  MESSAGE_TYPE_VIDEO = 6;
-}
+// 直接使用统一类型定义
 
 // Message 消息信息
 message Message {
@@ -46,7 +20,7 @@ message Message {
   // 发送者 ID
   string sender_id = 3;
   // 消息类型
-  MessageType type = 4;
+  common.v1.MessageType type = 4;
   // 消息内容
   string content = 5;
   // 会话内序列号
@@ -87,50 +61,10 @@ message OnlineStatus {
   int64 last_seen = 4;
 }
 
-// ErrorCode 错误码
-enum ErrorCode {
-  // 未指定
-  ERROR_CODE_UNSPECIFIED = 0;
-  // 成功
-  ERROR_CODE_SUCCESS = 1;
-  // 内部错误
-  ERROR_CODE_INTERNAL_ERROR = 1000;
-  // 参数无效
-  ERROR_CODE_INVALID_PARAMETER = 1001;
-  // 未授权
-  ERROR_CODE_UNAUTHORIZED = 1002;
-  // 禁止访问
-  ERROR_CODE_FORBIDDEN = 1003;
-  // 资源未找到
-  ERROR_CODE_NOT_FOUND = 1004;
-  // 用户不存在
-  ERROR_CODE_USER_NOT_FOUND = 2000;
-  // 用户已存在
-  ERROR_CODE_USER_EXISTS = 2001;
-  // 密码错误
-  ERROR_CODE_INVALID_PASSWORD = 2002;
-  // 令牌无效
-  ERROR_CODE_INVALID_TOKEN = 2003;
-  // 消息不存在
-  ERROR_CODE_MESSAGE_NOT_FOUND = 3000;
-  // 重复消息
-  ERROR_CODE_DUPLICATE_MESSAGE = 3001;
-  // 消息无效
-  ERROR_CODE_INVALID_MESSAGE = 3002;
-  // 群组不存在
-  ERROR_CODE_GROUP_NOT_FOUND = 4000;
-  // 不是群组成员
-  ERROR_CODE_NOT_GROUP_MEMBER = 4001;
-  // 群组已满
-  ERROR_CODE_GROUP_FULL = 4002;
-  // 权限不足
-  ERROR_CODE_INSUFFICIENT_PERMISSION = 4003;
-}
-
 // ErrorResponse 错误响应
 message ErrorResponse {
   // 错误码
-  ErrorCode code = 1;
+  common.v1.ErrorCode code = 1;
   // 错误消息
   string message = 2;
   // 请求追踪 ID
