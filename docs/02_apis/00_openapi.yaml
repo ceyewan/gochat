@@ -1,0 +1,751 @@
+openapi: 3.0.3
+info:
+  title: GoChat HTTP API
+  description: |-
+    GoChat RESTful API 的官方 OpenAPI 3.0 规范文档。
+    本文档提供了所有可用 HTTP 端点的详细定义，包括请求、响应和数据模型。
+    
+    The official OpenAPI 3.0 specification for the GoChat RESTful API.
+    This document provides a detailed, machine-readable definition of all available HTTP endpoints, including requests, responses, data models.
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: API Base Path
+
+paths:
+  # ===================================================================
+  # 身份认证 APIs / Authentication APIs
+  # ===================================================================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user | 注册新用户
+      description: 创建一个新的用户账户。需要提供唯一的用户名和密码。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: 用户名，必须唯一
+                  example: "newuser"
+                password:
+                  type: string
+                  format: password
+                  description: 用户密码，建议使用强密码
+                  example: "strongpassword123"
+      responses:
+        '201':
+          description: Registration successful. | 注册成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+        '400':
+          description: Bad Request (e.g., validation error, user already exists). | 请求错误（如验证失败、用户已存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Log in as a registered user | 用户登录
+      description: 使用已注册的用户名和密码进行登录认证。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: 注册时使用的用户名
+                  example: "testuser"
+                password:
+                  type: string
+                  format: password
+                  description: 用户账户密码
+                  example: "password123"
+      responses:
+        '200':
+          description: Login successful. Returns JWT tokens and user info. | 登录成功，返回JWT令牌和用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                            description: JWT访问令牌
+                            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                          refreshToken:
+                            type: string
+                            description: JWT刷新令牌
+                            example: "def50200..."
+                          expiresIn:
+                            type: integer
+                            format: int64
+                            description: Expiration timestamp for the access token. | 访问令牌的过期时间戳
+                          user:
+                            $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized (e.g., invalid credentials). | 未授权访问（如凭证无效）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/guest:
+    post:
+      tags:
+        - Authentication
+      summary: Log in as a guest | 游客登录
+      description: Creates a temporary guest account and returns login credentials. | 创建临时游客账户并返回登录凭证。
+      responses:
+        '201':
+          description: Guest login successful. | 游客登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                          refreshToken:
+                            type: string
+                            example: "def50200..."
+                          expiresIn:
+                            type: integer
+                            format: int64
+                            description: Expiration timestamp for the access token. | 访问令牌的过期时间戳
+                          user:
+                            $ref: '#/components/schemas/User'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Log out the current user | 用户退出登录
+      description: 退出当前用户的登录状态，使访问令牌失效。
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful. | 退出登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardSuccessResponse'
+        '401':
+          description: Unauthorized (e.g., invalid or expired token). | 未授权访问（如无效或过期的令牌）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===================================================================
+  # 用户 APIs / User APIs
+  # ===================================================================
+  /users/info:
+    get:
+      tags:
+        - Users
+      summary: Get current user's profile | 获取当前用户信息
+      description: 获取当前登录用户的详细个人资料信息。
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved user profile. | 成功获取用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized. | 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===================================================================
+  # 会话 APIs / Conversation APIs
+  # ===================================================================
+  /conversations:
+    get:
+      tags:
+        - Conversations
+      summary: Get the user's conversation list | 获取用户会话列表
+      description: 获取当前用户的所有会话列表，支持分页查询。
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination. | 分页页码
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          description: Number of conversations per page. | 每页会话数量
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: A paginated list of conversations. | 分页的会话列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          conversations:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Conversation'
+                          hasMore:
+                            type: boolean
+                            description: Indicates if there are more pages available. | 是否还有更多页面
+        '401':
+          description: Unauthorized. | 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Conversations
+      summary: Create a new private (1-on-1) conversation | 创建新的私聊会话
+      description: 与指定用户创建一个新的私聊会话。
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetUserId
+              properties:
+                targetUserId:
+                  type: string
+                  description: The ID of the user to start a conversation with. | 要开始对话的用户ID
+      responses:
+        '201':
+          description: Conversation created successfully. | 会话创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Conversation'
+        '400':
+          description: Bad Request (e.g., invalid target user ID). | 请求错误（如无效的目标用户ID）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized. | 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /conversations/{conversationId}/messages:
+    get:
+      tags:
+        - Conversations
+      summary: Get message history for a conversation | 获取会话消息历史
+      description: 获取指定会话的消息历史记录，支持分页查询。
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          description: The ID of the conversation. | 会话ID
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          description: The cursor for pagination (e.g., the `seq_id` of the last message from the previous page). | 分页游标（如上一页最后一条消息的seq_id）
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: The maximum number of messages to return. | 返回消息的最大数量
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: A paginated list of messages. | 分页的消息列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          messages:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Message'
+                          nextCursor:
+                            type: string
+                            description: The cursor to use for the next page of results. | 用于下一页结果的游标
+        '401':
+          description: Unauthorized. | 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found. | 会话不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Messages
+      summary: Send a message to a conversation | 向会话发送消息
+      description: 向指定会话发送一条新消息。
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          description: The ID of the conversation to send the message to. | 要发送消息的会话ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageType
+                - content
+              properties:
+                messageType:
+                  type: integer
+                  description: The type of the message (1 for text, 2 for image, etc.). | 消息类型（1表示文本，2表示图片等）
+                  example: 1
+                content:
+                  type: string
+                  description: The content of the message. | 消息内容
+                  example: "Hello, world!"
+      responses:
+        '201':
+          description: Message sent successfully. | 消息发送成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Message'
+        '400':
+          description: Bad Request (e.g., invalid message content). | 请求错误（如无效的消息内容）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized. | 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found. | 会话不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /conversations/{conversationId}/read:
+    put:
+      tags:
+        - Conversations
+      summary: Mark all messages in a conversation as read | 标记会话中所有消息为已读
+      description: 将指定会话中的所有消息标记为已读状态。
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          description: The ID of the conversation to mark as read. | 要标记为已读的会话ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully marked as read. | 成功标记为已读
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardSuccessResponse'
+        '401':
+          description: Unauthorized. | 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found. | 会话不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===================================================================
+  # 用户搜索 APIs / User Search APIs
+  # ===================================================================
+  /users/search:
+    get:
+      tags:
+        - Users
+      summary: Search for users by username | 按用户名搜索用户
+      description: 根据用户名关键词搜索系统中的用户。
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: The search query (username). | 搜索关键词（用户名）
+          schema:
+            type: string
+            example: "john"
+        - name: limit
+          in: query
+          description: The maximum number of users to return. | 返回用户的最大数量
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+      responses:
+        '200':
+          description: Search results. | 搜索结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          users:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized. | 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===================================================================
+  # 群组 APIs / Group APIs
+  # ===================================================================
+  /groups:
+    post:
+      tags:
+        - Groups
+      summary: Create a new group chat | 创建新的群聊
+      description: 创建一个新的群聊会话，并邀请指定的用户加入。
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - groupName
+                - members
+              properties:
+                groupName:
+                  type: string
+                  description: 群组名称
+                  example: "项目讨论组"
+                members:
+                  type: array
+                  description: 要邀请加入群组的用户ID列表
+                  items:
+                    type: string
+                  example: ["userId1", "userId2"]
+      responses:
+        '201':
+          description: 群组创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Conversation'
+        '400':
+          description: 请求错误（如无效的用户ID）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}:
+    get:
+      tags:
+        - Groups
+      summary: Get group details | 获取群组详情
+      description: 获取指定群组的详细信息，包括成员列表。
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: 群组ID（对应会话ID）
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取群组详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/Conversation'
+                          - type: object
+                            properties:
+                              members:
+                                type: array
+                                description: 群组成员列表
+                                items:
+                                  $ref: '#/components/schemas/User'
+        '401':
+          description: 未授权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 群组不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    # --- 核心数据模型 / Core Data Models ---
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - isGuest
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the user. | 用户的唯一标识符
+          example: "1234567890"
+        username:
+          type: string
+          description: The unique username of the user. | 用户的唯一用户名
+          example: "testuser"
+        avatarUrl:
+          type: string
+          format: uri
+          description: URL of the user's avatar image. | 用户头像图片的URL
+          example: "https://example.com/avatars/user.png"
+        isGuest:
+          type: boolean
+          description: True if the user is a guest account. | 如果是游客账户则为true
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp of when the user was created. | 用户创建时的Unix时间戳
+
+    Message:
+      type: object
+      required:
+        - id
+        - conversationId
+        - sender
+        - messageType
+        - content
+        - seqId
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the message. | 消息的唯一标识符
+        conversationId:
+          type: string
+          description: The ID of the conversation this message belongs to. | 此消息所属的会话ID
+        sender:
+          $ref: '#/components/schemas/User'
+        messageType:
+          type: integer
+          description: The type of the message (e.g., 1 for text, 2 for image). | 消息类型（如1表示文本，2表示图片）
+        content:
+          type: string
+          description: The content of the message. | 消息内容
+        seqId:
+          type: integer
+          format: int64
+          description: Sequence ID of the message within the conversation. | 消息在会话中的序列ID
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp of when the message was sent. | 消息发送时的Unix时间戳
+
+    Conversation:
+      type: object
+      required:
+        - id
+        - type
+        - name
+        - unreadCount
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the conversation. | 会话的唯一标识符
+        type:
+          type: integer
+          description: The type of conversation (1、single, 2、group). | 会话类型（1：单聊，2：群聊）
+        name:
+          type: string
+          description: The name of the conversation (e.g., group name or the other user's name). | 会话名称（如群组名称或对方用户名）
+        avatarUrl:
+          type: string
+          format: uri
+          description: URL of the conversation's avatar. | 会话头像的URL
+        lastMessage:
+          $ref: '#/components/schemas/Message'
+        unreadCount:
+          type: integer
+          description: The number of unread messages for the current user in this conversation. | 当前用户在此会话中的未读消息数量
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix timestamp of the last activity in the conversation. | 会话最后活动时间的Unix时间戳
+
+    # --- 标准响应封装 / Standard Response Wrappers ---
+    StandardSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: A descriptive message about the operation. | 关于操作的描述性消息
+          example: "Operation successful"
+        data:
+          type: object
+          description: The response data payload. | 响应数据载荷
+
+    Error:
+      type: object
+      required:
+        - success
+        - message
+        - code
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: A human-readable description of the error. | 人类可读的错误描述
+          example: "Invalid username or password."
+        code:
+          type: string
+          description: A unique error code. | 唯一的错误代码
+          example: "AUTH_INVALID_CREDENTIALS"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT Bearer token for authentication. Example: 'Authorization: Bearer {token}' | JWT Bearer令牌用于身份认证。示例：'Authorization: Bearer {token}'"

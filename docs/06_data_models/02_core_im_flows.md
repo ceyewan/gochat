@@ -116,9 +116,9 @@ sequenceDiagram
 
 ---
 
-## 3. 群组成员变更通知
+## 3. 会话成员变更通知
 
-**目标**: 用户 A 被拉入群聊后，群内所有其他成员收到“A 已加入群聊”的通知。
+**目标**: 用户 A 被拉入一个会话（如群聊）后，会话内所有其他成员收到“A 已加入”的通知。
 
 ### 3.1 流程图
 
@@ -130,38 +130,38 @@ sequenceDiagram
     participant Repo as im-repo
     participant Kafka
     participant Task as im-task
-    participant Others as 群内其他成员
+    participant Others as 会话内其他成员
 
-    Admin->>+Gateway: API: AddGroupMember(group_id, user_id)
-    Gateway->>+Logic: RPC: AddGroupMember(...)
-    Logic->>+Repo: RPC: AddGroupMember(...)
+    Admin->>+Gateway: API: AddMemberToConversation(conversation_id, user_id)
+    Gateway->>+Logic: RPC: AddMember(...)
+    Logic->>+Repo: RPC: AddConversationMember(...)
     Repo-->>-Logic: acks
-    Logic->>+Kafka: Produce to 'gochat.notifications' (type: group.member.joined)
+    Logic->>+Kafka: Produce to 'gochat.notifications' (type: conversation.member.joined)
     Kafka-->>-Logic: acks
     Logic-->>-Gateway: acks
     Gateway-->>-Admin: acks
 
     Kafka->>+Task: Consume from 'gochat.notifications'
-    Task->>+Repo: RPC: GetGroupMembers(group_id)
+    Task->>+Repo: RPC: GetConversationMembers(conversation_id)
     Repo-->>-Task: 返回成员列表
-    Task->>Task: 构建 SystemSignalMessage (type: group.member.changed)
+    Task->>Task: 构建 SystemSignalMessage (type: conversation.member.changed)
     Task->>+Gateway: RPC: PushToUsers(成员列表, signal)
     Gateway-->>-Task: acks
     Task-->>-Kafka: Commit offset
 
-    Gateway->>Others: 推送群成员变更信令
+    Gateway->>Others: 推送成员变更信令
 ```
 
 ### 3.2 详细步骤
 
-1.  **执行操作**: 管理员通过客户端调用 `AddGroupMember` API。
+1.  **执行操作**: 管理员或有权限的用户通过客户端 API 添加新成员。
 2.  **数据持久化与发布事件**:
     *   请求通过 `im-gateway` 到达 `im-logic`。
-    *   `im-logic` 调用 `im-repo` 的 `AddGroupMember` RPC，在 `group_members` 表中添加新成员记录。
-    *   成功后，`im-logic` 向 Kafka 的 `gochat.notifications` 主题发布一条 `group.member.joined` 事件。
+    *   `im-logic` 调用 `im-repo` 的 `ConversationService.AddConversationMember` RPC，在 `conversation_members` 表中添加新成员记录。
+    *   成功后，`im-logic` 向 Kafka 的 `gochat.notifications` 主题发布一条 `conversation.member.joined` 事件。
 
-3.  **处理事件与群组通知**:
-    *   `im-task` 消费 `group.member.joined` 事件。
-    *   `im-task` 调用 `im-repo` 的 `GetGroupMembers` RPC，获取该群的完整成员列表，作为推送目标。
-    *   `im-task` 构建 `SystemSignalMessage`，`SignalType` 为 `group.member.changed`。
-    *   `im-task` 调用 `im-gateway` 的 `PushToUsers` RPC，将此信令广播给群内所有成员。客户端收到后可以刷新成员列表。
+3.  **处理事件与会话通知**:
+    *   `im-task` 消费 `conversation.member.joined` 事件。
+    *   `im-task` 调用 `im-repo` 的 `ConversationService.GetConversationMembers` RPC，获取该会话的完整成员列表，作为推送目标。
+    *   `im-task` 构建 `SystemSignalMessage`，`SignalType` 为 `conversation.member.changed`。
+    *   `im-task` 调用 `im-gateway` 的 `PushToUsers` RPC，将此信令广播给会话内所有在线成员。客户端收到后可以刷新成员列表。

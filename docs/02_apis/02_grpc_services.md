@@ -79,21 +79,15 @@ GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语�
 
 ### `ConversationService`
 
--   **描述**: 为会话提供数据访问操作。
+-   **描述**: 为会话及成员关系提供统一的数据访问操作。
 -   **Proto 文件**: [`conversation.proto`](../../../api/proto/im_repo/v1/conversation.proto)
 -   **主要 RPC**:
     -   `CreateConversation`: 创建新的会话记录。
     -   `GetUserConversations`: 检索用户所属的会话 ID。
     -   `UpdateReadPointer`: 在数据库中更新用户的已读进度。
-
-### `GroupService`
-
--   **描述**: 为群组及其成员提供数据访问操作。
--   **Proto 文件**: [`group.proto`](../../../api/proto/im_repo/v1/group.proto)
--   **主要 RPC**:
-    -   `CreateGroup`: 创建新的群组记录。
-    -   `GetGroup`: 从数据库中检索群组信息。
-    -   `AddGroupMember`, `RemoveGroupMember`: 管理群组成员记录。
+    -   `AddConversationMember`: 向会话中添加一个或多个成员。
+    -   `RemoveConversationMember`: 从会话中移除成员。
+    -   `GetConversationMembers`: 获取会话的成员列表。
 
 ### `MessageService`
 
@@ -110,11 +104,3 @@ GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语�
 -   **主要 RPC**:
     -   `SetUserOnline`, `SetUserOffline`: 更新用户的在线状态。
     -   `GetUserOnlineStatus`: 检索用户的在线状态。
-
-### `FriendService`
-
--   **描述**: 为好友关系提供 CRUD 操作。
--   **主要 RPC**:
-    -   `AddFriend`: 创建好友关系记录。
-    -   `UpdateFriendStatus`: 更新好友关系状态（如接受、拒绝）。
-    -   `GetUserFriends`: 获取一个用户的所有好友列表。
