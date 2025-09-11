@@ -1,5 +1,6 @@
 // im_logic/v1/conversation.proto
-// 定义 im-logic 服务的会话管理相关接口
+// 定义 im-logic 服务的统一会话管理相关接口
+// 统一处理单聊、群聊、世界聊天室的所有操作
 
 syntax = "proto3";
 
@@ -9,32 +10,73 @@ option go_package = "github.com/ceyewan/gochat/api/proto/im_logic/v1;logicv1";
 
 import "im_logic/v1/common.proto";
 
-// ConversationService 会话管理服务
-// 提供会话列表、消息历史、已读状态等功能
+// ConversationService 统一会话管理服务
+// 提供所有类型会话的创建、管理、消息处理等功能
 service ConversationService {
-  // GetConversations 获取用户会话列表
-  // 返回用户参与的所有会话，按最后消息时间排序
-  rpc GetConversations(GetConversationsRequest) returns (GetConversationsResponse);
-  
-  // GetConversation 获取单个会话详情
-  // 返回会话的详细信息
+  // 会话基本操作
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
   rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
-  
-  // GetMessages 获取会话历史消息
-  // 支持分页查询会话中的历史消息
+  rpc GetConversations(GetConversationsRequest) returns (GetConversationsResponse);
+  rpc UpdateConversation(UpdateConversationRequest) returns (UpdateConversationResponse);
+  rpc DeleteConversation(DeleteConversationRequest) returns (DeleteConversationResponse);
+
+  // 成员管理
+  rpc AddMembers(AddMembersRequest) returns (AddMembersResponse);
+  rpc RemoveMembers(RemoveMembersRequest) returns (RemoveMembersResponse);
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse);
+  rpc GetMembers(GetMembersRequest) returns (GetMembersResponse);
+  rpc LeaveConversation(LeaveConversationRequest) returns (LeaveConversationResponse);
+
+  // 消息相关
   rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
-  
-  // MarkAsRead 标记消息已读
-  // 更新用户在指定会话中的已读位置
   rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse);
-  
-  // GetUnreadCount 获取未读消息数
-  // 返回用户在指定会话中的未读消息数量
   rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse);
 
-  // CreateConversation 创建会话
-  // 主要用于创建私聊会话
-  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+  // 特殊操作
+  rpc JoinWorldChat(JoinWorldChatRequest) returns (JoinWorldChatResponse);
+  rpc SearchConversations(SearchConversationsRequest) returns (SearchConversationsResponse);
+}
+
+// CreateConversationRequest 创建会话请求
+message CreateConversationRequest {
+  // 创建者用户 ID
+  string creator_id = 1;
+  // 会话类型
+  ConversationType type = 2;
+  // 会话名称（群聊时必填）
+  string name = 3;
+  // 会话头像 URL（可选）
+  string avatar_url = 4;
+  // 会话描述（可选）
+  string description = 5;
+  // 初始成员 ID 列表
+  repeated string member_ids = 6;
+  // 会话配置
+  ConversationSettings settings = 7;
+}
+
+// CreateConversationResponse 创建会话响应
+message CreateConversationResponse {
+  // 创建的会话信息
+  Conversation conversation = 1;
+}
+
+// GetConversationRequest 获取会话详情请求
+message GetConversationRequest {
+  // 请求者用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 是否包含成员列表
+  bool include_members = 3;
+}
+
+// GetConversationResponse 获取会话详情响应
+message GetConversationResponse {
+  // 会话信息
+  Conversation conversation = 1;
+  // 成员列表（如果请求包含）
+  repeated ConversationMember members = 2;
 }
 
 // GetConversationsRequest 获取会话列表请求
@@ -46,7 +88,9 @@ message GetConversationsRequest {
   // 每页大小
   int32 page_size = 3;
   // 会话类型过滤（可选）
-  ConversationType type = 4;
+  ConversationType type_filter = 4;
+  // 排序方式（默认按更新时间倒序）
+  string order_by = 5;
 }
 
 // GetConversationsResponse 获取会话列表响应
@@ -59,20 +103,152 @@ message GetConversationsResponse {
   int32 page = 3;
   // 每页大小
   int32 page_size = 4;
+  // 是否还有更多
+  bool has_more = 5;
 }
 
-// GetConversationRequest 获取会话详情请求
-message GetConversationRequest {
+// UpdateConversationRequest 更新会话信息请求
+message UpdateConversationRequest {
+  // 操作者用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 新的会话名称（可选）
+  string name = 3;
+  // 新的会话头像 URL（可选）
+  string avatar_url = 4;
+  // 新的会话描述（可选）
+  string description = 5;
+  // 新的会话配置（可选）
+  ConversationSettings settings = 6;
+  // 更新字段掩码
+  repeated string update_mask = 7;
+}
+
+// UpdateConversationResponse 更新会话信息响应
+message UpdateConversationResponse {
+  // 更新后的会话信息
+  Conversation conversation = 1;
+}
+
+// DeleteConversationRequest 删除会话请求
+message DeleteConversationRequest {
+  // 操作者用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 删除原因（可选）
+  string reason = 3;
+}
+
+// DeleteConversationResponse 删除会话响应
+message DeleteConversationResponse {
+  // 操作是否成功
+  bool success = 1;
+}
+
+// AddMembersRequest 添加成员请求
+message AddMembersRequest {
+  // 操作者用户 ID
+  string operator_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 要添加的用户 ID 列表
+  repeated string user_ids = 3;
+  // 新成员角色（默认为普通成员）
+  ConversationMemberRole role = 4;
+}
+
+// AddMembersResponse 添加成员响应
+message AddMembersResponse {
+  // 操作是否成功
+  bool success = 1;
+  // 成功添加的用户 ID 列表
+  repeated string added_user_ids = 2;
+  // 失败的用户 ID 列表及原因
+  repeated FailedUser failed_users = 3;
+}
+
+// RemoveMembersRequest 移除成员请求
+message RemoveMembersRequest {
+  // 操作者用户 ID
+  string operator_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 要移除的用户 ID 列表
+  repeated string user_ids = 3;
+  // 移除原因（可选）
+  string reason = 4;
+}
+
+// RemoveMembersResponse 移除成员响应
+message RemoveMembersResponse {
+  // 操作是否成功
+  bool success = 1;
+  // 成功移除的用户 ID 列表
+  repeated string removed_user_ids = 2;
+  // 失败的用户 ID 列表及原因
+  repeated FailedUser failed_users = 3;
+}
+
+// UpdateMemberRoleRequest 更新成员角色请求
+message UpdateMemberRoleRequest {
+  // 操作者用户 ID
+  string operator_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 目标用户 ID
+  string target_user_id = 3;
+  // 新角色
+  ConversationMemberRole new_role = 4;
+}
+
+// UpdateMemberRoleResponse 更新成员角色响应
+message UpdateMemberRoleResponse {
+  // 操作是否成功
+  bool success = 1;
+}
+
+// GetMembersRequest 获取成员列表请求
+message GetMembersRequest {
+  // 请求者用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 页码（从 1 开始）
+  int32 page = 3;
+  // 每页大小
+  int32 page_size = 4;
+  // 角色过滤（可选）
+  ConversationMemberRole role_filter = 5;
+}
+
+// GetMembersResponse 获取成员列表响应
+message GetMembersResponse {
+  // 成员列表
+  repeated ConversationMember members = 1;
+  // 总数量
+  int64 total = 2;
+  // 当前页码
+  int32 page = 3;
+  // 每页大小
+  int32 page_size = 4;
+  // 是否还有更多
+  bool has_more = 5;
+}
+
+// LeaveConversationRequest 离开会话请求
+message LeaveConversationRequest {
   // 用户 ID
   string user_id = 1;
   // 会话 ID
   string conversation_id = 2;
 }
 
-// GetConversationResponse 获取会话详情响应
-message GetConversationResponse {
-  // 会话信息
-  Conversation conversation = 1;
+// LeaveConversationResponse 离开会话响应
+message LeaveConversationResponse {
+  // 操作是否成功
+  bool success = 1;
 }
 
 // GetMessagesRequest 获取历史消息请求
@@ -89,6 +265,8 @@ message GetMessagesRequest {
   int32 limit = 5;
   // 排序方向（true: 升序, false: 降序）
   bool ascending = 6;
+  // 消息类型过滤（可选）
+  repeated MessageType type_filter = 7;
 }
 
 // GetMessagesResponse 获取历史消息响应
@@ -99,6 +277,8 @@ message GetMessagesResponse {
   bool has_more = 2;
   // 下一页的起始序列号
   int64 next_seq_id = 3;
+  // 上一页的起始序列号
+  int64 prev_seq_id = 4;
 }
 
 // MarkAsReadRequest 标记已读请求
@@ -135,33 +315,39 @@ message GetUnreadCountResponse {
   repeated ConversationUnreadCount conversation_counts = 2;
 }
 
-// ConversationUnreadCount 会话未读数
-message ConversationUnreadCount {
-  // 会话 ID
-  string conversation_id = 1;
-  // 未读数量
-  int64 unread_count = 2;
+// JoinWorldChatRequest 加入世界聊天室请求
+message JoinWorldChatRequest {
+  // 用户 ID
+  string user_id = 1;
 }
 
-// CreateConversationRequest 创建会话请求
-message CreateConversationRequest {
-  // 创建者用户 ID
-  string creator_id = 1;
-  // 会话类型
-  ConversationType type = 2;
-  // 成员用户 ID 列表
-  repeated string member_ids = 3;
-  // 会话名称（群聊时需要）
-  string name = 4;
+// JoinWorldChatResponse 加入世界聊天室响应
+message JoinWorldChatResponse {
+  // 操作是否成功
+  bool success = 1;
+  // 世界聊天室会话信息
+  Conversation conversation = 2;
 }
 
-// CreateConversationResponse 创建会话响应
-message CreateConversationResponse {
-  // 会话信息
-  Conversation conversation = 1;
+// SearchConversationsRequest 搜索会话请求
+message SearchConversationsRequest {
+  // 用户 ID
+  string user_id = 1;
+  // 搜索关键词
+  string query = 2;
+  // 会话类型过滤（可选）
+  ConversationType type_filter = 3;
+  // 限制数量
+  int32 limit = 4;
 }
 
-// Conversation 会话信息
+// SearchConversationsResponse 搜索会话响应
+message SearchConversationsResponse {
+  // 搜索结果
+  repeated Conversation conversations = 1;
+}
+
+// 统一的会话信息
 message Conversation {
   // 会话 ID
   string id = 1;
@@ -171,14 +357,124 @@ message Conversation {
   string name = 3;
   // 会话头像 URL
   string avatar_url = 4;
+  // 会话描述
+  string description = 5;
+  // 会话所有者 ID（群主、频道主，单聊为空）
+  string owner_id = 6;
+  // 成员数量
+  int32 member_count = 7;
+  // 会话配置
+  ConversationSettings settings = 8;
   // 最后一条消息
-  Message last_message = 5;
+  Message last_message = 9;
   // 未读消息数量
-  int64 unread_count = 6;
+  int64 unread_count = 10;
   // 最后更新时间（Unix 时间戳）
-  int64 updated_at = 7;
-  // 会话成员数量（群聊时有效）
-  int32 member_count = 8;
-  // 用户在该会话中的角色（群聊时有效）
-  int32 user_role = 9;
+  int64 updated_at = 11;
+  // 创建时间（Unix 时间戳）
+  int64 created_at = 12;
+
+  // 当前用户在此会话中的成员信息
+  ConversationMember my_membership = 13;
+}
+
+// 会话配置（用于存储类型特有的配置）
+message ConversationSettings {
+  // 群聊配置
+  GroupSettings group_settings = 1;
+  // 世界聊天室配置
+  WorldChatSettings world_settings = 2;
+  // 单聊配置
+  SingleChatSettings single_settings = 3;
+}
+
+// 群聊配置
+message GroupSettings {
+  // 是否需要审批加入
+  bool join_approval_required = 1;
+  // 是否允许普通成员邀请
+  bool invite_enabled = 2;
+  // 最大成员数
+  int32 max_members = 3;
+  // 是否全员禁言
+  bool mute_all = 4;
+  // 是否允许成员查看历史消息
+  bool allow_member_view_history = 5;
+  // 群公告
+  string announcement = 6;
+}
+
+// 世界聊天室配置
+message WorldChatSettings {
+  // 是否允许游客
+  bool guest_allowed = 1;
+  // 消息频率限制（条/分钟）
+  int32 message_rate_limit = 2;
+  // 游客是否自动加入
+  bool auto_join_guests = 3;
+  // 是否启用内容过滤
+  bool content_filter_enabled = 4;
+}
+
+// 单聊配置
+message SingleChatSettings {
+  // 是否允许消息撤回
+  bool allow_recall = 1;
+  // 消息撤回时限（秒）
+  int32 recall_time_limit = 2;
+  // 是否显示已读状态
+  bool show_read_status = 3;
+}
+
+// 会话成员信息
+message ConversationMember {
+  // 用户 ID
+  string user_id = 1;
+  // 会话 ID
+  string conversation_id = 2;
+  // 成员角色
+  ConversationMemberRole role = 3;
+  // 成员在此会话中的昵称
+  string nickname = 4;
+  // 是否被禁言
+  bool muted = 5;
+  // 禁言到期时间（Unix 时间戳，0表示未被禁言）
+  int64 muted_until = 6;
+  // 加入时间（Unix 时间戳）
+  int64 joined_at = 7;
+  // 更新时间（Unix 时间戳）
+  int64 updated_at = 8;
+
+  // 用户信息
+  User user = 9;
+}
+
+// 会话成员角色
+enum ConversationMemberRole {
+  // 未指定角色
+  CONVERSATION_MEMBER_ROLE_UNSPECIFIED = 0;
+  // 普通成员
+  CONVERSATION_MEMBER_ROLE_MEMBER = 1;
+  // 管理员
+  CONVERSATION_MEMBER_ROLE_ADMIN = 2;
+  // 群主/所有者
+  CONVERSATION_MEMBER_ROLE_OWNER = 3;
+}
+
+// 会话未读数
+message ConversationUnreadCount {
+  // 会话 ID
+  string conversation_id = 1;
+  // 未读数量
+  int64 unread_count = 2;
+}
+
+// 失败的用户操作
+message FailedUser {
+  // 用户 ID
+  string user_id = 1;
+  // 失败原因
+  string reason = 2;
+  // 错误码
+  ErrorCode error_code = 3;
 }
