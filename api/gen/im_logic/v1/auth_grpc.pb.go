@@ -54,7 +54,7 @@ type AuthServiceClient interface {
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
 	// GuestLogin 游客登录
 	// 为游客创建临时账号并返回令牌
-	GuestLogin(ctx context.Context, in *GuestLoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	GuestLogin(ctx context.Context, in *GuestLoginRequest, opts ...grpc.CallOption) (*GuestLoginResponse, error)
 }
 
 type authServiceClient struct {
@@ -115,9 +115,9 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 	return out, nil
 }
 
-func (c *authServiceClient) GuestLogin(ctx context.Context, in *GuestLoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+func (c *authServiceClient) GuestLogin(ctx context.Context, in *GuestLoginRequest, opts ...grpc.CallOption) (*GuestLoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LoginResponse)
+	out := new(GuestLoginResponse)
 	err := c.cc.Invoke(ctx, AuthService_GuestLogin_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ type AuthServiceServer interface {
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
 	// GuestLogin 游客登录
 	// 为游客创建临时账号并返回令牌
-	GuestLogin(context.Context, *GuestLoginRequest) (*LoginResponse, error)
+	GuestLogin(context.Context, *GuestLoginRequest) (*GuestLoginResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -175,7 +175,7 @@ func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*
 func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
 }
-func (UnimplementedAuthServiceServer) GuestLogin(context.Context, *GuestLoginRequest) (*LoginResponse, error) {
+func (UnimplementedAuthServiceServer) GuestLogin(context.Context, *GuestLoginRequest) (*GuestLoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GuestLogin not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}

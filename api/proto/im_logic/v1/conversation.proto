@@ -434,19 +434,17 @@ message ConversationMember {
   string conversation_id = 2;
   // 成员角色
   ConversationMemberRole role = 3;
-  // 成员在此会话中的昵称
-  string nickname = 4;
   // 是否被禁言
-  bool muted = 5;
+  bool muted = 4;
   // 禁言到期时间（Unix 时间戳，0表示未被禁言）
-  int64 muted_until = 6;
+  int64 muted_until = 5;
   // 加入时间（Unix 时间戳）
-  int64 joined_at = 7;
+  int64 joined_at = 6;
   // 更新时间（Unix 时间戳）
-  int64 updated_at = 8;
+  int64 updated_at = 7;
 
   // 用户信息
-  User user = 9;
+  User user = 8;
 }
 
 // 会话成员角色

@@ -22,12 +22,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConversationService_GetUserConversations_FullMethodName = "/im.repo.v1.ConversationService/GetUserConversations"
-	ConversationService_UpdateReadPointer_FullMethodName    = "/im.repo.v1.ConversationService/UpdateReadPointer"
-	ConversationService_GetUnreadCount_FullMethodName       = "/im.repo.v1.ConversationService/GetUnreadCount"
-	ConversationService_GetReadPointer_FullMethodName       = "/im.repo.v1.ConversationService/GetReadPointer"
-	ConversationService_BatchGetUnreadCounts_FullMethodName = "/im.repo.v1.ConversationService/BatchGetUnreadCounts"
-	ConversationService_CreateConversation_FullMethodName   = "/im.repo.v1.ConversationService/CreateConversation"
+	ConversationService_GetUserConversations_FullMethodName     = "/im.repo.v1.ConversationService/GetUserConversations"
+	ConversationService_UpdateReadPointer_FullMethodName        = "/im.repo.v1.ConversationService/UpdateReadPointer"
+	ConversationService_GetUnreadCount_FullMethodName           = "/im.repo.v1.ConversationService/GetUnreadCount"
+	ConversationService_GetReadPointer_FullMethodName           = "/im.repo.v1.ConversationService/GetReadPointer"
+	ConversationService_BatchGetUnreadCounts_FullMethodName     = "/im.repo.v1.ConversationService/BatchGetUnreadCounts"
+	ConversationService_CreateConversation_FullMethodName       = "/im.repo.v1.ConversationService/CreateConversation"
+	ConversationService_BatchGetConversations_FullMethodName    = "/im.repo.v1.ConversationService/BatchGetConversations"
+	ConversationService_AddConversationMember_FullMethodName    = "/im.repo.v1.ConversationService/AddConversationMember"
+	ConversationService_RemoveConversationMember_FullMethodName = "/im.repo.v1.ConversationService/RemoveConversationMember"
+	ConversationService_UpdateMemberRole_FullMethodName         = "/im.repo.v1.ConversationService/UpdateMemberRole"
+	ConversationService_GetConversationMembers_FullMethodName   = "/im.repo.v1.ConversationService/GetConversationMembers"
 )
 
 // ConversationServiceClient is the client API for ConversationService service.
@@ -55,6 +60,21 @@ type ConversationServiceClient interface {
 	// CreateConversation 创建会话
 	// 在数据库中创建新的会话记录
 	CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error)
+	// BatchGetConversations 批量获取会话信息
+	// 解决 N+1 查询问题，im-logic 获取会话列表后，可通过此接口一次性获取所有会话的详细信息
+	BatchGetConversations(ctx context.Context, in *BatchGetConversationsRequest, opts ...grpc.CallOption) (*BatchGetConversationsResponse, error)
+	// AddConversationMember 添加会话成员
+	// 用于将一个或多个用户添加到会话中
+	AddConversationMember(ctx context.Context, in *AddConversationMemberRequest, opts ...grpc.CallOption) (*AddConversationMemberResponse, error)
+	// RemoveConversationMember 移除会话成员
+	// 用于从会话中移除一个用户
+	RemoveConversationMember(ctx context.Context, in *RemoveConversationMemberRequest, opts ...grpc.CallOption) (*RemoveConversationMemberResponse, error)
+	// UpdateMemberRole 更新成员角色
+	// 更新会话中指定成员的角色
+	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error)
+	// GetConversationMembers 获取会话成员列表
+	// 分页获取一个会话的所有成员
+	GetConversationMembers(ctx context.Context, in *GetConversationMembersRequest, opts ...grpc.CallOption) (*GetConversationMembersResponse, error)
 }
 
 type conversationServiceClient struct {
@@ -125,6 +145,56 @@ func (c *conversationServiceClient) CreateConversation(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *conversationServiceClient) BatchGetConversations(ctx context.Context, in *BatchGetConversationsRequest, opts ...grpc.CallOption) (*BatchGetConversationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetConversationsResponse)
+	err := c.cc.Invoke(ctx, ConversationService_BatchGetConversations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *conversationServiceClient) AddConversationMember(ctx context.Context, in *AddConversationMemberRequest, opts ...grpc.CallOption) (*AddConversationMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddConversationMemberResponse)
+	err := c.cc.Invoke(ctx, ConversationService_AddConversationMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *conversationServiceClient) RemoveConversationMember(ctx context.Context, in *RemoveConversationMemberRequest, opts ...grpc.CallOption) (*RemoveConversationMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveConversationMemberResponse)
+	err := c.cc.Invoke(ctx, ConversationService_RemoveConversationMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *conversationServiceClient) UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMemberRoleResponse)
+	err := c.cc.Invoke(ctx, ConversationService_UpdateMemberRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *conversationServiceClient) GetConversationMembers(ctx context.Context, in *GetConversationMembersRequest, opts ...grpc.CallOption) (*GetConversationMembersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetConversationMembersResponse)
+	err := c.cc.Invoke(ctx, ConversationService_GetConversationMembers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConversationServiceServer is the server API for ConversationService service.
 // All implementations must embed UnimplementedConversationServiceServer
 // for forward compatibility.
@@ -150,6 +220,21 @@ type ConversationServiceServer interface {
 	// CreateConversation 创建会话
 	// 在数据库中创建新的会话记录
 	CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error)
+	// BatchGetConversations 批量获取会话信息
+	// 解决 N+1 查询问题，im-logic 获取会话列表后，可通过此接口一次性获取所有会话的详细信息
+	BatchGetConversations(context.Context, *BatchGetConversationsRequest) (*BatchGetConversationsResponse, error)
+	// AddConversationMember 添加会话成员
+	// 用于将一个或多个用户添加到会话中
+	AddConversationMember(context.Context, *AddConversationMemberRequest) (*AddConversationMemberResponse, error)
+	// RemoveConversationMember 移除会话成员
+	// 用于从会话中移除一个用户
+	RemoveConversationMember(context.Context, *RemoveConversationMemberRequest) (*RemoveConversationMemberResponse, error)
+	// UpdateMemberRole 更新成员角色
+	// 更新会话中指定成员的角色
+	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error)
+	// GetConversationMembers 获取会话成员列表
+	// 分页获取一个会话的所有成员
+	GetConversationMembers(context.Context, *GetConversationMembersRequest) (*GetConversationMembersResponse, error)
 	mustEmbedUnimplementedConversationServiceServer()
 }
 
@@ -177,6 +262,21 @@ func (UnimplementedConversationServiceServer) BatchGetUnreadCounts(context.Conte
 }
 func (UnimplementedConversationServiceServer) CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateConversation not implemented")
+}
+func (UnimplementedConversationServiceServer) BatchGetConversations(context.Context, *BatchGetConversationsRequest) (*BatchGetConversationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchGetConversations not implemented")
+}
+func (UnimplementedConversationServiceServer) AddConversationMember(context.Context, *AddConversationMemberRequest) (*AddConversationMemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddConversationMember not implemented")
+}
+func (UnimplementedConversationServiceServer) RemoveConversationMember(context.Context, *RemoveConversationMemberRequest) (*RemoveConversationMemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveConversationMember not implemented")
+}
+func (UnimplementedConversationServiceServer) UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMemberRole not implemented")
+}
+func (UnimplementedConversationServiceServer) GetConversationMembers(context.Context, *GetConversationMembersRequest) (*GetConversationMembersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetConversationMembers not implemented")
 }
 func (UnimplementedConversationServiceServer) mustEmbedUnimplementedConversationServiceServer() {}
 func (UnimplementedConversationServiceServer) testEmbeddedByValue()                             {}
@@ -307,6 +407,96 @@ func _ConversationService_CreateConversation_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConversationService_BatchGetConversations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetConversationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).BatchGetConversations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_BatchGetConversations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).BatchGetConversations(ctx, req.(*BatchGetConversationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConversationService_AddConversationMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddConversationMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).AddConversationMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_AddConversationMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).AddConversationMember(ctx, req.(*AddConversationMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConversationService_RemoveConversationMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveConversationMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).RemoveConversationMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_RemoveConversationMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).RemoveConversationMember(ctx, req.(*RemoveConversationMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConversationService_UpdateMemberRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMemberRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).UpdateMemberRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_UpdateMemberRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).UpdateMemberRole(ctx, req.(*UpdateMemberRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConversationService_GetConversationMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConversationMembersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConversationServiceServer).GetConversationMembers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConversationService_GetConversationMembers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConversationServiceServer).GetConversationMembers(ctx, req.(*GetConversationMembersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ConversationService_ServiceDesc is the grpc.ServiceDesc for ConversationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -337,6 +527,26 @@ var ConversationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateConversation",
 			Handler:    _ConversationService_CreateConversation_Handler,
+		},
+		{
+			MethodName: "BatchGetConversations",
+			Handler:    _ConversationService_BatchGetConversations_Handler,
+		},
+		{
+			MethodName: "AddConversationMember",
+			Handler:    _ConversationService_AddConversationMember_Handler,
+		},
+		{
+			MethodName: "RemoveConversationMember",
+			Handler:    _ConversationService_RemoveConversationMember_Handler,
+		},
+		{
+			MethodName: "UpdateMemberRole",
+			Handler:    _ConversationService_UpdateMemberRole_Handler,
+		},
+		{
+			MethodName: "GetConversationMembers",
+			Handler:    _ConversationService_GetConversationMembers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

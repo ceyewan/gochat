@@ -34,7 +34,7 @@ service AuthService {
 
   // GuestLogin 游客登录
   // 为游客创建临时账号并返回令牌
-  rpc GuestLogin(GuestLoginRequest) returns (LoginResponse);
+  rpc GuestLogin(GuestLoginRequest) returns (GuestLoginResponse);
 }
 
 // LoginRequest 登录请求
@@ -65,10 +65,8 @@ message RegisterRequest {
   string username = 1;
   // 密码
   string password = 2;
-  // 昵称（可选）
-  string nickname = 3;
   // 头像 URL（可选）
-  string avatar_url = 4;
+  string avatar_url = 3;
 }
 
 // RegisterResponse 注册响应
@@ -125,8 +123,18 @@ message ValidateTokenResponse {
 
 // GuestLoginRequest 游客登录请求
 message GuestLoginRequest {
-  // 游客昵称（可选）
-  string nickname = 1;
   // 客户端信息（可选）
-  string client_info = 2;
+  string client_info = 1;
+}
+
+// GuestLoginResponse 游客登录响应
+message GuestLoginResponse {
+  // 访问令牌
+  string access_token = 1;
+  // 刷新令牌
+  string refresh_token = 2;
+  // 访问令牌过期时间（Unix 时间戳）
+  int64 expires_in = 3;
+  // 用户信息
+  User user = 4;
 }

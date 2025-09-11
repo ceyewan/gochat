@@ -25,7 +25,6 @@ const (
 	MessageService_SaveMessage_FullMethodName             = "/im.repo.v1.MessageService/SaveMessage"
 	MessageService_GetMessage_FullMethodName              = "/im.repo.v1.MessageService/GetMessage"
 	MessageService_GetConversationMessages_FullMethodName = "/im.repo.v1.MessageService/GetConversationMessages"
-	MessageService_GenerateSeqID_FullMethodName           = "/im.repo.v1.MessageService/GenerateSeqID"
 	MessageService_CheckMessageIdempotency_FullMethodName = "/im.repo.v1.MessageService/CheckMessageIdempotency"
 	MessageService_GetLatestMessages_FullMethodName       = "/im.repo.v1.MessageService/GetLatestMessages"
 	MessageService_DeleteMessage_FullMethodName           = "/im.repo.v1.MessageService/DeleteMessage"
@@ -47,9 +46,6 @@ type MessageServiceClient interface {
 	// GetConversationMessages 获取会话消息列表
 	// 分页查询指定会话的消息列表
 	GetConversationMessages(ctx context.Context, in *GetConversationMessagesRequest, opts ...grpc.CallOption) (*GetConversationMessagesResponse, error)
-	// GenerateSeqID 生成序列号
-	// 为指定会话生成单调递增的序列号
-	GenerateSeqID(ctx context.Context, in *GenerateSeqIDRequest, opts ...grpc.CallOption) (*GenerateSeqIDResponse, error)
 	// CheckMessageIdempotency 检查消息幂等性
 	// 检查客户端消息 ID 是否已存在，实现幂等性
 	CheckMessageIdempotency(ctx context.Context, in *CheckMessageIdempotencyRequest, opts ...grpc.CallOption) (*CheckMessageIdempotencyResponse, error)
@@ -93,16 +89,6 @@ func (c *messageServiceClient) GetConversationMessages(ctx context.Context, in *
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetConversationMessagesResponse)
 	err := c.cc.Invoke(ctx, MessageService_GetConversationMessages_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *messageServiceClient) GenerateSeqID(ctx context.Context, in *GenerateSeqIDRequest, opts ...grpc.CallOption) (*GenerateSeqIDResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GenerateSeqIDResponse)
-	err := c.cc.Invoke(ctx, MessageService_GenerateSeqID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -155,9 +141,6 @@ type MessageServiceServer interface {
 	// GetConversationMessages 获取会话消息列表
 	// 分页查询指定会话的消息列表
 	GetConversationMessages(context.Context, *GetConversationMessagesRequest) (*GetConversationMessagesResponse, error)
-	// GenerateSeqID 生成序列号
-	// 为指定会话生成单调递增的序列号
-	GenerateSeqID(context.Context, *GenerateSeqIDRequest) (*GenerateSeqIDResponse, error)
 	// CheckMessageIdempotency 检查消息幂等性
 	// 检查客户端消息 ID 是否已存在，实现幂等性
 	CheckMessageIdempotency(context.Context, *CheckMessageIdempotencyRequest) (*CheckMessageIdempotencyResponse, error)
@@ -185,9 +168,6 @@ func (UnimplementedMessageServiceServer) GetMessage(context.Context, *GetMessage
 }
 func (UnimplementedMessageServiceServer) GetConversationMessages(context.Context, *GetConversationMessagesRequest) (*GetConversationMessagesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConversationMessages not implemented")
-}
-func (UnimplementedMessageServiceServer) GenerateSeqID(context.Context, *GenerateSeqIDRequest) (*GenerateSeqIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateSeqID not implemented")
 }
 func (UnimplementedMessageServiceServer) CheckMessageIdempotency(context.Context, *CheckMessageIdempotencyRequest) (*CheckMessageIdempotencyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckMessageIdempotency not implemented")
@@ -273,24 +253,6 @@ func _MessageService_GetConversationMessages_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MessageService_GenerateSeqID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GenerateSeqIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MessageServiceServer).GenerateSeqID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MessageService_GenerateSeqID_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MessageServiceServer).GenerateSeqID(ctx, req.(*GenerateSeqIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _MessageService_CheckMessageIdempotency_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckMessageIdempotencyRequest)
 	if err := dec(in); err != nil {
@@ -363,10 +325,6 @@ var MessageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConversationMessages",
 			Handler:    _MessageService_GetConversationMessages_Handler,
-		},
-		{
-			MethodName: "GenerateSeqID",
-			Handler:    _MessageService_GenerateSeqID_Handler,
 		},
 		{
 			MethodName: "CheckMessageIdempotency",

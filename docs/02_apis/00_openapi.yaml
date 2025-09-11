@@ -42,10 +42,6 @@ paths:
                   format: password
                   description: 用户密码，建议使用强密码
                   example: "strongpassword123"
-                nickname:
-                  type: string
-                  description: 用户昵称（可选）
-                  example: "新用户"
       responses:
         "201":
           description: Registration successful. | 注册成功
@@ -140,10 +136,6 @@ paths:
             schema:
               type: object
               properties:
-                nickname:
-                  type: string
-                  description: 游客昵称（可选）
-                  example: "访客用户"
       responses:
         "201":
           description: Guest login successful. | 游客登录成功
@@ -236,10 +228,6 @@ paths:
             schema:
               type: object
               properties:
-                nickname:
-                  type: string
-                  description: 用户昵称
-                  example: "新昵称"
                 avatarUrl:
                   type: string
                   format: uri
@@ -631,7 +619,7 @@ paths:
                   type: string
                   description: The content of the message. | 消息内容
                   example: "Hello, world!"
-                clientMsgId:
+                client_msg_id:
                   type: string
                   description: Client-side message ID for idempotency. | 客户端消息ID，用于幂等性处理
                   example: "client_msg_123456"
@@ -1065,10 +1053,6 @@ components:
           type: string
           description: The unique username of the user. | 用户的唯一用户名
           example: "testuser"
-        nickname:
-          type: string
-          description: The display name of the user. | 用户的显示昵称
-          example: "测试用户"
         avatarUrl:
           type: string
           format: uri
@@ -1207,9 +1191,6 @@ components:
           type: integer
           description: The role of the user in the conversation (1=member, 2=admin, 3=owner). | 用户在会话中的角色（1=成员，2=管理员，3=群主）
           enum: [1, 2, 3]
-        nickname:
-          type: string
-          description: The nickname of the user in this conversation. | 用户在此会话中的昵称
         muted:
           type: boolean
           description: Whether the user is muted in this conversation. | 用户是否在此会话中被禁言
@@ -1281,9 +1262,6 @@ components:
           type: integer
           description: The friendship status (1=friends, 3=blocked). | 好友状态（1=好友，3=已拉黑）
           enum: [1, 3]
-        remarks:
-          type: string
-          description: The remarks/nickname for the friend. | 对好友的备注名
         createdAt:
           type: integer
           format: int64

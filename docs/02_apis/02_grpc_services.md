@@ -44,16 +44,6 @@ GoChat 的内部通信通过 gRPC 处理，它提供高性能、强类型和语�
     -   `GetMessages`: 获取会话的消息历史记录。
     -   `MarkAsRead`: 更新用户在会话中的已读指针。
 
-### `GroupService`
-
--   **描述**: 管理群聊逻辑，包括创建、成员资格和信息检索。
--   **Proto 文件**: [`group.proto`](../../../api/proto/im_logic/v1/group.proto)
--   **主要 RPC**:
-    -   `CreateGroup`: 创建新群组。
-    -   `GetGroup`: 检索群组的详细信息。
-    -   `GetGroupMembers`: 获取群组的成员列表。
-    -   `JoinGroup`, `LeaveGroup`: 管理群组成员资格。
-
 ### `MessageService`
 
 -   **描述**: 处理发送消息的逻辑。

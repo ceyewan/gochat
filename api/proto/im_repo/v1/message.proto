@@ -22,10 +22,6 @@ service MessageService {
   // 分页查询指定会话的消息列表
   rpc GetConversationMessages(GetConversationMessagesRequest) returns (GetConversationMessagesResponse);
   
-  // GenerateSeqID 生成序列号
-  // 为指定会话生成单调递增的序列号
-  rpc GenerateSeqID(GenerateSeqIDRequest) returns (GenerateSeqIDResponse);
-  
   // CheckMessageIdempotency 检查消息幂等性
   // 检查客户端消息 ID 是否已存在，实现幂等性
   rpc CheckMessageIdempotency(CheckMessageIdempotencyRequest) returns (CheckMessageIdempotencyResponse);
@@ -51,7 +47,9 @@ message SaveMessageRequest {
   int32 message_type = 4;
   // 消息内容
   string content = 5;
-  // 序列号
+  // 序列号。
+  // [v1_simplify] 在当前简化版本中，调用方应确保此值与 message_id (如雪花ID) 相同，
+  // 以此来保证消息的全局基本有序，从而避免了维护会话内严格递增序列的复杂性。
   int64 seq_id = 6;
   // 客户端消息 ID（用于幂等性）
   string client_msg_id = 7;
@@ -99,18 +97,6 @@ message GetConversationMessagesResponse {
   bool has_more = 2;
   // 下一页的起始序列号
   int64 next_seq_id = 3;
-}
-
-// GenerateSeqIDRequest 生成序列号请求
-message GenerateSeqIDRequest {
-  // 会话 ID
-  string conversation_id = 1;
-}
-
-// GenerateSeqIDResponse 生成序列号响应
-message GenerateSeqIDResponse {
-  // 生成的序列号
-  int64 seq_id = 1;
 }
 
 // CheckMessageIdempotencyRequest 检查消息幂等性请求

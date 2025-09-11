@@ -41,19 +41,15 @@
 - `POST /auth/logout` - 用户登出
 
 ### 用户 API (`/users`)
-- `GET /users/info` - 获取当前用户信息
+- `GET /users/profile` - 获取当前用户信息
 - `GET /users/search` - 搜索用户
 
 ### 会话 API (`/conversations`)
 - `GET /conversations` - 获取会话列表
-- `POST /conversations` - 创建私聊会话
+- `POST /conversations` - 创建会话（单聊或群聊）
 - `GET /conversations/{conversationId}/messages` - 获取消息历史
 - `POST /conversations/{conversationId}/messages` - 发送消息
 - `PUT /conversations/{conversationId}/read` - 标记已读
-
-### 群组 API (`/groups`)
-- `POST /groups` - 创建群组
-- `GET /groups/{groupId}` - 获取群组详情
 
 > **注意**: 详细的请求/响应格式、数据模型和错误处理信息请参考 `00_openapi.yaml` 文件。
 
@@ -96,7 +92,7 @@ const ws = new WebSocket(`ws://localhost:8080/ws?token=${jwtToken}`);
     "conversationId": "string",
     "content": "string",
     "messageType": 1,
-    "tempMessageId": "string"
+    "client_msg_id": "string"
   }
 }
 ```
@@ -105,7 +101,7 @@ const ws = new WebSocket(`ws://localhost:8080/ws?token=${jwtToken}`);
 - `conversationId`: 目标会话ID
 - `content`: 消息内容
 - `messageType`: 消息类型（1=文本，2=图片，3=文件等）
-- `tempMessageId`: 客户端生成的临时消息ID，用于后续确认
+- `client_msg_id`: 客户端生成的临时消息ID，用于后续确认
 
 **处理流程**:
 1. `im-gateway` 接收消息
@@ -134,7 +130,8 @@ const ws = new WebSocket(`ws://localhost:8080/ws?token=${jwtToken}`);
 {
   "type": "mark-read",
   "data": {
-    "conversationId": "string"
+    "conversationId": "string",
+    "seqId": 12345
   }
 }
 ```
@@ -172,7 +169,7 @@ const ws = new WebSocket(`ws://localhost:8080/ws?token=${jwtToken}`);
 {
   "type": "message-ack",
   "data": {
-    "tempMessageId": "string",
+    "client_msg_id": "string",
     "messageId": "string",
     "status": "success"
   }

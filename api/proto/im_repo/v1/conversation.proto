@@ -33,6 +33,10 @@ service ConversationService {
   // CreateConversation 创建会话
   // 在数据库中创建新的会话记录
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+
+  // BatchGetConversations 批量获取会话信息
+  // 解决 N+1 查询问题，im-logic 获取会话列表后，可通过此接口一次性获取所有会话的详细信息
+  rpc BatchGetConversations(BatchGetConversationsRequest) returns (BatchGetConversationsResponse);
   // --- 成员管理 ---
 
   // AddConversationMember 添加会话成员
@@ -150,14 +154,57 @@ message ReadPointer {
 message CreateConversationRequest {
   // 会话类型
   int32 type = 1;
+  // 会话名称
+  string name = 2;
+  // 会话头像 URL
+  string avatar_url = 3;
+  // 会话描述
+  string description = 4;
+  // 会话所有者 ID
+  string owner_id = 5;
   // 成员用户 ID 列表
-  repeated string member_ids = 2;
+  repeated string member_ids = 6;
 }
 
 // CreateConversationResponse 创建会话响应
 message CreateConversationResponse {
+  // 完整的会话信息
+  Conversation conversation = 1;
+}
+
+// Conversation 会话核心信息
+// 定义了会话在 repo 层需要持久化的核心字段
+message Conversation {
   // 会话 ID
-  string conversation_id = 1;
+  string id = 1;
+  // 会话类型
+  int32 type = 2;
+  // 会话名称
+  string name = 3;
+  // 会话头像 URL
+  string avatar_url = 4;
+  // 会话描述
+  string description = 5;
+  // 会话所有者 ID
+  string owner_id = 6;
+  // 成员数量
+  int32 member_count = 7;
+  // 创建时间
+  int64 created_at = 8;
+  // 更新时间
+  int64 updated_at = 9;
+}
+
+// BatchGetConversationsRequest 批量获取会话请求
+message BatchGetConversationsRequest {
+  // 会话 ID 列表
+  repeated string conversation_ids = 1;
+}
+
+// BatchGetConversationsResponse 批量获取会话响应
+message BatchGetConversationsResponse {
+  // 会话信息列表
+  repeated Conversation conversations = 1;
 }
 
 // --- 成员管理消息定义 ---

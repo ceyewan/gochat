@@ -117,7 +117,6 @@ type FanoutTask struct {
 type UserInfo struct {
 	ID        string `json:"id"`
 	Username  string `json:"username"`
-	Nickname  string `json:"nickname"`
 	AvatarURL string `json:"avatar_url"`
 	IsGuest   bool   `json:"is_guest"`
 }
@@ -308,14 +307,12 @@ type ConversationInvitedPayload struct {
 	ConversationName string `json:"conversation_name"` // 会话名称
 	ConversationType int    `json:"conversation_type"` // 会话类型
 	InviterID        string `json:"inviter_id"`        // 邀请人ID
-	InviterName      string `json:"inviter_name"`      // 邀请人名称
 }
 
 // FriendRequestNewPayload 新好友申请通知载荷
 type FriendRequestNewPayload struct {
 	RequestID     string `json:"request_id"`     // 申请ID
 	RequesterID   string `json:"requester_id"`   // 申请人ID
-	RequesterName string `json:"requester_name"` // 申请人名称
 	Message       string `json:"message"`        // 申请消息
 }
 

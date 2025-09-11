@@ -41,12 +41,10 @@ message CreateUserRequest {
   string username = 1;
   // 密码哈希
   string password_hash = 2;
-  // 昵称
-  string nickname = 3;
   // 头像 URL
-  string avatar_url = 4;
+  string avatar_url = 3;
   // 是否为游客
-  bool is_guest = 5;
+  bool is_guest = 4;
 }
 
 // CreateUserResponse 创建用户响应
@@ -87,12 +85,10 @@ message GetUsersResponse {
 message UpdateUserRequest {
   // 用户 ID
   string user_id = 1;
-  // 新昵称（可选）
-  string nickname = 2;
   // 新头像 URL（可选）
-  string avatar_url = 3;
+  string avatar_url = 2;
   // 更新字段掩码
-  repeated string update_mask = 4;
+  repeated string update_mask = 3;
 }
 
 // UpdateUserResponse 更新用户响应
@@ -133,14 +129,12 @@ message User {
   string id = 1;
   // 用户名
   string username = 2;
-  // 昵称
-  string nickname = 3;
   // 头像 URL
-  string avatar_url = 4;
+  string avatar_url = 3;
   // 创建时间（Unix 时间戳）
-  int64 created_at = 5;
+  int64 created_at = 4;
   // 更新时间（Unix 时间戳）
-  int64 updated_at = 6;
+  int64 updated_at = 5;
   // 是否为游客
-  bool is_guest = 7;
+  bool is_guest = 6;
 }
