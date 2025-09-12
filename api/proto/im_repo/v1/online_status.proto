@@ -13,23 +13,23 @@ service OnlineStatusService {
   // SetUserOnline 设置用户在线状态
   // 将用户标记为在线并记录所在网关
   rpc SetUserOnline(SetUserOnlineRequest) returns (SetUserOnlineResponse);
-  
+
   // SetUserOffline 设置用户离线状态
   // 将用户标记为离线
   rpc SetUserOffline(SetUserOfflineRequest) returns (SetUserOfflineResponse);
-  
+
   // GetUserOnlineStatus 获取用户在线状态
   // 查询单个用户的在线状态
   rpc GetUserOnlineStatus(GetUserOnlineStatusRequest) returns (GetUserOnlineStatusResponse);
-  
+
   // GetUsersOnlineStatus 批量获取用户在线状态
   // 批量查询多个用户的在线状态
   rpc GetUsersOnlineStatus(GetUsersOnlineStatusRequest) returns (GetUsersOnlineStatusResponse);
-  
+
   // UpdateHeartbeat 更新心跳
   // 更新用户的最后活跃时间
   rpc UpdateHeartbeat(UpdateHeartbeatRequest) returns (UpdateHeartbeatResponse);
-  
+
   // CleanupExpiredStatus 清理过期状态
   // 清理长时间未活跃的在线状态
   rpc CleanupExpiredStatus(CleanupExpiredStatusRequest) returns (CleanupExpiredStatusResponse);

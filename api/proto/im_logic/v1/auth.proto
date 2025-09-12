@@ -2,11 +2,11 @@
 // 定义 im-logic 服务的用户认证相关接口
 
 syntax = "proto3";
-
-option go_package = "github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1";
 package im.logic.v1;
 
-import "im_logic/v1/common.proto";
+import "common/v1/types.proto";
+
+option go_package = "github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1";
 
 // AuthService 用户认证服务
 // 提供用户登录、注册、令牌刷新等认证功能
@@ -14,19 +14,19 @@ service AuthService {
   // Login 用户登录
   // 验证用户名密码，返回访问令牌和刷新令牌
   rpc Login(LoginRequest) returns (LoginResponse);
-  
+
   // Register 用户注册
   // 创建新用户账号
   rpc Register(RegisterRequest) returns (RegisterResponse);
-  
+
   // RefreshToken 刷新访问令牌
   // 使用刷新令牌获取新的访问令牌
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
-  
+
   // Logout 用户登出
   // 使访问令牌和刷新令牌失效
   rpc Logout(LogoutRequest) returns (LogoutResponse);
-  
+
   // ValidateToken 验证令牌
   // 验证访问令牌的有效性并返回用户信息
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
@@ -55,7 +55,7 @@ message LoginResponse {
   // 访问令牌过期时间（Unix 时间戳）
   int64 expires_in = 3;
   // 用户信息
-  User user = 4;
+  common.v1.User user = 4;
 }
 
 // RegisterRequest 注册请求
@@ -71,7 +71,7 @@ message RegisterRequest {
 // RegisterResponse 注册响应
 message RegisterResponse {
   // 用户信息
-  User user = 1;
+  common.v1.User user = 1;
 }
 
 // RefreshTokenRequest 刷新令牌请求
@@ -115,7 +115,7 @@ message ValidateTokenResponse {
   // 令牌是否有效
   bool valid = 1;
   // 用户信息（令牌有效时返回）
-  User user = 2;
+  common.v1.User user = 2;
   // 令牌过期时间（Unix 时间戳）
   int64 expires_at = 3;
 }
@@ -135,5 +135,5 @@ message GuestLoginResponse {
   // 访问令牌过期时间（Unix 时间戳）
   int64 expires_in = 3;
   // 用户信息
-  User user = 4;
+  common.v1.User user = 4;
 }

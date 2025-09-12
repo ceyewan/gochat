@@ -111,7 +111,7 @@ func (x *SendMessageRequest) GetClientMsgId() string {
 type SendMessageResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The server-generated message.
-	Message *Message `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message *v1.Message `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	// The temporary client-side ID for matching.
 	ClientMsgId   string `protobuf:"bytes,2,opt,name=client_msg_id,json=clientMsgId,proto3" json:"client_msg_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -148,7 +148,7 @@ func (*SendMessageResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_message_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SendMessageResponse) GetMessage() *Message {
+func (x *SendMessageResponse) GetMessage() *v1.Message {
 	if x != nil {
 		return x.Message
 	}
@@ -166,15 +166,15 @@ var File_im_logic_v1_message_proto protoreflect.FileDescriptor
 
 const file_im_logic_v1_message_proto_rawDesc = "" +
 	"\n" +
-	"\x19im_logic/v1/message.proto\x12\vim.logic.v1\x1a\x18im_logic/v1/common.proto\x1a\x15common/v1/types.proto\"\xc0\x01\n" +
+	"\x19im_logic/v1/message.proto\x12\vim.logic.v1\x1a\x15common/v1/types.proto\"\xc0\x01\n" +
 	"\x12SendMessageRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x18\n" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12*\n" +
 	"\x04type\x18\x04 \x01(\x0e2\x16.common.v1.MessageTypeR\x04type\x12\"\n" +
-	"\rclient_msg_id\x18\x05 \x01(\tR\vclientMsgId\"i\n" +
-	"\x13SendMessageResponse\x12.\n" +
-	"\amessage\x18\x01 \x01(\v2\x14.im.logic.v1.MessageR\amessage\x12\"\n" +
+	"\rclient_msg_id\x18\x05 \x01(\tR\vclientMsgId\"g\n" +
+	"\x13SendMessageResponse\x12,\n" +
+	"\amessage\x18\x01 \x01(\v2\x12.common.v1.MessageR\amessage\x12\"\n" +
 	"\rclient_msg_id\x18\x02 \x01(\tR\vclientMsgId2b\n" +
 	"\x0eMessageService\x12P\n" +
 	"\vSendMessage\x12\x1f.im.logic.v1.SendMessageRequest\x1a .im.logic.v1.SendMessageResponseB9Z7github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1b\x06proto3"
@@ -196,11 +196,11 @@ var file_im_logic_v1_message_proto_goTypes = []any{
 	(*SendMessageRequest)(nil),  // 0: im.logic.v1.SendMessageRequest
 	(*SendMessageResponse)(nil), // 1: im.logic.v1.SendMessageResponse
 	(v1.MessageType)(0),         // 2: common.v1.MessageType
-	(*Message)(nil),             // 3: im.logic.v1.Message
+	(*v1.Message)(nil),          // 3: common.v1.Message
 }
 var file_im_logic_v1_message_proto_depIdxs = []int32{
 	2, // 0: im.logic.v1.SendMessageRequest.type:type_name -> common.v1.MessageType
-	3, // 1: im.logic.v1.SendMessageResponse.message:type_name -> im.logic.v1.Message
+	3, // 1: im.logic.v1.SendMessageResponse.message:type_name -> common.v1.Message
 	0, // 2: im.logic.v1.MessageService.SendMessage:input_type -> im.logic.v1.SendMessageRequest
 	1, // 3: im.logic.v1.MessageService.SendMessage:output_type -> im.logic.v1.SendMessageResponse
 	3, // [3:4] is the sub-list for method output_type
@@ -215,7 +215,6 @@ func file_im_logic_v1_message_proto_init() {
 	if File_im_logic_v1_message_proto != nil {
 		return
 	}
-	file_im_logic_v1_common_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -1,6 +1,7 @@
 version: v2
 modules:
   - path: proto
+    name: buf.build/ceyewan/gochat
 breaking:
   use:
     - FILE

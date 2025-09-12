@@ -2,12 +2,11 @@
 // Defines the message management service for im-logic.
 
 syntax = "proto3";
-
-option go_package = "github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1";
 package im.logic.v1;
 
-import "im_logic/v1/common.proto";
 import "common/v1/types.proto";
+
+option go_package = "github.com/ceyewan/gochat/api/gen/im_logic/v1;imlogicv1";
 
 // MessageService is responsible for handling message-related operations.
 service MessageService {
@@ -32,7 +31,7 @@ message SendMessageRequest {
 // SendMessageResponse is the response after sending a message.
 message SendMessageResponse {
   // The server-generated message.
-  Message message = 1;
+  common.v1.Message message = 1;
   // The temporary client-side ID for matching.
   string client_msg_id = 2;
 }

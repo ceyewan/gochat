@@ -13,23 +13,23 @@ service MessageService {
   // SaveMessage 保存消息
   // 将消息持久化到数据库并更新热点缓存
   rpc SaveMessage(SaveMessageRequest) returns (SaveMessageResponse);
-  
+
   // GetMessage 获取单条消息
   // 根据消息 ID 获取消息详情
   rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
-  
+
   // GetConversationMessages 获取会话消息列表
   // 分页查询指定会话的消息列表
   rpc GetConversationMessages(GetConversationMessagesRequest) returns (GetConversationMessagesResponse);
-  
+
   // CheckMessageIdempotency 检查消息幂等性
   // 检查客户端消息 ID 是否已存在，实现幂等性
   rpc CheckMessageIdempotency(CheckMessageIdempotencyRequest) returns (CheckMessageIdempotencyResponse);
-  
+
   // GetLatestMessages 获取最新消息
   // 获取会话中最新的 N 条消息（用于会话列表）
   rpc GetLatestMessages(GetLatestMessagesRequest) returns (GetLatestMessagesResponse);
-  
+
   // DeleteMessage 删除消息
   // 软删除指定消息（标记为已删除）
   rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
@@ -60,7 +60,7 @@ message SaveMessageRequest {
 // SaveMessageResponse 保存消息响应
 message SaveMessageResponse {
   // 保存的消息信息
-  Message message = 1;
+  RepoMessage message = 1;
 }
 
 // GetMessageRequest 获取消息请求
@@ -72,7 +72,7 @@ message GetMessageRequest {
 // GetMessageResponse 获取消息响应
 message GetMessageResponse {
   // 消息信息
-  Message message = 1;
+  RepoMessage message = 1;
 }
 
 // GetConversationMessagesRequest 获取会话消息请求
@@ -92,7 +92,7 @@ message GetConversationMessagesRequest {
 // GetConversationMessagesResponse 获取会话消息响应
 message GetConversationMessagesResponse {
   // 消息列表
-  repeated Message messages = 1;
+  repeated RepoMessage messages = 1;
   // 是否还有更多消息
   bool has_more = 2;
   // 下一页的起始序列号
@@ -124,15 +124,16 @@ message GetLatestMessagesRequest {
 }
 
 // GetLatestMessagesResponse 获取最新消息响应
+// GetLatestMessagesResponse 获取最新消息响应
 message GetLatestMessagesResponse {
-  // 会话最新消息映射 (conversation_id -> messages)
-  map<string, ConversationMessages> conversation_messages = 1;
+  // 消息列表
+  repeated RepoMessage messages = 1;
 }
 
 // ConversationMessages 会话消息列表
 message ConversationMessages {
   // 消息列表
-  repeated Message messages = 1;
+  repeated RepoMessage messages = 1;
 }
 
 // DeleteMessageRequest 删除消息请求
@@ -151,8 +152,8 @@ message DeleteMessageResponse {
   bool success = 1;
 }
 
-// Message 消息信息
-message Message {
+// RepoMessage 存储层消息信息
+message RepoMessage {
   // 消息 ID
   string id = 1;
   // 会话 ID

@@ -1063,7 +1063,7 @@ components:
           description: True if the user is a guest account. | 如果是游客账户则为true
         status:
           type: integer
-          description: User status (0: normal, 1: disabled). | 用户状态（0: 正常, 1: 禁用）
+          description: User status (0、normal, 1、disabled). | 用户状态（0、正常, 1、禁用）
           example: 0
         createdAt:
           type: integer

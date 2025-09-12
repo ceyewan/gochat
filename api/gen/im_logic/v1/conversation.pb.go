@@ -40,9 +40,7 @@ type CreateConversationRequest struct {
 	// 会话描述（可选）
 	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// 初始成员 ID 列表
-	MemberIds []string `protobuf:"bytes,6,rep,name=member_ids,json=memberIds,proto3" json:"member_ids,omitempty"`
-	// 会话配置
-	Settings      *ConversationSettings `protobuf:"bytes,7,opt,name=settings,proto3" json:"settings,omitempty"`
+	MemberIds     []string `protobuf:"bytes,6,rep,name=member_ids,json=memberIds,proto3" json:"member_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,18 +117,11 @@ func (x *CreateConversationRequest) GetMemberIds() []string {
 	return nil
 }
 
-func (x *CreateConversationRequest) GetSettings() *ConversationSettings {
-	if x != nil {
-		return x.Settings
-	}
-	return nil
-}
-
 // CreateConversationResponse 创建会话响应
 type CreateConversationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 创建的会话信息
-	Conversation  *Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
+	Conversation  *v1.Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -165,7 +156,7 @@ func (*CreateConversationResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CreateConversationResponse) GetConversation() *Conversation {
+func (x *CreateConversationResponse) GetConversation() *v1.Conversation {
 	if x != nil {
 		return x.Conversation
 	}
@@ -240,9 +231,9 @@ func (x *GetConversationRequest) GetIncludeMembers() bool {
 type GetConversationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 会话信息
-	Conversation *Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
+	Conversation *v1.Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
 	// 成员列表（如果请求包含）
-	Members       []*ConversationMember `protobuf:"bytes,2,rep,name=members,proto3" json:"members,omitempty"`
+	Members       []*v1.ConversationMember `protobuf:"bytes,2,rep,name=members,proto3" json:"members,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -277,14 +268,14 @@ func (*GetConversationResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *GetConversationResponse) GetConversation() *Conversation {
+func (x *GetConversationResponse) GetConversation() *v1.Conversation {
 	if x != nil {
 		return x.Conversation
 	}
 	return nil
 }
 
-func (x *GetConversationResponse) GetMembers() []*ConversationMember {
+func (x *GetConversationResponse) GetMembers() []*v1.ConversationMember {
 	if x != nil {
 		return x.Members
 	}
@@ -377,7 +368,7 @@ func (x *GetConversationsRequest) GetOrderBy() string {
 type GetConversationsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 会话列表
-	Conversations []*Conversation `protobuf:"bytes,1,rep,name=conversations,proto3" json:"conversations,omitempty"`
+	Conversations []*v1.Conversation `protobuf:"bytes,1,rep,name=conversations,proto3" json:"conversations,omitempty"`
 	// 总数量
 	Total int64 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	// 当前页码
@@ -420,7 +411,7 @@ func (*GetConversationsResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetConversationsResponse) GetConversations() []*Conversation {
+func (x *GetConversationsResponse) GetConversations() []*v1.Conversation {
 	if x != nil {
 		return x.Conversations
 	}
@@ -643,20 +634,20 @@ func (x *GetConversationsOptimizedResponse) GetHasMore() bool {
 type ConversationOptimized struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 会话基本信息
-	Id          string                `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type        v1.ConversationType   `protobuf:"varint,2,opt,name=type,proto3,enum=common.v1.ConversationType" json:"type,omitempty"`
-	Name        string                `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	AvatarUrl   string                `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	Description string                `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	OwnerId     string                `protobuf:"bytes,6,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	MemberCount int32                 `protobuf:"varint,7,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
-	Settings    *ConversationSettings `protobuf:"bytes,8,opt,name=settings,proto3" json:"settings,omitempty"`
-	UpdatedAt   int64                 `protobuf:"varint,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	CreatedAt   int64                 `protobuf:"varint,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Id          string              `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type        v1.ConversationType `protobuf:"varint,2,opt,name=type,proto3,enum=common.v1.ConversationType" json:"type,omitempty"`
+	Name        string              `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	AvatarUrl   string              `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Description string              `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	OwnerId     string              `protobuf:"bytes,6,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	MemberCount int32               `protobuf:"varint,7,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
+	// ConversationSettings settings = 8;
+	UpdatedAt int64 `protobuf:"varint,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CreatedAt int64 `protobuf:"varint,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// 当前用户在此会话中的信息
-	MyMembership *ConversationMember `protobuf:"bytes,13,opt,name=my_membership,json=myMembership,proto3" json:"my_membership,omitempty"`
+	MyMembership *v1.ConversationMember `protobuf:"bytes,13,opt,name=my_membership,json=myMembership,proto3" json:"my_membership,omitempty"`
 	// 最后一条消息（可选）
-	LastMessage *Message `protobuf:"bytes,9,opt,name=last_message,json=lastMessage,proto3" json:"last_message,omitempty"`
+	LastMessage *v1.Message `protobuf:"bytes,9,opt,name=last_message,json=lastMessage,proto3" json:"last_message,omitempty"`
 	// 未读消息数量（可选）
 	UnreadCount int64 `protobuf:"varint,10,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
 	// 最后活动时间（用于排序）
@@ -744,13 +735,6 @@ func (x *ConversationOptimized) GetMemberCount() int32 {
 	return 0
 }
 
-func (x *ConversationOptimized) GetSettings() *ConversationSettings {
-	if x != nil {
-		return x.Settings
-	}
-	return nil
-}
-
 func (x *ConversationOptimized) GetUpdatedAt() int64 {
 	if x != nil {
 		return x.UpdatedAt
@@ -765,14 +749,14 @@ func (x *ConversationOptimized) GetCreatedAt() int64 {
 	return 0
 }
 
-func (x *ConversationOptimized) GetMyMembership() *ConversationMember {
+func (x *ConversationOptimized) GetMyMembership() *v1.ConversationMember {
 	if x != nil {
 		return x.MyMembership
 	}
 	return nil
 }
 
-func (x *ConversationOptimized) GetLastMessage() *Message {
+func (x *ConversationOptimized) GetLastMessage() *v1.Message {
 	if x != nil {
 		return x.LastMessage
 	}
@@ -807,7 +791,7 @@ type UpdateConversationRequest struct {
 	// 新的会话描述（可选）
 	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// 新的会话配置（可选）
-	Settings *ConversationSettings `protobuf:"bytes,6,opt,name=settings,proto3" json:"settings,omitempty"`
+	// ConversationSettings settings = 6;
 	// 更新字段掩码
 	UpdateMask    []string `protobuf:"bytes,7,rep,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -879,13 +863,6 @@ func (x *UpdateConversationRequest) GetDescription() string {
 	return ""
 }
 
-func (x *UpdateConversationRequest) GetSettings() *ConversationSettings {
-	if x != nil {
-		return x.Settings
-	}
-	return nil
-}
-
 func (x *UpdateConversationRequest) GetUpdateMask() []string {
 	if x != nil {
 		return x.UpdateMask
@@ -897,7 +874,7 @@ func (x *UpdateConversationRequest) GetUpdateMask() []string {
 type UpdateConversationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 更新后的会话信息
-	Conversation  *Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
+	Conversation  *v1.Conversation `protobuf:"bytes,1,opt,name=conversation,proto3" json:"conversation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -932,7 +909,7 @@ func (*UpdateConversationResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *UpdateConversationResponse) GetConversation() *Conversation {
+func (x *UpdateConversationResponse) GetConversation() *v1.Conversation {
 	if x != nil {
 		return x.Conversation
 	}
@@ -1528,7 +1505,7 @@ func (x *GetMembersRequest) GetRoleFilter() v1.ConversationMemberRole {
 type GetMembersResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 成员列表
-	Members []*ConversationMember `protobuf:"bytes,1,rep,name=members,proto3" json:"members,omitempty"`
+	Members []*v1.ConversationMember `protobuf:"bytes,1,rep,name=members,proto3" json:"members,omitempty"`
 	// 总数量
 	Total int64 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	// 当前页码
@@ -1571,7 +1548,7 @@ func (*GetMembersResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{20}
 }
 
-func (x *GetMembersResponse) GetMembers() []*ConversationMember {
+func (x *GetMembersResponse) GetMembers() []*v1.ConversationMember {
 	if x != nil {
 		return x.Members
 	}
@@ -1811,7 +1788,7 @@ func (x *GetMessagesRequest) GetTypeFilter() []v1.MessageType {
 type GetMessagesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 消息列表
-	Messages []*Message `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	Messages []*v1.Message `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
 	// 是否还有更多消息
 	HasMore bool `protobuf:"varint,2,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
 	// 下一页的起始序列号
@@ -1852,7 +1829,7 @@ func (*GetMessagesResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{24}
 }
 
-func (x *GetMessagesResponse) GetMessages() []*Message {
+func (x *GetMessagesResponse) GetMessages() []*v1.Message {
 	if x != nil {
 		return x.Messages
 	}
@@ -2161,7 +2138,7 @@ type JoinWorldChatResponse struct {
 	// 操作是否成功
 	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	// 世界聊天室会话信息
-	Conversation  *Conversation `protobuf:"bytes,2,opt,name=conversation,proto3" json:"conversation,omitempty"`
+	Conversation  *v1.Conversation `protobuf:"bytes,2,opt,name=conversation,proto3" json:"conversation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2203,7 +2180,7 @@ func (x *JoinWorldChatResponse) GetSuccess() bool {
 	return false
 }
 
-func (x *JoinWorldChatResponse) GetConversation() *Conversation {
+func (x *JoinWorldChatResponse) GetConversation() *v1.Conversation {
 	if x != nil {
 		return x.Conversation
 	}
@@ -2287,7 +2264,7 @@ func (x *SearchConversationsRequest) GetLimit() int32 {
 type SearchConversationsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 搜索结果
-	Conversations []*Conversation `protobuf:"bytes,1,rep,name=conversations,proto3" json:"conversations,omitempty"`
+	Conversations []*v1.Conversation `protobuf:"bytes,1,rep,name=conversations,proto3" json:"conversations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2322,564 +2299,9 @@ func (*SearchConversationsResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{32}
 }
 
-func (x *SearchConversationsResponse) GetConversations() []*Conversation {
+func (x *SearchConversationsResponse) GetConversations() []*v1.Conversation {
 	if x != nil {
 		return x.Conversations
-	}
-	return nil
-}
-
-// 统一的会话信息
-type Conversation struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 会话 ID
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// 会话类型
-	Type v1.ConversationType `protobuf:"varint,2,opt,name=type,proto3,enum=common.v1.ConversationType" json:"type,omitempty"`
-	// 会话名称
-	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	// 会话头像 URL
-	AvatarUrl string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	// 会话描述
-	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	// 会话所有者 ID（群主、频道主，单聊为空）
-	OwnerId string `protobuf:"bytes,6,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	// 成员数量
-	MemberCount int32 `protobuf:"varint,7,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
-	// 会话配置
-	Settings *ConversationSettings `protobuf:"bytes,8,opt,name=settings,proto3" json:"settings,omitempty"`
-	// 最后一条消息
-	LastMessage *Message `protobuf:"bytes,9,opt,name=last_message,json=lastMessage,proto3" json:"last_message,omitempty"`
-	// 未读消息数量
-	UnreadCount int64 `protobuf:"varint,10,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
-	// 最后更新时间（Unix 时间戳）
-	UpdatedAt int64 `protobuf:"varint,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// 创建时间（Unix 时间戳）
-	CreatedAt int64 `protobuf:"varint,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	// 当前用户在此会话中的成员信息
-	MyMembership  *ConversationMember `protobuf:"bytes,13,opt,name=my_membership,json=myMembership,proto3" json:"my_membership,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Conversation) Reset() {
-	*x = Conversation{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Conversation) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Conversation) ProtoMessage() {}
-
-func (x *Conversation) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Conversation.ProtoReflect.Descriptor instead.
-func (*Conversation) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{33}
-}
-
-func (x *Conversation) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Conversation) GetType() v1.ConversationType {
-	if x != nil {
-		return x.Type
-	}
-	return v1.ConversationType(0)
-}
-
-func (x *Conversation) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *Conversation) GetAvatarUrl() string {
-	if x != nil {
-		return x.AvatarUrl
-	}
-	return ""
-}
-
-func (x *Conversation) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *Conversation) GetOwnerId() string {
-	if x != nil {
-		return x.OwnerId
-	}
-	return ""
-}
-
-func (x *Conversation) GetMemberCount() int32 {
-	if x != nil {
-		return x.MemberCount
-	}
-	return 0
-}
-
-func (x *Conversation) GetSettings() *ConversationSettings {
-	if x != nil {
-		return x.Settings
-	}
-	return nil
-}
-
-func (x *Conversation) GetLastMessage() *Message {
-	if x != nil {
-		return x.LastMessage
-	}
-	return nil
-}
-
-func (x *Conversation) GetUnreadCount() int64 {
-	if x != nil {
-		return x.UnreadCount
-	}
-	return 0
-}
-
-func (x *Conversation) GetUpdatedAt() int64 {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return 0
-}
-
-func (x *Conversation) GetCreatedAt() int64 {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return 0
-}
-
-func (x *Conversation) GetMyMembership() *ConversationMember {
-	if x != nil {
-		return x.MyMembership
-	}
-	return nil
-}
-
-// 会话配置（用于存储类型特有的配置）
-type ConversationSettings struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 群聊配置
-	GroupSettings *GroupSettings `protobuf:"bytes,1,opt,name=group_settings,json=groupSettings,proto3" json:"group_settings,omitempty"`
-	// 世界聊天室配置
-	WorldSettings *WorldChatSettings `protobuf:"bytes,2,opt,name=world_settings,json=worldSettings,proto3" json:"world_settings,omitempty"`
-	// 单聊配置
-	SingleSettings *SingleChatSettings `protobuf:"bytes,3,opt,name=single_settings,json=singleSettings,proto3" json:"single_settings,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ConversationSettings) Reset() {
-	*x = ConversationSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ConversationSettings) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ConversationSettings) ProtoMessage() {}
-
-func (x *ConversationSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ConversationSettings.ProtoReflect.Descriptor instead.
-func (*ConversationSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{34}
-}
-
-func (x *ConversationSettings) GetGroupSettings() *GroupSettings {
-	if x != nil {
-		return x.GroupSettings
-	}
-	return nil
-}
-
-func (x *ConversationSettings) GetWorldSettings() *WorldChatSettings {
-	if x != nil {
-		return x.WorldSettings
-	}
-	return nil
-}
-
-func (x *ConversationSettings) GetSingleSettings() *SingleChatSettings {
-	if x != nil {
-		return x.SingleSettings
-	}
-	return nil
-}
-
-// 群聊配置
-type GroupSettings struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 是否需要审批加入
-	JoinApprovalRequired bool `protobuf:"varint,1,opt,name=join_approval_required,json=joinApprovalRequired,proto3" json:"join_approval_required,omitempty"`
-	// 是否允许普通成员邀请
-	InviteEnabled bool `protobuf:"varint,2,opt,name=invite_enabled,json=inviteEnabled,proto3" json:"invite_enabled,omitempty"`
-	// 最大成员数
-	MaxMembers int32 `protobuf:"varint,3,opt,name=max_members,json=maxMembers,proto3" json:"max_members,omitempty"`
-	// 是否全员禁言
-	MuteAll bool `protobuf:"varint,4,opt,name=mute_all,json=muteAll,proto3" json:"mute_all,omitempty"`
-	// 是否允许成员查看历史消息
-	AllowMemberViewHistory bool `protobuf:"varint,5,opt,name=allow_member_view_history,json=allowMemberViewHistory,proto3" json:"allow_member_view_history,omitempty"`
-	// 群公告
-	Announcement  string `protobuf:"bytes,6,opt,name=announcement,proto3" json:"announcement,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GroupSettings) Reset() {
-	*x = GroupSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[35]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GroupSettings) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GroupSettings) ProtoMessage() {}
-
-func (x *GroupSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[35]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GroupSettings.ProtoReflect.Descriptor instead.
-func (*GroupSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{35}
-}
-
-func (x *GroupSettings) GetJoinApprovalRequired() bool {
-	if x != nil {
-		return x.JoinApprovalRequired
-	}
-	return false
-}
-
-func (x *GroupSettings) GetInviteEnabled() bool {
-	if x != nil {
-		return x.InviteEnabled
-	}
-	return false
-}
-
-func (x *GroupSettings) GetMaxMembers() int32 {
-	if x != nil {
-		return x.MaxMembers
-	}
-	return 0
-}
-
-func (x *GroupSettings) GetMuteAll() bool {
-	if x != nil {
-		return x.MuteAll
-	}
-	return false
-}
-
-func (x *GroupSettings) GetAllowMemberViewHistory() bool {
-	if x != nil {
-		return x.AllowMemberViewHistory
-	}
-	return false
-}
-
-func (x *GroupSettings) GetAnnouncement() string {
-	if x != nil {
-		return x.Announcement
-	}
-	return ""
-}
-
-// 世界聊天室配置
-type WorldChatSettings struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 是否允许游客
-	GuestAllowed bool `protobuf:"varint,1,opt,name=guest_allowed,json=guestAllowed,proto3" json:"guest_allowed,omitempty"`
-	// 消息频率限制（条/分钟）
-	MessageRateLimit int32 `protobuf:"varint,2,opt,name=message_rate_limit,json=messageRateLimit,proto3" json:"message_rate_limit,omitempty"`
-	// 游客是否自动加入
-	AutoJoinGuests bool `protobuf:"varint,3,opt,name=auto_join_guests,json=autoJoinGuests,proto3" json:"auto_join_guests,omitempty"`
-	// 是否启用内容过滤
-	ContentFilterEnabled bool `protobuf:"varint,4,opt,name=content_filter_enabled,json=contentFilterEnabled,proto3" json:"content_filter_enabled,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
-}
-
-func (x *WorldChatSettings) Reset() {
-	*x = WorldChatSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[36]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WorldChatSettings) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WorldChatSettings) ProtoMessage() {}
-
-func (x *WorldChatSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[36]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WorldChatSettings.ProtoReflect.Descriptor instead.
-func (*WorldChatSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{36}
-}
-
-func (x *WorldChatSettings) GetGuestAllowed() bool {
-	if x != nil {
-		return x.GuestAllowed
-	}
-	return false
-}
-
-func (x *WorldChatSettings) GetMessageRateLimit() int32 {
-	if x != nil {
-		return x.MessageRateLimit
-	}
-	return 0
-}
-
-func (x *WorldChatSettings) GetAutoJoinGuests() bool {
-	if x != nil {
-		return x.AutoJoinGuests
-	}
-	return false
-}
-
-func (x *WorldChatSettings) GetContentFilterEnabled() bool {
-	if x != nil {
-		return x.ContentFilterEnabled
-	}
-	return false
-}
-
-// 单聊配置
-type SingleChatSettings struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 是否允许消息撤回
-	AllowRecall bool `protobuf:"varint,1,opt,name=allow_recall,json=allowRecall,proto3" json:"allow_recall,omitempty"`
-	// 消息撤回时限（秒）
-	RecallTimeLimit int32 `protobuf:"varint,2,opt,name=recall_time_limit,json=recallTimeLimit,proto3" json:"recall_time_limit,omitempty"`
-	// 是否显示已读状态
-	ShowReadStatus bool `protobuf:"varint,3,opt,name=show_read_status,json=showReadStatus,proto3" json:"show_read_status,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *SingleChatSettings) Reset() {
-	*x = SingleChatSettings{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[37]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SingleChatSettings) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SingleChatSettings) ProtoMessage() {}
-
-func (x *SingleChatSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[37]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SingleChatSettings.ProtoReflect.Descriptor instead.
-func (*SingleChatSettings) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{37}
-}
-
-func (x *SingleChatSettings) GetAllowRecall() bool {
-	if x != nil {
-		return x.AllowRecall
-	}
-	return false
-}
-
-func (x *SingleChatSettings) GetRecallTimeLimit() int32 {
-	if x != nil {
-		return x.RecallTimeLimit
-	}
-	return 0
-}
-
-func (x *SingleChatSettings) GetShowReadStatus() bool {
-	if x != nil {
-		return x.ShowReadStatus
-	}
-	return false
-}
-
-// 会话成员信息
-type ConversationMember struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 用户 ID
-	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// 会话 ID
-	ConversationId string `protobuf:"bytes,2,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	// 成员角色
-	Role v1.ConversationMemberRole `protobuf:"varint,3,opt,name=role,proto3,enum=common.v1.ConversationMemberRole" json:"role,omitempty"`
-	// 是否被禁言
-	Muted bool `protobuf:"varint,4,opt,name=muted,proto3" json:"muted,omitempty"`
-	// 禁言到期时间（Unix 时间戳，0表示未被禁言）
-	MutedUntil int64 `protobuf:"varint,5,opt,name=muted_until,json=mutedUntil,proto3" json:"muted_until,omitempty"`
-	// 加入时间（Unix 时间戳）
-	JoinedAt int64 `protobuf:"varint,6,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
-	// 更新时间（Unix 时间戳）
-	UpdatedAt int64 `protobuf:"varint,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// 用户信息
-	User          *User `protobuf:"bytes,8,opt,name=user,proto3" json:"user,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ConversationMember) Reset() {
-	*x = ConversationMember{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[38]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ConversationMember) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ConversationMember) ProtoMessage() {}
-
-func (x *ConversationMember) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[38]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ConversationMember.ProtoReflect.Descriptor instead.
-func (*ConversationMember) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{38}
-}
-
-func (x *ConversationMember) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *ConversationMember) GetConversationId() string {
-	if x != nil {
-		return x.ConversationId
-	}
-	return ""
-}
-
-func (x *ConversationMember) GetRole() v1.ConversationMemberRole {
-	if x != nil {
-		return x.Role
-	}
-	return v1.ConversationMemberRole(0)
-}
-
-func (x *ConversationMember) GetMuted() bool {
-	if x != nil {
-		return x.Muted
-	}
-	return false
-}
-
-func (x *ConversationMember) GetMutedUntil() int64 {
-	if x != nil {
-		return x.MutedUntil
-	}
-	return 0
-}
-
-func (x *ConversationMember) GetJoinedAt() int64 {
-	if x != nil {
-		return x.JoinedAt
-	}
-	return 0
-}
-
-func (x *ConversationMember) GetUpdatedAt() int64 {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return 0
-}
-
-func (x *ConversationMember) GetUser() *User {
-	if x != nil {
-		return x.User
 	}
 	return nil
 }
@@ -2897,7 +2319,7 @@ type ConversationUnreadCount struct {
 
 func (x *ConversationUnreadCount) Reset() {
 	*x = ConversationUnreadCount{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[39]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2909,7 +2331,7 @@ func (x *ConversationUnreadCount) String() string {
 func (*ConversationUnreadCount) ProtoMessage() {}
 
 func (x *ConversationUnreadCount) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[39]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2922,7 +2344,7 @@ func (x *ConversationUnreadCount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationUnreadCount.ProtoReflect.Descriptor instead.
 func (*ConversationUnreadCount) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{39}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ConversationUnreadCount) GetConversationId() string {
@@ -2954,7 +2376,7 @@ type FailedUser struct {
 
 func (x *FailedUser) Reset() {
 	*x = FailedUser{}
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[40]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2966,7 +2388,7 @@ func (x *FailedUser) String() string {
 func (*FailedUser) ProtoMessage() {}
 
 func (x *FailedUser) ProtoReflect() protoreflect.Message {
-	mi := &file_im_logic_v1_conversation_proto_msgTypes[40]
+	mi := &file_im_logic_v1_conversation_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2979,7 +2401,7 @@ func (x *FailedUser) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailedUser.ProtoReflect.Descriptor instead.
 func (*FailedUser) Descriptor() ([]byte, []int) {
-	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{40}
+	return file_im_logic_v1_conversation_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *FailedUser) GetUserId() string {
@@ -3007,7 +2429,7 @@ var File_im_logic_v1_conversation_proto protoreflect.FileDescriptor
 
 const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\n" +
-	"\x1eim_logic/v1/conversation.proto\x12\vim.logic.v1\x1a\x18im_logic/v1/common.proto\x1a\x15common/v1/types.proto\"\x9e\x02\n" +
+	"\x1eim_logic/v1/conversation.proto\x12\vim.logic.v1\x1a\x15common/v1/types.proto\"\xdf\x01\n" +
 	"\x19CreateConversationRequest\x12\x1d\n" +
 	"\n" +
 	"creator_id\x18\x01 \x01(\tR\tcreatorId\x12/\n" +
@@ -3017,26 +2439,25 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1d\n" +
 	"\n" +
-	"member_ids\x18\x06 \x03(\tR\tmemberIds\x12=\n" +
-	"\bsettings\x18\a \x01(\v2!.im.logic.v1.ConversationSettingsR\bsettings\"[\n" +
-	"\x1aCreateConversationResponse\x12=\n" +
-	"\fconversation\x18\x01 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\"\x83\x01\n" +
+	"member_ids\x18\x06 \x03(\tR\tmemberIds\"Y\n" +
+	"\x1aCreateConversationResponse\x12;\n" +
+	"\fconversation\x18\x01 \x01(\v2\x17.common.v1.ConversationR\fconversation\"\x83\x01\n" +
 	"\x16GetConversationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12'\n" +
-	"\x0finclude_members\x18\x03 \x01(\bR\x0eincludeMembers\"\x93\x01\n" +
-	"\x17GetConversationResponse\x12=\n" +
-	"\fconversation\x18\x01 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\x129\n" +
-	"\amembers\x18\x02 \x03(\v2\x1f.im.logic.v1.ConversationMemberR\amembers\"\xbc\x01\n" +
+	"\x0finclude_members\x18\x03 \x01(\bR\x0eincludeMembers\"\x8f\x01\n" +
+	"\x17GetConversationResponse\x12;\n" +
+	"\fconversation\x18\x01 \x01(\v2\x17.common.v1.ConversationR\fconversation\x127\n" +
+	"\amembers\x18\x02 \x03(\v2\x1d.common.v1.ConversationMemberR\amembers\"\xbc\x01\n" +
 	"\x17GetConversationsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12<\n" +
 	"\vtype_filter\x18\x04 \x01(\x0e2\x1b.common.v1.ConversationTypeR\n" +
 	"typeFilter\x12\x19\n" +
-	"\border_by\x18\x05 \x01(\tR\aorderBy\"\xbd\x01\n" +
-	"\x18GetConversationsResponse\x12?\n" +
-	"\rconversations\x18\x01 \x03(\v2\x19.im.logic.v1.ConversationR\rconversations\x12\x14\n" +
+	"\border_by\x18\x05 \x01(\tR\aorderBy\"\xbb\x01\n" +
+	"\x18GetConversationsResponse\x12=\n" +
+	"\rconversations\x18\x01 \x03(\v2\x17.common.v1.ConversationR\rconversations\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x19\n" +
@@ -3055,7 +2476,7 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x19\n" +
-	"\bhas_more\x18\x05 \x01(\bR\ahasMore\"\xb4\x04\n" +
+	"\bhas_more\x18\x05 \x01(\bR\ahasMore\"\xf1\x03\n" +
 	"\x15ConversationOptimized\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12/\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1b.common.v1.ConversationTypeR\x04type\x12\x12\n" +
@@ -3064,29 +2485,27 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x19\n" +
 	"\bowner_id\x18\x06 \x01(\tR\aownerId\x12!\n" +
-	"\fmember_count\x18\a \x01(\x05R\vmemberCount\x12=\n" +
-	"\bsettings\x18\b \x01(\v2!.im.logic.v1.ConversationSettingsR\bsettings\x12\x1d\n" +
+	"\fmember_count\x18\a \x01(\x05R\vmemberCount\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\v \x01(\x03R\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\f \x01(\x03R\tcreatedAt\x12D\n" +
-	"\rmy_membership\x18\r \x01(\v2\x1f.im.logic.v1.ConversationMemberR\fmyMembership\x127\n" +
-	"\flast_message\x18\t \x01(\v2\x14.im.logic.v1.MessageR\vlastMessage\x12!\n" +
+	"created_at\x18\f \x01(\x03R\tcreatedAt\x12B\n" +
+	"\rmy_membership\x18\r \x01(\v2\x1d.common.v1.ConversationMemberR\fmyMembership\x125\n" +
+	"\flast_message\x18\t \x01(\v2\x12.common.v1.MessageR\vlastMessage\x12!\n" +
 	"\funread_count\x18\n" +
 	" \x01(\x03R\vunreadCount\x12(\n" +
-	"\x10last_activity_at\x18\x0e \x01(\x03R\x0elastActivityAt\"\x92\x02\n" +
+	"\x10last_activity_at\x18\x0e \x01(\x03R\x0elastActivityAt\"\xd3\x01\n" +
 	"\x19UpdateConversationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x12=\n" +
-	"\bsettings\x18\x06 \x01(\v2!.im.logic.v1.ConversationSettingsR\bsettings\x12\x1f\n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1f\n" +
 	"\vupdate_mask\x18\a \x03(\tR\n" +
-	"updateMask\"[\n" +
-	"\x1aUpdateConversationResponse\x12=\n" +
-	"\fconversation\x18\x01 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\"u\n" +
+	"updateMask\"Y\n" +
+	"\x1aUpdateConversationResponse\x12;\n" +
+	"\fconversation\x18\x01 \x01(\v2\x17.common.v1.ConversationR\fconversation\"u\n" +
 	"\x19DeleteConversationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x16\n" +
@@ -3127,9 +2546,9 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12B\n" +
 	"\vrole_filter\x18\x05 \x01(\x0e2!.common.v1.ConversationMemberRoleR\n" +
-	"roleFilter\"\xb1\x01\n" +
-	"\x12GetMembersResponse\x129\n" +
-	"\amembers\x18\x01 \x03(\v2\x1f.im.logic.v1.ConversationMemberR\amembers\x12\x14\n" +
+	"roleFilter\"\xaf\x01\n" +
+	"\x12GetMembersResponse\x127\n" +
+	"\amembers\x18\x01 \x03(\v2\x1d.common.v1.ConversationMemberR\amembers\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x19\n" +
@@ -3149,9 +2568,9 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x1c\n" +
 	"\tascending\x18\x06 \x01(\bR\tascending\x127\n" +
 	"\vtype_filter\x18\a \x03(\x0e2\x16.common.v1.MessageTypeR\n" +
-	"typeFilter\"\xa2\x01\n" +
-	"\x13GetMessagesResponse\x120\n" +
-	"\bmessages\x18\x01 \x03(\v2\x14.im.logic.v1.MessageR\bmessages\x12\x19\n" +
+	"typeFilter\"\xa0\x01\n" +
+	"\x13GetMessagesResponse\x12.\n" +
+	"\bmessages\x18\x01 \x03(\v2\x12.common.v1.MessageR\bmessages\x12\x19\n" +
 	"\bhas_more\x18\x02 \x01(\bR\ahasMore\x12\x1e\n" +
 	"\vnext_seq_id\x18\x03 \x01(\x03R\tnextSeqId\x12\x1e\n" +
 	"\vprev_seq_id\x18\x04 \x01(\x03R\tprevSeqId\"l\n" +
@@ -3169,68 +2588,18 @@ const file_im_logic_v1_conversation_proto_rawDesc = "" +
 	"\funread_count\x18\x01 \x01(\x03R\vunreadCount\x12U\n" +
 	"\x13conversation_counts\x18\x02 \x03(\v2$.im.logic.v1.ConversationUnreadCountR\x12conversationCounts\"/\n" +
 	"\x14JoinWorldChatRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"p\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"n\n" +
 	"\x15JoinWorldChatResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12=\n" +
-	"\fconversation\x18\x02 \x01(\v2\x19.im.logic.v1.ConversationR\fconversation\"\x9f\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12;\n" +
+	"\fconversation\x18\x02 \x01(\v2\x17.common.v1.ConversationR\fconversation\"\x9f\x01\n" +
 	"\x1aSearchConversationsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12<\n" +
 	"\vtype_filter\x18\x03 \x01(\x0e2\x1b.common.v1.ConversationTypeR\n" +
 	"typeFilter\x12\x14\n" +
-	"\x05limit\x18\x04 \x01(\x05R\x05limit\"^\n" +
-	"\x1bSearchConversationsResponse\x12?\n" +
-	"\rconversations\x18\x01 \x03(\v2\x19.im.logic.v1.ConversationR\rconversations\"\x81\x04\n" +
-	"\fConversation\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12/\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x1b.common.v1.ConversationTypeR\x04type\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
-	"\n" +
-	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x19\n" +
-	"\bowner_id\x18\x06 \x01(\tR\aownerId\x12!\n" +
-	"\fmember_count\x18\a \x01(\x05R\vmemberCount\x12=\n" +
-	"\bsettings\x18\b \x01(\v2!.im.logic.v1.ConversationSettingsR\bsettings\x127\n" +
-	"\flast_message\x18\t \x01(\v2\x14.im.logic.v1.MessageR\vlastMessage\x12!\n" +
-	"\funread_count\x18\n" +
-	" \x01(\x03R\vunreadCount\x12\x1d\n" +
-	"\n" +
-	"updated_at\x18\v \x01(\x03R\tupdatedAt\x12\x1d\n" +
-	"\n" +
-	"created_at\x18\f \x01(\x03R\tcreatedAt\x12D\n" +
-	"\rmy_membership\x18\r \x01(\v2\x1f.im.logic.v1.ConversationMemberR\fmyMembership\"\xea\x01\n" +
-	"\x14ConversationSettings\x12A\n" +
-	"\x0egroup_settings\x18\x01 \x01(\v2\x1a.im.logic.v1.GroupSettingsR\rgroupSettings\x12E\n" +
-	"\x0eworld_settings\x18\x02 \x01(\v2\x1e.im.logic.v1.WorldChatSettingsR\rworldSettings\x12H\n" +
-	"\x0fsingle_settings\x18\x03 \x01(\v2\x1f.im.logic.v1.SingleChatSettingsR\x0esingleSettings\"\x87\x02\n" +
-	"\rGroupSettings\x124\n" +
-	"\x16join_approval_required\x18\x01 \x01(\bR\x14joinApprovalRequired\x12%\n" +
-	"\x0einvite_enabled\x18\x02 \x01(\bR\rinviteEnabled\x12\x1f\n" +
-	"\vmax_members\x18\x03 \x01(\x05R\n" +
-	"maxMembers\x12\x19\n" +
-	"\bmute_all\x18\x04 \x01(\bR\amuteAll\x129\n" +
-	"\x19allow_member_view_history\x18\x05 \x01(\bR\x16allowMemberViewHistory\x12\"\n" +
-	"\fannouncement\x18\x06 \x01(\tR\fannouncement\"\xc6\x01\n" +
-	"\x11WorldChatSettings\x12#\n" +
-	"\rguest_allowed\x18\x01 \x01(\bR\fguestAllowed\x12,\n" +
-	"\x12message_rate_limit\x18\x02 \x01(\x05R\x10messageRateLimit\x12(\n" +
-	"\x10auto_join_guests\x18\x03 \x01(\bR\x0eautoJoinGuests\x124\n" +
-	"\x16content_filter_enabled\x18\x04 \x01(\bR\x14contentFilterEnabled\"\x8d\x01\n" +
-	"\x12SingleChatSettings\x12!\n" +
-	"\fallow_recall\x18\x01 \x01(\bR\vallowRecall\x12*\n" +
-	"\x11recall_time_limit\x18\x02 \x01(\x05R\x0frecallTimeLimit\x12(\n" +
-	"\x10show_read_status\x18\x03 \x01(\bR\x0eshowReadStatus\"\xa7\x02\n" +
-	"\x12ConversationMember\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
-	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x125\n" +
-	"\x04role\x18\x03 \x01(\x0e2!.common.v1.ConversationMemberRoleR\x04role\x12\x14\n" +
-	"\x05muted\x18\x04 \x01(\bR\x05muted\x12\x1f\n" +
-	"\vmuted_until\x18\x05 \x01(\x03R\n" +
-	"mutedUntil\x12\x1b\n" +
-	"\tjoined_at\x18\x06 \x01(\x03R\bjoinedAt\x12\x1d\n" +
-	"\n" +
-	"updated_at\x18\a \x01(\x03R\tupdatedAt\x12%\n" +
-	"\x04user\x18\b \x01(\v2\x11.im.logic.v1.UserR\x04user\"e\n" +
+	"\x05limit\x18\x04 \x01(\x05R\x05limit\"\\\n" +
+	"\x1bSearchConversationsResponse\x12=\n" +
+	"\rconversations\x18\x01 \x03(\v2\x17.common.v1.ConversationR\rconversations\"e\n" +
 	"\x17ConversationUnreadCount\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId\x12!\n" +
 	"\funread_count\x18\x02 \x01(\x03R\vunreadCount\"r\n" +
@@ -3273,7 +2642,7 @@ func file_im_logic_v1_conversation_proto_rawDescGZIP() []byte {
 	return file_im_logic_v1_conversation_proto_rawDescData
 }
 
-var file_im_logic_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_im_logic_v1_conversation_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_im_logic_v1_conversation_proto_goTypes = []any{
 	(*CreateConversationRequest)(nil),         // 0: im.logic.v1.CreateConversationRequest
 	(*CreateConversationResponse)(nil),        // 1: im.logic.v1.CreateConversationResponse
@@ -3308,96 +2677,79 @@ var file_im_logic_v1_conversation_proto_goTypes = []any{
 	(*JoinWorldChatResponse)(nil),             // 30: im.logic.v1.JoinWorldChatResponse
 	(*SearchConversationsRequest)(nil),        // 31: im.logic.v1.SearchConversationsRequest
 	(*SearchConversationsResponse)(nil),       // 32: im.logic.v1.SearchConversationsResponse
-	(*Conversation)(nil),                      // 33: im.logic.v1.Conversation
-	(*ConversationSettings)(nil),              // 34: im.logic.v1.ConversationSettings
-	(*GroupSettings)(nil),                     // 35: im.logic.v1.GroupSettings
-	(*WorldChatSettings)(nil),                 // 36: im.logic.v1.WorldChatSettings
-	(*SingleChatSettings)(nil),                // 37: im.logic.v1.SingleChatSettings
-	(*ConversationMember)(nil),                // 38: im.logic.v1.ConversationMember
-	(*ConversationUnreadCount)(nil),           // 39: im.logic.v1.ConversationUnreadCount
-	(*FailedUser)(nil),                        // 40: im.logic.v1.FailedUser
-	(v1.ConversationType)(0),                  // 41: common.v1.ConversationType
-	(*Message)(nil),                           // 42: im.logic.v1.Message
-	(v1.ConversationMemberRole)(0),            // 43: common.v1.ConversationMemberRole
-	(v1.MessageType)(0),                       // 44: common.v1.MessageType
-	(*User)(nil),                              // 45: im.logic.v1.User
-	(v1.ErrorCode)(0),                         // 46: common.v1.ErrorCode
+	(*ConversationUnreadCount)(nil),           // 33: im.logic.v1.ConversationUnreadCount
+	(*FailedUser)(nil),                        // 34: im.logic.v1.FailedUser
+	(v1.ConversationType)(0),                  // 35: common.v1.ConversationType
+	(*v1.Conversation)(nil),                   // 36: common.v1.Conversation
+	(*v1.ConversationMember)(nil),             // 37: common.v1.ConversationMember
+	(*v1.Message)(nil),                        // 38: common.v1.Message
+	(v1.ConversationMemberRole)(0),            // 39: common.v1.ConversationMemberRole
+	(v1.MessageType)(0),                       // 40: common.v1.MessageType
+	(v1.ErrorCode)(0),                         // 41: common.v1.ErrorCode
 }
 var file_im_logic_v1_conversation_proto_depIdxs = []int32{
-	41, // 0: im.logic.v1.CreateConversationRequest.type:type_name -> common.v1.ConversationType
-	34, // 1: im.logic.v1.CreateConversationRequest.settings:type_name -> im.logic.v1.ConversationSettings
-	33, // 2: im.logic.v1.CreateConversationResponse.conversation:type_name -> im.logic.v1.Conversation
-	33, // 3: im.logic.v1.GetConversationResponse.conversation:type_name -> im.logic.v1.Conversation
-	38, // 4: im.logic.v1.GetConversationResponse.members:type_name -> im.logic.v1.ConversationMember
-	41, // 5: im.logic.v1.GetConversationsRequest.type_filter:type_name -> common.v1.ConversationType
-	33, // 6: im.logic.v1.GetConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
-	41, // 7: im.logic.v1.GetConversationsOptimizedRequest.type_filter:type_name -> common.v1.ConversationType
-	8,  // 8: im.logic.v1.GetConversationsOptimizedResponse.conversations:type_name -> im.logic.v1.ConversationOptimized
-	41, // 9: im.logic.v1.ConversationOptimized.type:type_name -> common.v1.ConversationType
-	34, // 10: im.logic.v1.ConversationOptimized.settings:type_name -> im.logic.v1.ConversationSettings
-	38, // 11: im.logic.v1.ConversationOptimized.my_membership:type_name -> im.logic.v1.ConversationMember
-	42, // 12: im.logic.v1.ConversationOptimized.last_message:type_name -> im.logic.v1.Message
-	34, // 13: im.logic.v1.UpdateConversationRequest.settings:type_name -> im.logic.v1.ConversationSettings
-	33, // 14: im.logic.v1.UpdateConversationResponse.conversation:type_name -> im.logic.v1.Conversation
-	43, // 15: im.logic.v1.AddMembersRequest.role:type_name -> common.v1.ConversationMemberRole
-	40, // 16: im.logic.v1.AddMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
-	40, // 17: im.logic.v1.RemoveMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
-	43, // 18: im.logic.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ConversationMemberRole
-	43, // 19: im.logic.v1.GetMembersRequest.role_filter:type_name -> common.v1.ConversationMemberRole
-	38, // 20: im.logic.v1.GetMembersResponse.members:type_name -> im.logic.v1.ConversationMember
-	44, // 21: im.logic.v1.GetMessagesRequest.type_filter:type_name -> common.v1.MessageType
-	42, // 22: im.logic.v1.GetMessagesResponse.messages:type_name -> im.logic.v1.Message
-	39, // 23: im.logic.v1.GetUnreadCountResponse.conversation_counts:type_name -> im.logic.v1.ConversationUnreadCount
-	33, // 24: im.logic.v1.JoinWorldChatResponse.conversation:type_name -> im.logic.v1.Conversation
-	41, // 25: im.logic.v1.SearchConversationsRequest.type_filter:type_name -> common.v1.ConversationType
-	33, // 26: im.logic.v1.SearchConversationsResponse.conversations:type_name -> im.logic.v1.Conversation
-	41, // 27: im.logic.v1.Conversation.type:type_name -> common.v1.ConversationType
-	34, // 28: im.logic.v1.Conversation.settings:type_name -> im.logic.v1.ConversationSettings
-	42, // 29: im.logic.v1.Conversation.last_message:type_name -> im.logic.v1.Message
-	38, // 30: im.logic.v1.Conversation.my_membership:type_name -> im.logic.v1.ConversationMember
-	35, // 31: im.logic.v1.ConversationSettings.group_settings:type_name -> im.logic.v1.GroupSettings
-	36, // 32: im.logic.v1.ConversationSettings.world_settings:type_name -> im.logic.v1.WorldChatSettings
-	37, // 33: im.logic.v1.ConversationSettings.single_settings:type_name -> im.logic.v1.SingleChatSettings
-	43, // 34: im.logic.v1.ConversationMember.role:type_name -> common.v1.ConversationMemberRole
-	45, // 35: im.logic.v1.ConversationMember.user:type_name -> im.logic.v1.User
-	46, // 36: im.logic.v1.FailedUser.error_code:type_name -> common.v1.ErrorCode
-	0,  // 37: im.logic.v1.ConversationService.CreateConversation:input_type -> im.logic.v1.CreateConversationRequest
-	2,  // 38: im.logic.v1.ConversationService.GetConversation:input_type -> im.logic.v1.GetConversationRequest
-	4,  // 39: im.logic.v1.ConversationService.GetConversations:input_type -> im.logic.v1.GetConversationsRequest
-	6,  // 40: im.logic.v1.ConversationService.GetConversationsOptimized:input_type -> im.logic.v1.GetConversationsOptimizedRequest
-	9,  // 41: im.logic.v1.ConversationService.UpdateConversation:input_type -> im.logic.v1.UpdateConversationRequest
-	11, // 42: im.logic.v1.ConversationService.DeleteConversation:input_type -> im.logic.v1.DeleteConversationRequest
-	13, // 43: im.logic.v1.ConversationService.AddMembers:input_type -> im.logic.v1.AddMembersRequest
-	15, // 44: im.logic.v1.ConversationService.RemoveMembers:input_type -> im.logic.v1.RemoveMembersRequest
-	17, // 45: im.logic.v1.ConversationService.UpdateMemberRole:input_type -> im.logic.v1.UpdateMemberRoleRequest
-	19, // 46: im.logic.v1.ConversationService.GetMembers:input_type -> im.logic.v1.GetMembersRequest
-	21, // 47: im.logic.v1.ConversationService.LeaveConversation:input_type -> im.logic.v1.LeaveConversationRequest
-	23, // 48: im.logic.v1.ConversationService.GetMessages:input_type -> im.logic.v1.GetMessagesRequest
-	25, // 49: im.logic.v1.ConversationService.MarkAsRead:input_type -> im.logic.v1.MarkAsReadRequest
-	27, // 50: im.logic.v1.ConversationService.GetUnreadCount:input_type -> im.logic.v1.GetUnreadCountRequest
-	29, // 51: im.logic.v1.ConversationService.JoinWorldChat:input_type -> im.logic.v1.JoinWorldChatRequest
-	31, // 52: im.logic.v1.ConversationService.SearchConversations:input_type -> im.logic.v1.SearchConversationsRequest
-	1,  // 53: im.logic.v1.ConversationService.CreateConversation:output_type -> im.logic.v1.CreateConversationResponse
-	3,  // 54: im.logic.v1.ConversationService.GetConversation:output_type -> im.logic.v1.GetConversationResponse
-	5,  // 55: im.logic.v1.ConversationService.GetConversations:output_type -> im.logic.v1.GetConversationsResponse
-	7,  // 56: im.logic.v1.ConversationService.GetConversationsOptimized:output_type -> im.logic.v1.GetConversationsOptimizedResponse
-	10, // 57: im.logic.v1.ConversationService.UpdateConversation:output_type -> im.logic.v1.UpdateConversationResponse
-	12, // 58: im.logic.v1.ConversationService.DeleteConversation:output_type -> im.logic.v1.DeleteConversationResponse
-	14, // 59: im.logic.v1.ConversationService.AddMembers:output_type -> im.logic.v1.AddMembersResponse
-	16, // 60: im.logic.v1.ConversationService.RemoveMembers:output_type -> im.logic.v1.RemoveMembersResponse
-	18, // 61: im.logic.v1.ConversationService.UpdateMemberRole:output_type -> im.logic.v1.UpdateMemberRoleResponse
-	20, // 62: im.logic.v1.ConversationService.GetMembers:output_type -> im.logic.v1.GetMembersResponse
-	22, // 63: im.logic.v1.ConversationService.LeaveConversation:output_type -> im.logic.v1.LeaveConversationResponse
-	24, // 64: im.logic.v1.ConversationService.GetMessages:output_type -> im.logic.v1.GetMessagesResponse
-	26, // 65: im.logic.v1.ConversationService.MarkAsRead:output_type -> im.logic.v1.MarkAsReadResponse
-	28, // 66: im.logic.v1.ConversationService.GetUnreadCount:output_type -> im.logic.v1.GetUnreadCountResponse
-	30, // 67: im.logic.v1.ConversationService.JoinWorldChat:output_type -> im.logic.v1.JoinWorldChatResponse
-	32, // 68: im.logic.v1.ConversationService.SearchConversations:output_type -> im.logic.v1.SearchConversationsResponse
-	53, // [53:69] is the sub-list for method output_type
-	37, // [37:53] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	35, // 0: im.logic.v1.CreateConversationRequest.type:type_name -> common.v1.ConversationType
+	36, // 1: im.logic.v1.CreateConversationResponse.conversation:type_name -> common.v1.Conversation
+	36, // 2: im.logic.v1.GetConversationResponse.conversation:type_name -> common.v1.Conversation
+	37, // 3: im.logic.v1.GetConversationResponse.members:type_name -> common.v1.ConversationMember
+	35, // 4: im.logic.v1.GetConversationsRequest.type_filter:type_name -> common.v1.ConversationType
+	36, // 5: im.logic.v1.GetConversationsResponse.conversations:type_name -> common.v1.Conversation
+	35, // 6: im.logic.v1.GetConversationsOptimizedRequest.type_filter:type_name -> common.v1.ConversationType
+	8,  // 7: im.logic.v1.GetConversationsOptimizedResponse.conversations:type_name -> im.logic.v1.ConversationOptimized
+	35, // 8: im.logic.v1.ConversationOptimized.type:type_name -> common.v1.ConversationType
+	37, // 9: im.logic.v1.ConversationOptimized.my_membership:type_name -> common.v1.ConversationMember
+	38, // 10: im.logic.v1.ConversationOptimized.last_message:type_name -> common.v1.Message
+	36, // 11: im.logic.v1.UpdateConversationResponse.conversation:type_name -> common.v1.Conversation
+	39, // 12: im.logic.v1.AddMembersRequest.role:type_name -> common.v1.ConversationMemberRole
+	34, // 13: im.logic.v1.AddMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
+	34, // 14: im.logic.v1.RemoveMembersResponse.failed_users:type_name -> im.logic.v1.FailedUser
+	39, // 15: im.logic.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ConversationMemberRole
+	39, // 16: im.logic.v1.GetMembersRequest.role_filter:type_name -> common.v1.ConversationMemberRole
+	37, // 17: im.logic.v1.GetMembersResponse.members:type_name -> common.v1.ConversationMember
+	40, // 18: im.logic.v1.GetMessagesRequest.type_filter:type_name -> common.v1.MessageType
+	38, // 19: im.logic.v1.GetMessagesResponse.messages:type_name -> common.v1.Message
+	33, // 20: im.logic.v1.GetUnreadCountResponse.conversation_counts:type_name -> im.logic.v1.ConversationUnreadCount
+	36, // 21: im.logic.v1.JoinWorldChatResponse.conversation:type_name -> common.v1.Conversation
+	35, // 22: im.logic.v1.SearchConversationsRequest.type_filter:type_name -> common.v1.ConversationType
+	36, // 23: im.logic.v1.SearchConversationsResponse.conversations:type_name -> common.v1.Conversation
+	41, // 24: im.logic.v1.FailedUser.error_code:type_name -> common.v1.ErrorCode
+	0,  // 25: im.logic.v1.ConversationService.CreateConversation:input_type -> im.logic.v1.CreateConversationRequest
+	2,  // 26: im.logic.v1.ConversationService.GetConversation:input_type -> im.logic.v1.GetConversationRequest
+	4,  // 27: im.logic.v1.ConversationService.GetConversations:input_type -> im.logic.v1.GetConversationsRequest
+	6,  // 28: im.logic.v1.ConversationService.GetConversationsOptimized:input_type -> im.logic.v1.GetConversationsOptimizedRequest
+	9,  // 29: im.logic.v1.ConversationService.UpdateConversation:input_type -> im.logic.v1.UpdateConversationRequest
+	11, // 30: im.logic.v1.ConversationService.DeleteConversation:input_type -> im.logic.v1.DeleteConversationRequest
+	13, // 31: im.logic.v1.ConversationService.AddMembers:input_type -> im.logic.v1.AddMembersRequest
+	15, // 32: im.logic.v1.ConversationService.RemoveMembers:input_type -> im.logic.v1.RemoveMembersRequest
+	17, // 33: im.logic.v1.ConversationService.UpdateMemberRole:input_type -> im.logic.v1.UpdateMemberRoleRequest
+	19, // 34: im.logic.v1.ConversationService.GetMembers:input_type -> im.logic.v1.GetMembersRequest
+	21, // 35: im.logic.v1.ConversationService.LeaveConversation:input_type -> im.logic.v1.LeaveConversationRequest
+	23, // 36: im.logic.v1.ConversationService.GetMessages:input_type -> im.logic.v1.GetMessagesRequest
+	25, // 37: im.logic.v1.ConversationService.MarkAsRead:input_type -> im.logic.v1.MarkAsReadRequest
+	27, // 38: im.logic.v1.ConversationService.GetUnreadCount:input_type -> im.logic.v1.GetUnreadCountRequest
+	29, // 39: im.logic.v1.ConversationService.JoinWorldChat:input_type -> im.logic.v1.JoinWorldChatRequest
+	31, // 40: im.logic.v1.ConversationService.SearchConversations:input_type -> im.logic.v1.SearchConversationsRequest
+	1,  // 41: im.logic.v1.ConversationService.CreateConversation:output_type -> im.logic.v1.CreateConversationResponse
+	3,  // 42: im.logic.v1.ConversationService.GetConversation:output_type -> im.logic.v1.GetConversationResponse
+	5,  // 43: im.logic.v1.ConversationService.GetConversations:output_type -> im.logic.v1.GetConversationsResponse
+	7,  // 44: im.logic.v1.ConversationService.GetConversationsOptimized:output_type -> im.logic.v1.GetConversationsOptimizedResponse
+	10, // 45: im.logic.v1.ConversationService.UpdateConversation:output_type -> im.logic.v1.UpdateConversationResponse
+	12, // 46: im.logic.v1.ConversationService.DeleteConversation:output_type -> im.logic.v1.DeleteConversationResponse
+	14, // 47: im.logic.v1.ConversationService.AddMembers:output_type -> im.logic.v1.AddMembersResponse
+	16, // 48: im.logic.v1.ConversationService.RemoveMembers:output_type -> im.logic.v1.RemoveMembersResponse
+	18, // 49: im.logic.v1.ConversationService.UpdateMemberRole:output_type -> im.logic.v1.UpdateMemberRoleResponse
+	20, // 50: im.logic.v1.ConversationService.GetMembers:output_type -> im.logic.v1.GetMembersResponse
+	22, // 51: im.logic.v1.ConversationService.LeaveConversation:output_type -> im.logic.v1.LeaveConversationResponse
+	24, // 52: im.logic.v1.ConversationService.GetMessages:output_type -> im.logic.v1.GetMessagesResponse
+	26, // 53: im.logic.v1.ConversationService.MarkAsRead:output_type -> im.logic.v1.MarkAsReadResponse
+	28, // 54: im.logic.v1.ConversationService.GetUnreadCount:output_type -> im.logic.v1.GetUnreadCountResponse
+	30, // 55: im.logic.v1.ConversationService.JoinWorldChat:output_type -> im.logic.v1.JoinWorldChatResponse
+	32, // 56: im.logic.v1.ConversationService.SearchConversations:output_type -> im.logic.v1.SearchConversationsResponse
+	41, // [41:57] is the sub-list for method output_type
+	25, // [25:41] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_im_logic_v1_conversation_proto_init() }
@@ -3405,14 +2757,13 @@ func file_im_logic_v1_conversation_proto_init() {
 	if File_im_logic_v1_conversation_proto != nil {
 		return
 	}
-	file_im_logic_v1_common_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_logic_v1_conversation_proto_rawDesc), len(file_im_logic_v1_conversation_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   41,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

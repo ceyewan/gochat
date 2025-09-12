@@ -1,101 +1,160 @@
-# im-task 异步任务服务设计
+# im-task 异步任务服务设计文档
 
-`im-task` 是 GoChat 系统的“重型武器库”，它负责处理所有耗时、繁重或需要与外部系统交互的异步任务。通过将这些任务从核心的 `im-logic` 服务中剥离，`im-task` 保证了核心业务的响应速度和稳定性。
+`im-task` 是 GoChat 系统的后台任务处理中心，一个纯粹的消费者服务。它的核心职责是将耗时的、非实时的、可并行的任务从主业务流程（`im-logic`）中剥离出来，以提高主流程的响应速度和系统的整体吞吐量。
+
+**设计目标**: 开发一个**可靠、可扩展、易于维护**的通用异步任务处理服务，确保任务不丢失、不阻塞，并能随着业务增长而水平扩展。
 
 ## 1. 核心职责
 
-1.  **异步任务消费者**: 它是 GoChat 系统中所有**非实时任务**的唯一消费者。它通过**消费 Kafka 中的任务消息**来驱动自己的工作。
-2.  **重负载处理器**: 专门处理那些会严重消耗 CPU 或 I/O 资源的任务，从而避免拖垮核心的 `im-logic` 服务。
-    *   **典型案例**: **超大群（如万人群）的消息扩散**。
-3.  **外部系统集成器**: 负责与所有第三方系统进行交互。这些交互通常伴随着网络延迟和不确定性。
-    *   **典型案例**: 调用苹果/谷歌的服务器进行**离线推送**；调用第三方服务进行**内容安全审核**。
-4.  **后台作业执行者**: 执行所有预定的、周期性的后台任务。
-    *   **典型案例**: **数据归档**、**生成统计报表**、**更新推荐模型**等。
-5.  **数据索引器 (Indexer)**: 负责将业务数据同步到外部的搜索和分析系统。
-    *   **典型案例**: 将消息数据**异步索引**到 Elasticsearch 和向量数据库。
+1.  **消息持久化 (Message Persistence)**:
+    *   作为消息写入数据库的**唯一入口**，消费 `gochat.messages.persist` 主题。
+    *   调用 `im-repo` 的 `BatchSaveMessages` 接口，将消息批量、可靠地存入 MySQL。
+    *   这是 `im-task` 最高优先级的任务，确保了 `im-logic` 可以“发后即忘”。
 
-**设计目标**: 开发一个**可靠、可扩展、易于增加新任务类型**的异步任务处理服务。
+2.  **大群消息扇出 (Large Group Fan-out)**:
+    *   消费 `gochat.tasks.fanout` 主题，处理超大群的消息扩散任务。
+    *   通过分批拉取群成员、查询在线状态、批量生产下行消息的方式，高效地完成消息扩散，避免阻塞 `im-logic`。
 
-## 2. 架构与设计模式
+3.  **通用后台任务处理 (General Background Tasks)**:
+    *   作为一个通用的任务处理框架，未来可轻松扩展以支持更多任务，例如：
+        *   **推送通知**: 调用第三方服务（APNs, FCM）发送移动端推送。
+        *   **数据聚合**: 定期执行统计分析任务。
+        *   **数据清理**: 清理过期的临时数据。
 
-`im-task` 的设计核心是**任务处理的抽象**和**插件化**。我们能够非常方便地增加一种新的任务处理器，而不需要改动核心的消费逻辑。
+## 2. 架构与模块设计
 
-### 2.1 任务分发器模式 (Task Dispatcher Pattern)
+### 2.1 内部模块图
 
 ```mermaid
 graph TD
-    subgraph "Kafka"
-        A[im-task-topic]
+    subgraph Upstream [上游服务]
+        direction LR
+        U1[Kafka: persist, fanout, ...]
     end
 
-    subgraph "im-task 服务"
-        B(Consumer) --> C{Dispatcher};
-        C -- "task_type: fanout" --> D[Fanout Processor];
-        C -- "task_type: push" --> E[Push Processor];
-        C -- "task_type: audit" --> F[Audit Processor];
-        C -- "task_type: index" --> G[Index Processor];
-        C -- "task_type: recommend" --> H[Recommend Processor];
+    subgraph im-task [im-task 服务]
+        direction TB
+        
+        subgraph Entrypoint [入口层]
+            KafkaConsumer[Kafka 消费者]
+        end
+
+        subgraph Dispatcher [任务分发器]
+            TaskDispatcher[Task Dispatcher]
+        end
+        
+        subgraph Handlers [任务处理器]
+            PersistHandler[持久化处理器]
+            FanoutHandler[扇出处理器]
+            NotificationHandler[...]
+        end
+
+        subgraph Connectors [连接器层]
+            RepoClient[Repo gRPC Client]
+            KafkaProducer[Kafka 生产者]
+        end
+
+        KafkaConsumer --> TaskDispatcher
+        TaskDispatcher -- "分发任务" --> Handlers
+        
+        PersistHandler --> RepoClient
+        FanoutHandler --> RepoClient
+        FanoutHandler --> KafkaProducer
     end
 
-    D --> I((处理大群扩散));
-    E --> J((调用APNs/FCM));
-    F --> K((调用内容审核API));
-    G --> L((写入 ES / VectorDB));
-    H --> M((更新推荐结果));
+    subgraph Downstream [下游服务]
+        direction TB
+        D1[im-repo (gRPC)]
+        D2[Kafka: downstream]
+    end
+
+    U1 -- "消费" --> KafkaConsumer
+    RepoClient -- "gRPC 调用" --> D1
+    KafkaProducer -- "生产" --> D2
 ```
 
-1.  **Consumer**: `im-task` 的 Kafka 消费者从 `im-task-topic` 中拉取消息。
-2.  **Dispatcher**: 消费者将消息交给分发器。分发器检查消息头中的 `task_type` 字段。
-3.  **Processor**: 根据 `task_type`，分发器将消息路由给一个已经注册的、专门处理该类型任务的处理器（Processor）。
-4.  **插件化**: 每个 Processor 都是一个独立的 Go 模块，实现了统一的 `TaskProcessor` 接口。增加新任务类型只需要编写一个新的 Processor 并注册到分发器即可。
+### 2.2 模块职责
 
-### 2.2 技术栈
+*   **入口层 (`KafkaConsumer`)**: 唯一入口。订阅所有任务 Topic，并将消费到的原始消息传递给 `TaskDispatcher`。
+*   **任务分发器 (`TaskDispatcher`)**: 核心路由。根据消息来源的 Topic 或消息体内的类型字段，将任务分发给对应的 `Handler`。
+*   **任务处理器 (`Handlers`)**:
+    *   **插件化设计**，每个 `Handler` 负责一种特定任务。
+    *   `PersistHandler`: 负责批量处理持久化任务。
+    *   `FanoutHandler`: 负责处理大群扇出任务。
+*   **连接器层 (`Connectors`)**:
+    *   `RepoClient`: `im-repo` 服务的 gRPC 客户端封装。
+    *   `KafkaProducer`: 主要由 `FanoutHandler` 使用，向 `downstream` Topic 生产消息。
 
-| 用途 | 库/工具 | 说明 |
-| :--- | :--- | :--- |
-| **基础库** | `im-infra` | 提供统一的基础能力，如配置、日志、RPC等。 |
-| **Kafka 客户端** | `im-infra/mq` | 核心组件，用于消费任务。 |
-| **gRPC 客户端** | `im-infra/rpc` | 用于调用 `im-repo` 服务获取任务处理所需的数据。 |
-| **服务发现** | `im-infra/coord` | 通过 etcd 发现 `im-repo` 服务。 |
-| **HTTP 客户端**| `net/http` | 用于调用第三方 RESTful API (如内容审核、离线推送)。 |
-| **ES/VectorDB 客户端** | - | 用于将数据写入 Elasticsearch 和向量数据库。 |
+## 3. 关键任务处理流程
 
-## 3. 核心任务详解
-
-### 3.1 大群消息扩散 (Large Group Fan-out)
-
-这是 `im-task` 最重要的任务之一。
+### 3.1 消息持久化流程 (批量处理)
 
 ```mermaid
 sequenceDiagram
-    participant Task as im-task
-    participant Repo as im-repo
     participant Kafka as Kafka
+    participant Handler as PersistHandler
+    participant Repo as im-repo
 
-    Task->>Task: 1. 接收到扩散任务<br> (group_id, message_id)
-    Task->>+Repo: 2. 获取消息内容 (GetMessage)
-    Repo-->>-Task: 3. 返回消息详情
-    Task->>+Repo: 4. **分批**获取群成员 (GetGroupMembers)
-    Repo-->>-Task: 5. 返回第一批成员 (e.g., 200人)
-    Task->>+Repo: 6. **批量**查询该批成员的在线状态
-    Repo-->>-Task: 7. 返回在线成员的 gateway_id 列表
-    Task->>+Kafka: 8. **批量**生产下行消息到不同的网关Topic
-    Note right of Task: 重复步骤 4-8 直到所有成员处理完毕
+    Handler->>+Kafka: 1. 从 `persist` Topic 批量拉取消息
+    Kafka-->>-Handler: 2. 返回一批 PersistenceMessage
+    
+    Handler->>Handler: 3. 在内存中聚合消息 (e.g., 100条或1s)
+    Handler->>+Repo: 4. gRPC 调用 BatchSaveMessages(messages)
+    Repo-->>-Handler: 5. 返回结果
+    
+    alt 成功
+        Handler->>+Kafka: 6a. **手动提交 Offset**
+    else 失败
+        Handler->>Handler: 6b. 记录日志，将失败消息发往**死信队列**
+        Handler->>+Kafka: 7b. **手动提交 Offset** (避免阻塞)
+    end
 ```
 
-**关键设计点**:
+### 3.2 大群消息扇出流程
 
--   **分批处理**: 为了避免一次性加载数万甚至数十万群成员到内存中，`im-task` 会分批次（例如每批200人）从 `im-repo` 拉取成员列表进行处理。
--   **批量查询**: 在处理每一批成员时，会使用**批量查询**接口从 `im-repo` 获取他们的在线状态，而不是逐个查询，以极大地减少RPC调用次数。
--   **健壮性**: 任务处理器会妥善处理 `im-repo` 或 `Kafka` 的临时性故障，并包含重试逻辑。对于无法恢复的错误，任务将被投递到死信队列（Dead-Letter Queue）等待人工干预。
+```mermaid
+sequenceDiagram
+    participant Kafka as Kafka
+    participant Handler as FanoutHandler
+    participant Repo as im-repo
 
-## 4. 可扩展性
+    Handler->>+Kafka: 1. 从 `fanout` Topic 消费 FanoutTask
+    
+    loop 分批获取群成员
+        Handler->>+Repo: 2. 分页调用 GetGroupMembers
+        Repo-->>-Handler: 3. 返回一批成员 user_ids
+        
+        Handler->>+Repo: 4. 批量调用 BatchGetUsersOnlineStatus
+        Repo-->>-Handler: 5. 返回在线成员及 gateway_id
+        
+        Handler->>Handler: 6. 按 gateway_id 对消息分组
+        
+        loop 遍历每个 gateway_id
+            Handler->>+Kafka: 7. **批量生产** DownstreamMessage 到 `downstream.{gateway_id}`
+        end
+        
+        alt 还有更多成员
+            continue
+        else
+            break
+        end
+    end
+    
+    Handler->>+Kafka: 8. **手动提交 Offset**
+```
 
-得益于任务分发器模式，为 `im-task` 添加新功能非常简单。例如，要添加一个“内容审核”任务：
+## 4. 可靠性与扩展性
 
-1.  **定义任务**: `im-logic` 在遇到需要审核的内容时，向 `im-task-topic` 生产一条 `task_type` 为 `content_audit` 的消息。
-2.  **创建处理器**: 在 `im-task` 项目中，创建一个新的 `audit_processor.go` 文件，并实现 `TaskProcessor` 接口。
-3.  **实现逻辑**: 在 `Process` 方法中，调用 `im-repo` 获取内容详情，然后通过 HTTP 客户端调用第三方审核服务。
-4.  **注册处理器**: 在 `im-task` 的启动逻辑中，将新的 `AuditProcessor` 实例注册到分发器：`dispatcher.Register("content_audit", auditProcessor)`。
+### 4.1 可靠性设计
 
-整个过程无需修改任何现有代码，实现了高度的解耦和可扩展性。
+*   **At-Least-Once 语义**: 强制采用**手动提交 Offset** 机制，确保任务在处理完成后才确认消费，防止服务崩溃导致任务丢失。
+*   **死信队列 (DLQ)**: 对于处理失败（如格式错误、数据库写入失败）的任务，将其转发到死信队列，以便后续分析和人工干预，同时避免阻塞主消费流程。
+*   **优雅停机**: 服务能响应 `SIGTERM` 信号，确保在退出前完成当前正在处理的任务并提交 Offset。
+
+### 4.2 扩展性设计
+
+*   **水平扩展**: `im-task` 是无状态服务，可以随时增减实例。Kafka 的**消费者组 (Consumer Group)** 机制会自动将 Topic 分区 rebalance 到所有实例，实现处理能力的线性扩展。
+*   **分区规划**: `im-task` 的最大并发度受限于其消费的 Topic 的分区数。核心 Topic（如 `gochat.messages.persist`）在创建时就应规划足够多的分区（如 64, 128）。
+*   **任务隔离**:
+    *   **Topic 隔离**: 将不同优先级或资源消耗模型的任务放入不同的 Topic，并使用不同的消费者组进行消费，实现物理隔离。
+    *   **线程池隔离**: 在服务内部，为不同类型的任务分配独立的 Goroutine Pool，防止低优先级或耗时长的任务阻塞高优先级任务。

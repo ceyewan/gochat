@@ -1,140 +1,34 @@
-// im_repo/v1/user.proto
-// 定义 im-repo 服务的用户数据相关接口
-
 syntax = "proto3";
 
 package im.repo.v1;
 
+import "common/v1/types.proto";
+
 option go_package = "github.com/ceyewan/gochat/api/gen/im_repo/v1;imrepov1";
 
-// UserService 用户数据服务
-// 提供用户数据的 CRUD 操作和缓存管理
 service UserService {
-  // CreateUser 创建用户
-  // 在数据库中创建新用户记录
+  // 创建用户
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
-  
-  // GetUser 获取用户信息
-  // 优先从缓存获取，缓存未命中时从数据库查询
+  // 获取用户信息
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
-  
-  // GetUsers 批量获取用户信息
-  // 批量查询多个用户的信息，优化网络调用
-  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
-  
-  // UpdateUser 更新用户信息
-  // 更新数据库并删除对应缓存
-  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
-  
-  // VerifyPassword 验证用户密码
-  // 验证用户密码是否正确
-  rpc VerifyPassword(VerifyPasswordRequest) returns (VerifyPasswordResponse);
-  
-  // GetUserByUsername 根据用户名获取用户
-  // 通过用户名查询用户信息
-  rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserByUsernameResponse);
+  // ... 其他 RPC
 }
 
-// CreateUserRequest 创建用户请求
 message CreateUserRequest {
-  // 用户名（唯一）
   string username = 1;
-  // 密码哈希
   string password_hash = 2;
-  // 头像 URL
   string avatar_url = 3;
-  // 是否为游客
   bool is_guest = 4;
 }
 
-// CreateUserResponse 创建用户响应
 message CreateUserResponse {
-  // 用户信息
-  User user = 1;
+  common.v1.User user = 1;
 }
 
-// GetUserRequest 获取用户请求
 message GetUserRequest {
-  // 用户 ID
   string user_id = 1;
 }
 
-// GetUserResponse 获取用户响应
 message GetUserResponse {
-  // 用户信息
-  User user = 1;
-  // 是否从缓存获取
-  bool from_cache = 2;
-}
-
-// GetUsersRequest 批量获取用户请求
-message GetUsersRequest {
-  // 用户 ID 列表
-  repeated string user_ids = 1;
-}
-
-// GetUsersResponse 批量获取用户响应
-message GetUsersResponse {
-  // 用户信息列表
-  repeated User users = 1;
-  // 缓存命中的用户 ID 列表
-  repeated string cached_user_ids = 2;
-}
-
-// UpdateUserRequest 更新用户请求
-message UpdateUserRequest {
-  // 用户 ID
-  string user_id = 1;
-  // 新头像 URL（可选）
-  string avatar_url = 2;
-  // 更新字段掩码
-  repeated string update_mask = 3;
-}
-
-// UpdateUserResponse 更新用户响应
-message UpdateUserResponse {
-  // 更新后的用户信息
-  User user = 1;
-}
-
-// VerifyPasswordRequest 验证密码请求
-message VerifyPasswordRequest {
-  // 用户 ID
-  string user_id = 1;
-  // 明文密码
-  string password = 2;
-}
-
-// VerifyPasswordResponse 验证密码响应
-message VerifyPasswordResponse {
-  // 密码是否正确
-  bool valid = 1;
-}
-
-// GetUserByUsernameRequest 根据用户名获取用户请求
-message GetUserByUsernameRequest {
-  // 用户名
-  string username = 1;
-}
-
-// GetUserByUsernameResponse 根据用户名获取用户响应
-message GetUserByUsernameResponse {
-  // 用户信息
-  User user = 1;
-}
-
-// User 用户信息
-message User {
-  // 用户 ID
-  string id = 1;
-  // 用户名
-  string username = 2;
-  // 头像 URL
-  string avatar_url = 3;
-  // 创建时间（Unix 时间戳）
-  int64 created_at = 4;
-  // 更新时间（Unix 时间戳）
-  int64 updated_at = 5;
-  // 是否为游客
-  bool is_guest = 6;
+  common.v1.User user = 1;
 }

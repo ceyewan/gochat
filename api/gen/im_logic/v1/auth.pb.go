@@ -10,6 +10,7 @@
 package imlogicv1
 
 import (
+	v1 "github.com/ceyewan/gochat/api/gen/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -98,7 +99,7 @@ type LoginResponse struct {
 	// 访问令牌过期时间（Unix 时间戳）
 	ExpiresIn int64 `protobuf:"varint,3,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
 	// 用户信息
-	User          *User `protobuf:"bytes,4,opt,name=user,proto3" json:"user,omitempty"`
+	User          *v1.User `protobuf:"bytes,4,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,7 +155,7 @@ func (x *LoginResponse) GetExpiresIn() int64 {
 	return 0
 }
 
-func (x *LoginResponse) GetUser() *User {
+func (x *LoginResponse) GetUser() *v1.User {
 	if x != nil {
 		return x.User
 	}
@@ -229,7 +230,7 @@ func (x *RegisterRequest) GetAvatarUrl() string {
 type RegisterResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 用户信息
-	User          *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	User          *v1.User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -264,7 +265,7 @@ func (*RegisterResponse) Descriptor() ([]byte, []int) {
 	return file_im_logic_v1_auth_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *RegisterResponse) GetUser() *User {
+func (x *RegisterResponse) GetUser() *v1.User {
 	if x != nil {
 		return x.User
 	}
@@ -534,7 +535,7 @@ type ValidateTokenResponse struct {
 	// 令牌是否有效
 	Valid bool `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
 	// 用户信息（令牌有效时返回）
-	User *User `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	User *v1.User `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
 	// 令牌过期时间（Unix 时间戳）
 	ExpiresAt     int64 `protobuf:"varint,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -578,7 +579,7 @@ func (x *ValidateTokenResponse) GetValid() bool {
 	return false
 }
 
-func (x *ValidateTokenResponse) GetUser() *User {
+func (x *ValidateTokenResponse) GetUser() *v1.User {
 	if x != nil {
 		return x.User
 	}
@@ -648,7 +649,7 @@ type GuestLoginResponse struct {
 	// 访问令牌过期时间（Unix 时间戳）
 	ExpiresIn int64 `protobuf:"varint,3,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
 	// 用户信息
-	User          *User `protobuf:"bytes,4,opt,name=user,proto3" json:"user,omitempty"`
+	User          *v1.User `protobuf:"bytes,4,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -704,7 +705,7 @@ func (x *GuestLoginResponse) GetExpiresIn() int64 {
 	return 0
 }
 
-func (x *GuestLoginResponse) GetUser() *User {
+func (x *GuestLoginResponse) GetUser() *v1.User {
 	if x != nil {
 		return x.User
 	}
@@ -715,25 +716,25 @@ var File_im_logic_v1_auth_proto protoreflect.FileDescriptor
 
 const file_im_logic_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x16im_logic/v1/auth.proto\x12\vim.logic.v1\x1a\x18im_logic/v1/common.proto\"g\n" +
+	"\x16im_logic/v1/auth.proto\x12\vim.logic.v1\x1a\x15common/v1/types.proto\"g\n" +
 	"\fLoginRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1f\n" +
 	"\vclient_info\x18\x03 \x01(\tR\n" +
-	"clientInfo\"\x9d\x01\n" +
+	"clientInfo\"\x9b\x01\n" +
 	"\rLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
 	"\n" +
-	"expires_in\x18\x03 \x01(\x03R\texpiresIn\x12%\n" +
-	"\x04user\x18\x04 \x01(\v2\x11.im.logic.v1.UserR\x04user\"h\n" +
+	"expires_in\x18\x03 \x01(\x03R\texpiresIn\x12#\n" +
+	"\x04user\x18\x04 \x01(\v2\x0f.common.v1.UserR\x04user\"h\n" +
 	"\x0fRegisterRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\"9\n" +
-	"\x10RegisterResponse\x12%\n" +
-	"\x04user\x18\x01 \x01(\v2\x11.im.logic.v1.UserR\x04user\":\n" +
+	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\"7\n" +
+	"\x10RegisterResponse\x12#\n" +
+	"\x04user\x18\x01 \x01(\v2\x0f.common.v1.UserR\x04user\":\n" +
 	"\x13RefreshTokenRequest\x12#\n" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"}\n" +
 	"\x14RefreshTokenResponse\x12!\n" +
@@ -747,21 +748,21 @@ const file_im_logic_v1_auth_proto_rawDesc = "" +
 	"\x0eLogoutResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"9\n" +
 	"\x14ValidateTokenRequest\x12!\n" +
-	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"s\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"q\n" +
 	"\x15ValidateTokenResponse\x12\x14\n" +
-	"\x05valid\x18\x01 \x01(\bR\x05valid\x12%\n" +
-	"\x04user\x18\x02 \x01(\v2\x11.im.logic.v1.UserR\x04user\x12\x1d\n" +
+	"\x05valid\x18\x01 \x01(\bR\x05valid\x12#\n" +
+	"\x04user\x18\x02 \x01(\v2\x0f.common.v1.UserR\x04user\x12\x1d\n" +
 	"\n" +
 	"expires_at\x18\x03 \x01(\x03R\texpiresAt\"4\n" +
 	"\x11GuestLoginRequest\x12\x1f\n" +
 	"\vclient_info\x18\x01 \x01(\tR\n" +
-	"clientInfo\"\xa2\x01\n" +
+	"clientInfo\"\xa0\x01\n" +
 	"\x12GuestLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
 	"\n" +
-	"expires_in\x18\x03 \x01(\x03R\texpiresIn\x12%\n" +
-	"\x04user\x18\x04 \x01(\v2\x11.im.logic.v1.UserR\x04user2\xd5\x03\n" +
+	"expires_in\x18\x03 \x01(\x03R\texpiresIn\x12#\n" +
+	"\x04user\x18\x04 \x01(\v2\x0f.common.v1.UserR\x04user2\xd5\x03\n" +
 	"\vAuthService\x12>\n" +
 	"\x05Login\x12\x19.im.logic.v1.LoginRequest\x1a\x1a.im.logic.v1.LoginResponse\x12G\n" +
 	"\bRegister\x12\x1c.im.logic.v1.RegisterRequest\x1a\x1d.im.logic.v1.RegisterResponse\x12S\n" +
@@ -797,13 +798,13 @@ var file_im_logic_v1_auth_proto_goTypes = []any{
 	(*ValidateTokenResponse)(nil), // 9: im.logic.v1.ValidateTokenResponse
 	(*GuestLoginRequest)(nil),     // 10: im.logic.v1.GuestLoginRequest
 	(*GuestLoginResponse)(nil),    // 11: im.logic.v1.GuestLoginResponse
-	(*User)(nil),                  // 12: im.logic.v1.User
+	(*v1.User)(nil),               // 12: common.v1.User
 }
 var file_im_logic_v1_auth_proto_depIdxs = []int32{
-	12, // 0: im.logic.v1.LoginResponse.user:type_name -> im.logic.v1.User
-	12, // 1: im.logic.v1.RegisterResponse.user:type_name -> im.logic.v1.User
-	12, // 2: im.logic.v1.ValidateTokenResponse.user:type_name -> im.logic.v1.User
-	12, // 3: im.logic.v1.GuestLoginResponse.user:type_name -> im.logic.v1.User
+	12, // 0: im.logic.v1.LoginResponse.user:type_name -> common.v1.User
+	12, // 1: im.logic.v1.RegisterResponse.user:type_name -> common.v1.User
+	12, // 2: im.logic.v1.ValidateTokenResponse.user:type_name -> common.v1.User
+	12, // 3: im.logic.v1.GuestLoginResponse.user:type_name -> common.v1.User
 	0,  // 4: im.logic.v1.AuthService.Login:input_type -> im.logic.v1.LoginRequest
 	2,  // 5: im.logic.v1.AuthService.Register:input_type -> im.logic.v1.RegisterRequest
 	4,  // 6: im.logic.v1.AuthService.RefreshToken:input_type -> im.logic.v1.RefreshTokenRequest
@@ -828,7 +829,6 @@ func file_im_logic_v1_auth_proto_init() {
 	if File_im_logic_v1_auth_proto != nil {
 		return
 	}
-	file_im_logic_v1_common_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

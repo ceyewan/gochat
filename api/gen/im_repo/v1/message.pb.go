@@ -139,7 +139,7 @@ func (x *SaveMessageRequest) GetExtra() string {
 type SaveMessageResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 保存的消息信息
-	Message       *Message `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message       *RepoMessage `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -174,7 +174,7 @@ func (*SaveMessageResponse) Descriptor() ([]byte, []int) {
 	return file_im_repo_v1_message_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SaveMessageResponse) GetMessage() *Message {
+func (x *SaveMessageResponse) GetMessage() *RepoMessage {
 	if x != nil {
 		return x.Message
 	}
@@ -231,7 +231,7 @@ func (x *GetMessageRequest) GetMessageId() string {
 type GetMessageResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 消息信息
-	Message       *Message `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message       *RepoMessage `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -266,7 +266,7 @@ func (*GetMessageResponse) Descriptor() ([]byte, []int) {
 	return file_im_repo_v1_message_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *GetMessageResponse) GetMessage() *Message {
+func (x *GetMessageResponse) GetMessage() *RepoMessage {
 	if x != nil {
 		return x.Message
 	}
@@ -359,7 +359,7 @@ func (x *GetConversationMessagesRequest) GetAscending() bool {
 type GetConversationMessagesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 消息列表
-	Messages []*Message `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	Messages []*RepoMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
 	// 是否还有更多消息
 	HasMore bool `protobuf:"varint,2,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
 	// 下一页的起始序列号
@@ -398,7 +398,7 @@ func (*GetConversationMessagesResponse) Descriptor() ([]byte, []int) {
 	return file_im_repo_v1_message_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetConversationMessagesResponse) GetMessages() []*Message {
+func (x *GetConversationMessagesResponse) GetMessages() []*RepoMessage {
 	if x != nil {
 		return x.Messages
 	}
@@ -585,12 +585,13 @@ func (x *GetLatestMessagesRequest) GetLimitPerConversation() int32 {
 }
 
 // GetLatestMessagesResponse 获取最新消息响应
+// GetLatestMessagesResponse 获取最新消息响应
 type GetLatestMessagesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 会话最新消息映射 (conversation_id -> messages)
-	ConversationMessages map[string]*ConversationMessages `protobuf:"bytes,1,rep,name=conversation_messages,json=conversationMessages,proto3" json:"conversation_messages,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// 消息列表
+	Messages      []*RepoMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetLatestMessagesResponse) Reset() {
@@ -623,9 +624,9 @@ func (*GetLatestMessagesResponse) Descriptor() ([]byte, []int) {
 	return file_im_repo_v1_message_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *GetLatestMessagesResponse) GetConversationMessages() map[string]*ConversationMessages {
+func (x *GetLatestMessagesResponse) GetMessages() []*RepoMessage {
 	if x != nil {
-		return x.ConversationMessages
+		return x.Messages
 	}
 	return nil
 }
@@ -634,7 +635,7 @@ func (x *GetLatestMessagesResponse) GetConversationMessages() map[string]*Conver
 type ConversationMessages struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 消息列表
-	Messages      []*Message `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	Messages      []*RepoMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -669,7 +670,7 @@ func (*ConversationMessages) Descriptor() ([]byte, []int) {
 	return file_im_repo_v1_message_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *ConversationMessages) GetMessages() []*Message {
+func (x *ConversationMessages) GetMessages() []*RepoMessage {
 	if x != nil {
 		return x.Messages
 	}
@@ -786,8 +787,8 @@ func (x *DeleteMessageResponse) GetSuccess() bool {
 	return false
 }
 
-// Message 消息信息
-type Message struct {
+// RepoMessage 存储层消息信息
+type RepoMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 消息 ID
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -813,20 +814,20 @@ type Message struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Message) Reset() {
-	*x = Message{}
+func (x *RepoMessage) Reset() {
+	*x = RepoMessage{}
 	mi := &file_im_repo_v1_message_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Message) String() string {
+func (x *RepoMessage) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Message) ProtoMessage() {}
+func (*RepoMessage) ProtoMessage() {}
 
-func (x *Message) ProtoReflect() protoreflect.Message {
+func (x *RepoMessage) ProtoReflect() protoreflect.Message {
 	mi := &file_im_repo_v1_message_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -838,75 +839,75 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Message.ProtoReflect.Descriptor instead.
-func (*Message) Descriptor() ([]byte, []int) {
+// Deprecated: Use RepoMessage.ProtoReflect.Descriptor instead.
+func (*RepoMessage) Descriptor() ([]byte, []int) {
 	return file_im_repo_v1_message_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *Message) GetId() string {
+func (x *RepoMessage) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Message) GetConversationId() string {
+func (x *RepoMessage) GetConversationId() string {
 	if x != nil {
 		return x.ConversationId
 	}
 	return ""
 }
 
-func (x *Message) GetSenderId() string {
+func (x *RepoMessage) GetSenderId() string {
 	if x != nil {
 		return x.SenderId
 	}
 	return ""
 }
 
-func (x *Message) GetMessageType() int32 {
+func (x *RepoMessage) GetMessageType() int32 {
 	if x != nil {
 		return x.MessageType
 	}
 	return 0
 }
 
-func (x *Message) GetContent() string {
+func (x *RepoMessage) GetContent() string {
 	if x != nil {
 		return x.Content
 	}
 	return ""
 }
 
-func (x *Message) GetSeqId() int64 {
+func (x *RepoMessage) GetSeqId() int64 {
 	if x != nil {
 		return x.SeqId
 	}
 	return 0
 }
 
-func (x *Message) GetCreatedAt() int64 {
+func (x *RepoMessage) GetCreatedAt() int64 {
 	if x != nil {
 		return x.CreatedAt
 	}
 	return 0
 }
 
-func (x *Message) GetUpdatedAt() int64 {
+func (x *RepoMessage) GetUpdatedAt() int64 {
 	if x != nil {
 		return x.UpdatedAt
 	}
 	return 0
 }
 
-func (x *Message) GetDeleted() bool {
+func (x *RepoMessage) GetDeleted() bool {
 	if x != nil {
 		return x.Deleted
 	}
 	return false
 }
 
-func (x *Message) GetExtra() string {
+func (x *RepoMessage) GetExtra() string {
 	if x != nil {
 		return x.Extra
 	}
@@ -928,14 +929,14 @@ const file_im_repo_v1_message_proto_rawDesc = "" +
 	"\acontent\x18\x05 \x01(\tR\acontent\x12\x15\n" +
 	"\x06seq_id\x18\x06 \x01(\x03R\x05seqId\x12\"\n" +
 	"\rclient_msg_id\x18\a \x01(\tR\vclientMsgId\x12\x14\n" +
-	"\x05extra\x18\b \x01(\tR\x05extra\"D\n" +
-	"\x13SaveMessageResponse\x12-\n" +
-	"\amessage\x18\x01 \x01(\v2\x13.im.repo.v1.MessageR\amessage\"2\n" +
+	"\x05extra\x18\b \x01(\tR\x05extra\"H\n" +
+	"\x13SaveMessageResponse\x121\n" +
+	"\amessage\x18\x01 \x01(\v2\x17.im.repo.v1.RepoMessageR\amessage\"2\n" +
 	"\x11GetMessageRequest\x12\x1d\n" +
 	"\n" +
-	"message_id\x18\x01 \x01(\tR\tmessageId\"C\n" +
-	"\x12GetMessageResponse\x12-\n" +
-	"\amessage\x18\x01 \x01(\v2\x13.im.repo.v1.MessageR\amessage\"\xbd\x01\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\"G\n" +
+	"\x12GetMessageResponse\x121\n" +
+	"\amessage\x18\x01 \x01(\v2\x17.im.repo.v1.RepoMessageR\amessage\"\xbd\x01\n" +
 	"\x1eGetConversationMessagesRequest\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tR\x0econversationId\x12 \n" +
 	"\fstart_seq_id\x18\x02 \x01(\x03R\n" +
@@ -943,9 +944,9 @@ const file_im_repo_v1_message_proto_rawDesc = "" +
 	"\n" +
 	"end_seq_id\x18\x03 \x01(\x03R\bendSeqId\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x1c\n" +
-	"\tascending\x18\x05 \x01(\bR\tascending\"\x8d\x01\n" +
-	"\x1fGetConversationMessagesResponse\x12/\n" +
-	"\bmessages\x18\x01 \x03(\v2\x13.im.repo.v1.MessageR\bmessages\x12\x19\n" +
+	"\tascending\x18\x05 \x01(\bR\tascending\"\x91\x01\n" +
+	"\x1fGetConversationMessagesResponse\x123\n" +
+	"\bmessages\x18\x01 \x03(\v2\x17.im.repo.v1.RepoMessageR\bmessages\x12\x19\n" +
 	"\bhas_more\x18\x02 \x01(\bR\ahasMore\x12\x1e\n" +
 	"\vnext_seq_id\x18\x03 \x01(\x03R\tnextSeqId\"e\n" +
 	"\x1eCheckMessageIdempotencyRequest\x12\"\n" +
@@ -957,14 +958,11 @@ const file_im_repo_v1_message_proto_rawDesc = "" +
 	"\x13existing_message_id\x18\x02 \x01(\tR\x11existingMessageId\"{\n" +
 	"\x18GetLatestMessagesRequest\x12)\n" +
 	"\x10conversation_ids\x18\x01 \x03(\tR\x0fconversationIds\x124\n" +
-	"\x16limit_per_conversation\x18\x02 \x01(\x05R\x14limitPerConversation\"\xfc\x01\n" +
-	"\x19GetLatestMessagesResponse\x12t\n" +
-	"\x15conversation_messages\x18\x01 \x03(\v2?.im.repo.v1.GetLatestMessagesResponse.ConversationMessagesEntryR\x14conversationMessages\x1ai\n" +
-	"\x19ConversationMessagesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x126\n" +
-	"\x05value\x18\x02 \x01(\v2 .im.repo.v1.ConversationMessagesR\x05value:\x028\x01\"G\n" +
-	"\x14ConversationMessages\x12/\n" +
-	"\bmessages\x18\x01 \x03(\v2\x13.im.repo.v1.MessageR\bmessages\"n\n" +
+	"\x16limit_per_conversation\x18\x02 \x01(\x05R\x14limitPerConversation\"P\n" +
+	"\x19GetLatestMessagesResponse\x123\n" +
+	"\bmessages\x18\x01 \x03(\v2\x17.im.repo.v1.RepoMessageR\bmessages\"K\n" +
+	"\x14ConversationMessages\x123\n" +
+	"\bmessages\x18\x01 \x03(\v2\x17.im.repo.v1.RepoMessageR\bmessages\"n\n" +
 	"\x14DeleteMessageRequest\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x1f\n" +
@@ -972,8 +970,8 @@ const file_im_repo_v1_message_proto_rawDesc = "" +
 	"operatorId\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\"1\n" +
 	"\x15DeleteMessageResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xa1\x02\n" +
-	"\aMessage\x12\x0e\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xa5\x02\n" +
+	"\vRepoMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x1b\n" +
 	"\tsender_id\x18\x03 \x01(\tR\bsenderId\x12!\n" +
@@ -1008,7 +1006,7 @@ func file_im_repo_v1_message_proto_rawDescGZIP() []byte {
 	return file_im_repo_v1_message_proto_rawDescData
 }
 
-var file_im_repo_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_im_repo_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_im_repo_v1_message_proto_goTypes = []any{
 	(*SaveMessageRequest)(nil),              // 0: im.repo.v1.SaveMessageRequest
 	(*SaveMessageResponse)(nil),             // 1: im.repo.v1.SaveMessageResponse
@@ -1023,33 +1021,31 @@ var file_im_repo_v1_message_proto_goTypes = []any{
 	(*ConversationMessages)(nil),            // 10: im.repo.v1.ConversationMessages
 	(*DeleteMessageRequest)(nil),            // 11: im.repo.v1.DeleteMessageRequest
 	(*DeleteMessageResponse)(nil),           // 12: im.repo.v1.DeleteMessageResponse
-	(*Message)(nil),                         // 13: im.repo.v1.Message
-	nil,                                     // 14: im.repo.v1.GetLatestMessagesResponse.ConversationMessagesEntry
+	(*RepoMessage)(nil),                     // 13: im.repo.v1.RepoMessage
 }
 var file_im_repo_v1_message_proto_depIdxs = []int32{
-	13, // 0: im.repo.v1.SaveMessageResponse.message:type_name -> im.repo.v1.Message
-	13, // 1: im.repo.v1.GetMessageResponse.message:type_name -> im.repo.v1.Message
-	13, // 2: im.repo.v1.GetConversationMessagesResponse.messages:type_name -> im.repo.v1.Message
-	14, // 3: im.repo.v1.GetLatestMessagesResponse.conversation_messages:type_name -> im.repo.v1.GetLatestMessagesResponse.ConversationMessagesEntry
-	13, // 4: im.repo.v1.ConversationMessages.messages:type_name -> im.repo.v1.Message
-	10, // 5: im.repo.v1.GetLatestMessagesResponse.ConversationMessagesEntry.value:type_name -> im.repo.v1.ConversationMessages
-	0,  // 6: im.repo.v1.MessageService.SaveMessage:input_type -> im.repo.v1.SaveMessageRequest
-	2,  // 7: im.repo.v1.MessageService.GetMessage:input_type -> im.repo.v1.GetMessageRequest
-	4,  // 8: im.repo.v1.MessageService.GetConversationMessages:input_type -> im.repo.v1.GetConversationMessagesRequest
-	6,  // 9: im.repo.v1.MessageService.CheckMessageIdempotency:input_type -> im.repo.v1.CheckMessageIdempotencyRequest
-	8,  // 10: im.repo.v1.MessageService.GetLatestMessages:input_type -> im.repo.v1.GetLatestMessagesRequest
-	11, // 11: im.repo.v1.MessageService.DeleteMessage:input_type -> im.repo.v1.DeleteMessageRequest
-	1,  // 12: im.repo.v1.MessageService.SaveMessage:output_type -> im.repo.v1.SaveMessageResponse
-	3,  // 13: im.repo.v1.MessageService.GetMessage:output_type -> im.repo.v1.GetMessageResponse
-	5,  // 14: im.repo.v1.MessageService.GetConversationMessages:output_type -> im.repo.v1.GetConversationMessagesResponse
-	7,  // 15: im.repo.v1.MessageService.CheckMessageIdempotency:output_type -> im.repo.v1.CheckMessageIdempotencyResponse
-	9,  // 16: im.repo.v1.MessageService.GetLatestMessages:output_type -> im.repo.v1.GetLatestMessagesResponse
-	12, // 17: im.repo.v1.MessageService.DeleteMessage:output_type -> im.repo.v1.DeleteMessageResponse
-	12, // [12:18] is the sub-list for method output_type
-	6,  // [6:12] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	13, // 0: im.repo.v1.SaveMessageResponse.message:type_name -> im.repo.v1.RepoMessage
+	13, // 1: im.repo.v1.GetMessageResponse.message:type_name -> im.repo.v1.RepoMessage
+	13, // 2: im.repo.v1.GetConversationMessagesResponse.messages:type_name -> im.repo.v1.RepoMessage
+	13, // 3: im.repo.v1.GetLatestMessagesResponse.messages:type_name -> im.repo.v1.RepoMessage
+	13, // 4: im.repo.v1.ConversationMessages.messages:type_name -> im.repo.v1.RepoMessage
+	0,  // 5: im.repo.v1.MessageService.SaveMessage:input_type -> im.repo.v1.SaveMessageRequest
+	2,  // 6: im.repo.v1.MessageService.GetMessage:input_type -> im.repo.v1.GetMessageRequest
+	4,  // 7: im.repo.v1.MessageService.GetConversationMessages:input_type -> im.repo.v1.GetConversationMessagesRequest
+	6,  // 8: im.repo.v1.MessageService.CheckMessageIdempotency:input_type -> im.repo.v1.CheckMessageIdempotencyRequest
+	8,  // 9: im.repo.v1.MessageService.GetLatestMessages:input_type -> im.repo.v1.GetLatestMessagesRequest
+	11, // 10: im.repo.v1.MessageService.DeleteMessage:input_type -> im.repo.v1.DeleteMessageRequest
+	1,  // 11: im.repo.v1.MessageService.SaveMessage:output_type -> im.repo.v1.SaveMessageResponse
+	3,  // 12: im.repo.v1.MessageService.GetMessage:output_type -> im.repo.v1.GetMessageResponse
+	5,  // 13: im.repo.v1.MessageService.GetConversationMessages:output_type -> im.repo.v1.GetConversationMessagesResponse
+	7,  // 14: im.repo.v1.MessageService.CheckMessageIdempotency:output_type -> im.repo.v1.CheckMessageIdempotencyResponse
+	9,  // 15: im.repo.v1.MessageService.GetLatestMessages:output_type -> im.repo.v1.GetLatestMessagesResponse
+	12, // 16: im.repo.v1.MessageService.DeleteMessage:output_type -> im.repo.v1.DeleteMessageResponse
+	11, // [11:17] is the sub-list for method output_type
+	5,  // [5:11] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_im_repo_v1_message_proto_init() }
@@ -1063,7 +1059,7 @@ func file_im_repo_v1_message_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_im_repo_v1_message_proto_rawDesc), len(file_im_repo_v1_message_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
