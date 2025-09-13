@@ -20,7 +20,8 @@ func main() {
 	fmt.Println("测试内容：错误处理、边界条件、性能验证、降级策略")
 
 	// 创建协调器
-	coordinator, err := coord.New(context.Background(), coord.DefaultConfig())
+	cfg := coord.DefaultConfig()
+	coordinator, err := coord.New(context.Background(), &cfg)
 	if err != nil {
 		log.Fatalf("创建协调器失败: %v", err)
 	}
@@ -171,20 +172,14 @@ func testDegradationStrategy(ctx context.Context, coordinator coord.Provider) {
 	// 测试3: 重试机制
 	fmt.Println("3. 测试重试机制...")
 
-	// 使用无效的etcd地址测试重试
-	invalidConfig := coord.CoordinatorConfig{
-		Endpoints: []string{"localhost:9999"}, // 无效地址
-		Timeout:   1 * time.Second,
-		RetryConfig: &coord.RetryConfig{
-			MaxAttempts:  2,
-			InitialDelay: 100 * time.Millisecond,
-			MaxDelay:     500 * time.Millisecond,
-			Multiplier:   2.0,
-		},
+	// 使用无效的etcd地址测试连接失败
+	invalidConfig := coord.Config{
+		Endpoints:   []string{"localhost:9999"}, // 无效地址
+		DialTimeout: 1 * time.Second,
 	}
 
 	start := time.Now()
-	_, err = coord.New(context.Background(), invalidConfig)
+	_, err = coord.New(context.Background(), &invalidConfig)
 	duration := time.Since(start)
 
 	if err != nil && duration >= 200*time.Millisecond {

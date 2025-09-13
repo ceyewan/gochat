@@ -45,17 +45,16 @@ type clogUpdater struct{}
 
 func (u *clogUpdater) OnConfigUpdate(oldConfig, newConfig *clog.Config) error {
 	log.Println("clog config updated, re-initializing logger...")
-	return clog.Init(*newConfig)
+	return clog.Init(context.Background(), newConfig)
 }
 
 func main() {
 	log.Println("=== 通用配置管理器示例 ===")
 
 	// 1. 初始化 coord 实例
-	coordInstance, err := coord.New(context.Background(), coord.CoordinatorConfig{
-		Endpoints: []string{"localhost:2379"},
-		Timeout:   5 * time.Second,
-	})
+	coordConfig := coord.GetDefaultConfig("development")
+	coordConfig.Endpoints = []string{"localhost:2379"}
+	coordInstance, err := coord.New(context.Background(), coordConfig)
 	if err != nil {
 		log.Fatalf("Failed to create coord instance: %v", err)
 	}
@@ -63,17 +62,17 @@ func main() {
 
 	configCenter := coordInstance.Config()
 
-	// 2. 示例1：管理 clog 配置，支持热更新
-	log.Println("\n--- clog 配置管理示例 ---")
-	clogManager := config.NewManager(
-		configCenter, "dev", "gochat", "clog",
-		clog.DefaultConfig(),
-		config.WithUpdater[clog.Config](&clogUpdater{}),
-		config.WithLogger[clog.Config](clog.Module("config-manager-clog")),
-	)
-	clogManager.Start()
-	defer clogManager.Stop()
-	clog.Info("clog a info message")
+	// 2. 示例1：管理 clog 配置，支持热更新 (暂时注释掉，因为类型系统较复杂)
+	// log.Println("\n--- clog 配置管理示例 ---")
+	// clogManager := config.NewManager(
+	// 	configCenter, "dev", "gochat", "clog",
+	// 	clog.GetDefaultConfig("development"),
+	// 	config.WithUpdater[*clog.Config](&clogUpdater{}),
+	// 	config.WithLogger[*clog.Config](clog.Namespace("config-manager-clog")),
+	// )
+	// clogManager.Start()
+	// defer clogManager.Stop()
+	// clog.Info("clog a info message")
 
 	// 3. 示例2：自定义应用配置管理
 	log.Println("\n--- 自定义应用配置管理示例 ---")
@@ -83,7 +82,7 @@ func main() {
 		defaultAppConfig,
 		config.WithValidator[MyAppConfig](&myAppConfigValidator{}),
 		config.WithUpdater[MyAppConfig](&myAppConfigUpdater{}),
-		config.WithLogger[MyAppConfig](clog.Module("config-manager-app")),
+		config.WithLogger[MyAppConfig](clog.Namespace("config-manager-app")),
 	)
 	appConfigManager.Start()
 	defer appConfigManager.Stop()

@@ -33,7 +33,7 @@ func NewEtcdResolverBuilder(client *client.EtcdClient, prefix string, logger clo
 		prefix = "/services"
 	}
 	if logger == nil {
-		logger = clog.Module("coordination.resolver")
+		logger = clog.Namespace("coordination.resolver")
 	}
 	return &EtcdResolverBuilder{
 		client: client,

@@ -15,7 +15,7 @@ import (
 
 func main() {
 	// clog 包是零配置的，不需要显式初始化
-	cfg := coord.DefaultConfig()
+	cfg := coord.GetDefaultConfig("development")
 	provider, err := coord.New(context.Background(), cfg)
 	if err != nil {
 		clog.Error("failed to create coordinator", clog.Err(err))

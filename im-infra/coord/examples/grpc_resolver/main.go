@@ -22,7 +22,7 @@ func main() {
 	// 启动命令：etcd --listen-client-urls=http://localhost:2379 --advertise-client-urls=http://localhost:2379
 
 	// 创建协调器，连接到 2379 端口的 etcd
-	config := coord.DefaultConfig()
+	config := coord.GetDefaultConfig("development")
 	config.Endpoints = []string{"localhost:2379"}
 	coordinator, err := coord.New(context.Background(), config)
 	if err != nil {

@@ -25,7 +25,7 @@ func NewEtcdLockFactory(c *client.EtcdClient, prefix string, logger clog.Logger)
 		prefix = "/locks"
 	}
 	if logger == nil {
-		logger = clog.Module("coordination.lock")
+		logger = clog.Namespace("coordination.lock")
 	}
 	return &EtcdLockFactory{
 		client: c,

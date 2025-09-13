@@ -198,7 +198,7 @@ func New(cfg Config) (*EtcdClient, error) {
 	if cfg.Logger != nil {
 		logger = cfg.Logger
 	} else {
-		logger = clog.Module("coordination.client")
+		logger = clog.Namespace("coordination.client")
 	}
 
 	logger.Info("etcd client created successfully",

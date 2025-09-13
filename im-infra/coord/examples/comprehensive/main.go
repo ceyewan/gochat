@@ -60,7 +60,8 @@ func main() {
 	fmt.Println("=== Coord 模块综合测试示例 ===")
 
 	// 创建协调器
-	coordinator, err := coord.New(context.Background(), coord.DefaultConfig())
+	cfg := coord.DefaultConfig()
+	coordinator, err := coord.New(context.Background(), &cfg)
 	if err != nil {
 		log.Fatalf("创建协调器失败: %v", err)
 	}

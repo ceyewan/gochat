@@ -26,7 +26,7 @@ func NewEtcdConfigCenter(c *client.EtcdClient, prefix string, logger clog.Logger
 		prefix = "/config"
 	}
 	if logger == nil {
-		logger = clog.Module("coordination.config")
+		logger = clog.Namespace("coordination.config")
 	}
 	return &EtcdConfigCenter{
 		client: c,

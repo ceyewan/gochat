@@ -40,7 +40,7 @@ func NewEtcdServiceRegistry(c *client.EtcdClient, prefix string, logger clog.Log
 		prefix = "/services"
 	}
 	if logger == nil {
-		logger = clog.Module("coordination.registry")
+		logger = clog.Namespace("coordination.registry")
 	}
 
 	registry := &EtcdServiceRegistry{
