@@ -53,7 +53,7 @@ func GetDefaultConfig(env string) *Config {
 			Level:       "info",
 			Format:      "json",
 			Output:      "stdout",
-			AddSource:   true,
+			AddSource:   true,  // 确保 JSON 格式也显示源码信息
 			EnableColor: false,
 			RootPath:    "",
 		}

@@ -26,9 +26,10 @@ func main() {
 	// 示例 2: 创建独立的 logger 实例，使用多个选项
 	fmt.Println("\n--- 示例 2: 创建独立的 logger 实例 ---")
 	config2 := &clog.Config{
-		Level:  "debug",
-		Format: "json",
-		Output: "stdout",
+		Level:     "debug",
+		Format:    "json",
+		Output:    "stdout",
+		AddSource: true,  // 确保 JSON 格式显示源码信息
 	}
 
 	logger, err := clog.New(context.Background(), config2, 

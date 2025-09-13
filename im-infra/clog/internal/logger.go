@@ -39,12 +39,12 @@ func (l *zapLogger) addNamespaceToFields(fields []zap.Field) []zap.Field {
 	if l.namespace == "" {
 		return fields
 	}
-	
+
 	// 创建新的字段切片，确保 namespace 字段在第一个位置
 	newFields := make([]zap.Field, len(fields)+1)
 	newFields[0] = WithNamespaceField(l.namespace)
 	copy(newFields[1:], fields)
-	
+
 	return newFields
 }
 
@@ -52,7 +52,6 @@ func (l *zapLogger) addNamespaceToFields(fields []zap.Field) []zap.Field {
 func WithNamespaceField(name string) zap.Field {
 	return zap.String("namespace", name)
 }
-
 
 // rotationConfig 日志轮转配置
 type rotationConfig struct {
@@ -136,23 +135,10 @@ func (l *zapLogger) With(fields ...zap.Field) Logger {
 			filteredFields = append(filteredFields, field)
 		}
 	}
-	
+
 	return &zapLogger{
 		Logger:    l.Logger.With(filteredFields...),
 		namespace: l.namespace,
-	}
-}
-
-// logWithNamespace 包装日志记录方法，动态添加 namespace 字段
-func (l *zapLogger) logWithNamespace(logFunc func(string, ...zap.Field), msg string, fields ...zap.Field) {
-	if l.namespace != "" {
-		// 添加 namespace 字段到字段列表的开头
-		allFields := make([]zap.Field, len(fields)+1)
-		allFields[0] = WithNamespaceField(l.namespace)
-		copy(allFields[1:], fields)
-		logFunc(msg, allFields...)
-	} else {
-		logFunc(msg, fields...)
 	}
 }
 
@@ -160,7 +146,7 @@ func (l *zapLogger) logWithNamespace(logFunc func(string, ...zap.Field), msg str
 func (l *zapLogger) WithOptions(opts ...zap.Option) Logger {
 	// 应用选项，不再自动添加 namespace 字段
 	newLogger := l.Logger.WithOptions(opts...)
-	
+
 	return &zapLogger{
 		Logger:    newLogger,
 		namespace: l.namespace,
@@ -169,27 +155,67 @@ func (l *zapLogger) WithOptions(opts ...zap.Option) Logger {
 
 // Debug 记录 Debug 级别的日志
 func (l *zapLogger) Debug(msg string, fields ...zap.Field) {
-	l.logWithNamespace(l.Logger.Debug, msg, fields...)
+	logger := l.Logger.WithOptions(zap.AddCallerSkip(1))
+	if l.namespace != "" {
+		allFields := make([]zap.Field, len(fields)+1)
+		allFields[0] = WithNamespaceField(l.namespace)
+		copy(allFields[1:], fields)
+		logger.Debug(msg, allFields...)
+	} else {
+		logger.Debug(msg, fields...)
+	}
 }
 
 // Info 记录 Info 级别的日志
 func (l *zapLogger) Info(msg string, fields ...zap.Field) {
-	l.logWithNamespace(l.Logger.Info, msg, fields...)
+	logger := l.Logger.WithOptions(zap.AddCallerSkip(1))
+	if l.namespace != "" {
+		allFields := make([]zap.Field, len(fields)+1)
+		allFields[0] = WithNamespaceField(l.namespace)
+		copy(allFields[1:], fields)
+		logger.Info(msg, allFields...)
+	} else {
+		logger.Info(msg, fields...)
+	}
 }
 
 // Warn 记录 Warn 级别的日志
 func (l *zapLogger) Warn(msg string, fields ...zap.Field) {
-	l.logWithNamespace(l.Logger.Warn, msg, fields...)
+	logger := l.Logger.WithOptions(zap.AddCallerSkip(1))
+	if l.namespace != "" {
+		allFields := make([]zap.Field, len(fields)+1)
+		allFields[0] = WithNamespaceField(l.namespace)
+		copy(allFields[1:], fields)
+		logger.Warn(msg, allFields...)
+	} else {
+		logger.Warn(msg, fields...)
+	}
 }
 
 // Error 记录 Error 级别的日志
 func (l *zapLogger) Error(msg string, fields ...zap.Field) {
-	l.logWithNamespace(l.Logger.Error, msg, fields...)
+	logger := l.Logger.WithOptions(zap.AddCallerSkip(1))
+	if l.namespace != "" {
+		allFields := make([]zap.Field, len(fields)+1)
+		allFields[0] = WithNamespaceField(l.namespace)
+		copy(allFields[1:], fields)
+		logger.Error(msg, allFields...)
+	} else {
+		logger.Error(msg, fields...)
+	}
 }
 
 // Fatal 记录 Fatal 级别的日志并退出程序
 func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
-	l.logWithNamespace(l.Logger.Fatal, msg, fields...)
+	logger := l.Logger.WithOptions(zap.AddCallerSkip(1))
+	if l.namespace != "" {
+		allFields := make([]zap.Field, len(fields)+1)
+		allFields[0] = WithNamespaceField(l.namespace)
+		copy(allFields[1:], fields)
+		logger.Fatal(msg, allFields...)
+	} else {
+		logger.Fatal(msg, fields...)
+	}
 	os.Exit(1)
 }
 
@@ -202,7 +228,7 @@ func (l *zapLogger) Namespace(name string) Logger {
 	} else {
 		fullNamespace = l.namespace + "." + name
 	}
-	
+
 	// 不再在 logger 实例中添加 namespace 字段，避免重复
 	// namespace 字段会在日志记录时动态添加
 	return &zapLogger{

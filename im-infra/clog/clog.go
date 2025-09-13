@@ -71,7 +71,7 @@ func New(ctx context.Context, config *Config, opts ...Option) (Logger, error) {
 		// 对于明显无效的配置，直接返回错误，不创建 fallback logger
 		return nil, err
 	}
-	
+
 	// 解析选项
 	options := ParseOptions(opts...)
 	logger, err := internal.NewLogger(config, options.Namespace)
@@ -92,7 +92,7 @@ func Init(ctx context.Context, config *Config, opts ...Option) error {
 		// 对于明显无效的配置，直接返回错误
 		return err
 	}
-	
+
 	// 解析选项
 	options := ParseOptions(opts...)
 	logger, err := internal.NewLogger(config, options.Namespace)
