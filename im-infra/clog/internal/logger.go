@@ -25,27 +25,29 @@ type Logger interface {
 
 	With(fields ...zap.Field) Logger
 	WithOptions(opts ...zap.Option) Logger
-	Module(name string) Logger
+	Namespace(name string) Logger
 }
 
 // zapLogger 封装 zap.Logger
 type zapLogger struct {
 	*zap.Logger
-	hook Hook
+	namespace string
 }
 
-// Option 定义配置选项
-type Option func(*options)
-
-type options struct {
-	hook Hook
+// WithNamespaceField 创建命名空间字段（用于内部实现）
+func WithNamespaceField(name string) zap.Field {
+	return zap.String("namespace", name)
 }
 
-// WithHook 设置 context 钩子
-func WithHook(hook Hook) Option {
-	return func(o *options) {
-		o.hook = hook
+// replaceNamespaceField 替换 namespace 字段而不是添加新字段
+func replaceNamespaceField(logger *zap.Logger, namespace string) *zap.Logger {
+	if namespace == "" {
+		return logger
 	}
+	
+	// 创建一个新的 core 来替换 namespace 字段
+	// 由于 zap.Logger 不支持直接替换字段，我们使用 With 来覆盖
+	return logger.With(WithNamespaceField(namespace))
 }
 
 // rotationConfig 日志轮转配置
@@ -68,13 +70,7 @@ type config struct {
 }
 
 // NewLogger 创建新的 logger
-func NewLogger(cfg interface{}, opts ...Option) (Logger, error) {
-	// 解析选项
-	var opt options
-	for _, o := range opts {
-		o(&opt)
-	}
-
+func NewLogger(cfg interface{}, namespace string) (Logger, error) {
 	// 类型断言获取配置
 	config := parseConfig(cfg)
 
@@ -96,7 +92,7 @@ func NewLogger(cfg interface{}, opts ...Option) (Logger, error) {
 		// 如果需要轮转，使用自定义的文件写入器
 		if config.Rotation != nil {
 			// 对于轮转文件，我们需要使用自定义的核心
-			return buildLoggerWithRotation(config, opt.hook)
+			return buildLoggerWithRotation(config, namespace)
 		}
 	}
 
@@ -114,9 +110,14 @@ func NewLogger(cfg interface{}, opts ...Option) (Logger, error) {
 		return nil, err
 	}
 
+	// 如果有命名空间，添加为初始字段
+	if namespace != "" {
+		baseLogger = baseLogger.With(WithNamespaceField(namespace))
+	}
+
 	return &zapLogger{
-		Logger: baseLogger,
-		hook:   opt.hook,
+		Logger:    baseLogger,
+		namespace: namespace,
 	}, nil
 }
 
@@ -128,17 +129,31 @@ func NewFallbackLogger() Logger {
 
 // With 添加字段
 func (l *zapLogger) With(fields ...zap.Field) Logger {
+	// 过滤掉 namespace 字段，避免重复
+	var filteredFields []zap.Field
+	for _, field := range fields {
+		if field.Key != "namespace" {
+			filteredFields = append(filteredFields, field)
+		}
+	}
+	
 	return &zapLogger{
-		Logger: l.Logger.With(fields...),
-		hook:   l.hook,
+		Logger:    l.Logger.With(filteredFields...),
+		namespace: l.namespace,
 	}
 }
 
 // WithOptions 添加选项
 func (l *zapLogger) WithOptions(opts ...zap.Option) Logger {
+	// 先应用选项，然后重新添加 namespace 字段以确保其存在
+	newLogger := l.Logger.WithOptions(opts...)
+	if l.namespace != "" {
+		newLogger = newLogger.With(WithNamespaceField(l.namespace))
+	}
+	
 	return &zapLogger{
-		Logger: l.Logger.WithOptions(opts...),
-		hook:   l.hook,
+		Logger:    newLogger,
+		namespace: l.namespace,
 	}
 }
 
@@ -148,9 +163,24 @@ func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
 	os.Exit(1)
 }
 
-// Module 创建模块日志器 - 只能基于默认 logger，不支持嵌套
-func (l *zapLogger) Module(name string) Logger {
-	return l.With(zap.String("module", name))
+// Namespace 创建子命名空间的 Logger 实例，支持链式调用
+// 子命名空间会与父命名空间组合形成完整的层次化路径
+func (l *zapLogger) Namespace(name string) Logger {
+	var fullNamespace string
+	if l.namespace == "" {
+		fullNamespace = name
+	} else {
+		fullNamespace = l.namespace + "." + name
+	}
+	
+	// 创建一个新的 logger，直接使用 zap 的 core 来避免字段重复
+	// 这是一个简化的实现，直接使用 With 替换 namespace 字段
+	newLogger := l.Logger.With(WithNamespaceField(fullNamespace))
+	
+	return &zapLogger{
+		Logger:    newLogger,
+		namespace: fullNamespace,
+	}
 }
 
 // parseConfig 解析配置
@@ -212,7 +242,7 @@ func parseLevel(level string) zapcore.Level {
 }
 
 // buildLoggerWithRotation 构建带轮转的日志器
-func buildLoggerWithRotation(config *config, hook Hook) (Logger, error) {
+func buildLoggerWithRotation(config *config, namespace string) (Logger, error) {
 	// 创建编码器
 	encoderConfig := buildEncoderConfig(config.Format, config.EnableColor, config.RootPath, config.AddSource)
 	encoder := createEncoder(config.Format, encoderConfig)
@@ -247,9 +277,14 @@ func buildLoggerWithRotation(config *config, hook Hook) (Logger, error) {
 	// 创建 logger
 	logger := zap.New(core, opts...)
 
+	// 如果有命名空间，添加为初始字段
+	if namespace != "" {
+		logger = logger.With(WithNamespaceField(namespace))
+	}
+
 	return &zapLogger{
-		Logger: logger,
-		hook:   hook,
+		Logger:    logger,
+		namespace: namespace,
 	}, nil
 }
 

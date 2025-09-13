@@ -45,7 +45,7 @@ func testRootPathFeature() {
 
 	// 测试1: 不设置 RootPath
 	fmt.Println("\n1. 默认路径显示（不设置 RootPath）:")
-	defaultConfig := clog.Config{
+	defaultConfig := &clog.Config{
 		Level:       "info",
 		Format:      "console",
 		Output:      "stdout",
@@ -53,12 +53,12 @@ func testRootPathFeature() {
 		EnableColor: true,
 	}
 
-	defaultLogger, _ := clog.New(defaultConfig)
+	defaultLogger, _ := clog.New(context.Background(), defaultConfig)
 	defaultLogger.Info("默认路径显示")
 
 	// 测试2: 设置 RootPath 为项目根目录
 	fmt.Println("\n2. 设置 RootPath 为项目根目录:")
-	rootPathConfig := clog.Config{
+	rootPathConfig := &clog.Config{
 		Level:       "info",
 		Format:      "console",
 		Output:      "stdout",
@@ -67,12 +67,12 @@ func testRootPathFeature() {
 		RootPath:    projectRoot,
 	}
 
-	rootPathLogger, _ := clog.New(rootPathConfig)
+	rootPathLogger, _ := clog.New(context.Background(), rootPathConfig)
 	rootPathLogger.Info("项目根目录相对路径显示")
 
 	// 测试3: 设置 RootPath 为 "gochat"
 	fmt.Println("\n3. 设置 RootPath 为 'gochat':")
-	gochatConfig := clog.Config{
+	gochatConfig := &clog.Config{
 		Level:       "info",
 		Format:      "console",
 		Output:      "stdout",
@@ -81,12 +81,12 @@ func testRootPathFeature() {
 		RootPath:    "gochat",
 	}
 
-	gochatLogger, _ := clog.New(gochatConfig)
+	gochatLogger, _ := clog.New(context.Background(), gochatConfig)
 	gochatLogger.Info("gochat 相对路径显示")
 
 	// 测试4: 设置不存在的 RootPath
 	fmt.Println("\n4. 设置不存在的 RootPath:")
-	invalidConfig := clog.Config{
+	invalidConfig := &clog.Config{
 		Level:       "info",
 		Format:      "console",
 		Output:      "stdout",
@@ -95,7 +95,7 @@ func testRootPathFeature() {
 		RootPath:    "/nonexistent/path",
 	}
 
-	invalidLogger, _ := clog.New(invalidConfig)
+	invalidLogger, _ := clog.New(context.Background(), invalidConfig)
 	invalidLogger.Info("应该显示绝对路径")
 }
 
@@ -124,7 +124,7 @@ func testLogRotation() {
 		},
 	}
 
-	logger, err := clog.New(rotationConfig)
+	logger, err := clog.New(context.Background(), &rotationConfig)
 	if err != nil {
 		fmt.Printf("创建轮转 logger 失败: %v\n", err)
 		return
@@ -172,50 +172,29 @@ func testLogRotation() {
 }
 
 func testCustomTraceIDHook() {
-	// 设置自定义 TraceID Hook
-	clog.SetTraceIDHook(func(ctx context.Context) (string, bool) {
-		// 优先查找自定义的 trace key
-		if val := ctx.Value("custom-trace-id"); val != nil {
-			if str, ok := val.(string); ok && str != "" {
-				return "custom:" + str, true
-			}
-		}
-
-		// 查找请求ID
-		if val := ctx.Value("request-id"); val != nil {
-			if str, ok := val.(string); ok && str != "" {
-				return "req:" + str, true
-			}
-		}
-
-		// 回退到默认行为
-		if val := ctx.Value("traceID"); val != nil {
-			if str, ok := val.(string); ok && str != "" {
-				return str, true
-			}
-		}
-
-		return "", false
-	})
-
-	// 使用全局 logger 进行测试，无需创建新实例
-
-	// 测试不同的 context 值
-	fmt.Println("\n1. 使用 custom-trace-id:")
-	ctx1 := context.WithValue(context.Background(), "custom-trace-id", "abc123")
+	// 演示新的类型安全 TraceID 管理方式
+	fmt.Println("\n1. 使用 WithTraceID 注入自定义 TraceID:")
+	ctx1 := clog.WithTraceID(context.Background(), "custom:abc123")
 	clog.WithContext(ctx1).Info("自定义 TraceID 测试")
 
-	fmt.Println("\n2. 使用 request-id:")
-	ctx2 := context.WithValue(context.Background(), "request-id", "req456")
+	fmt.Println("\n2. 注入请求ID作为 TraceID:")
+	ctx2 := clog.WithTraceID(context.Background(), "req:456")
 	clog.WithContext(ctx2).Info("请求ID 测试")
 
-	fmt.Println("\n3. 使用默认 traceID:")
-	ctx3 := context.WithValue(context.Background(), "traceID", "default789")
+	fmt.Println("\n3. 注入默认 TraceID:")
+	ctx3 := clog.WithTraceID(context.Background(), "default789")
 	clog.WithContext(ctx3).Info("默认 TraceID 测试")
 
 	fmt.Println("\n4. 没有 TraceID:")
 	ctx4 := context.Background()
 	clog.WithContext(ctx4).Info("无 TraceID 测试")
+
+	fmt.Println("\n5. 链式命名空间与 TraceID 结合:")
+	ctx5 := clog.WithTraceID(context.Background(), "trace-combined")
+	logger := clog.WithContext(ctx5)
+	logger.Namespace("api").Info("API 层日志")
+	logger.Namespace("database").Info("数据库层日志")
+	logger.Namespace("cache").Info("缓存层日志")
 }
 
 func testMultipleFormats() {
@@ -261,12 +240,12 @@ func testMultipleFormats() {
 		},
 	}
 
-	ctx := context.WithValue(context.Background(), "traceID", "format-test-123")
+	ctx := clog.WithTraceID(context.Background(), "format-test-123")
 
 	for i, test := range testData {
 		fmt.Printf("\n%d. %s:\n", i+1, test.name)
 
-		logger, err := clog.New(test.config)
+		logger, err := clog.New(context.Background(), &test.config)
 		if err != nil {
 			fmt.Printf("❌ 创建 logger 失败: %v\n", err)
 			continue
@@ -274,7 +253,7 @@ func testMultipleFormats() {
 
 		// 测试各种日志级别和功能
 		logger.Info("格式测试信息", clog.String("format", test.config.Format))
-		clog.WithContext(ctx).Module("test").Warn("格式测试警告",
+		clog.WithContext(ctx).Namespace("test").Warn("格式测试警告",
 			clog.String("type", "format_comparison"),
 			clog.Int("test_id", i+1))
 	}
