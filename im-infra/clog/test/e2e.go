@@ -40,12 +40,12 @@ func main() {
 
 	// 测试 6: 性能与并发
 	fmt.Println("\n--- 测试 6: 性能与并发 ---")
-	// testPerformanceAndConcurrency()
+	testPerformanceAndConcurrency()
 
 	fmt.Println("\n=== clog E2E 测试完成 ===")
 
 	// 清理测试文件
-	// os.RemoveAll(testDir)
+	os.RemoveAll(testDir)
 	fmt.Println("测试文件已清理")
 }
 

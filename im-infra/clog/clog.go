@@ -66,9 +66,15 @@ func getDefaultLogger() Logger {
 // ctx: 仅用于控制本次初始化过程的上下文。Logger 实例本身不会持有此上下文
 // opts: 一系列功能选项，如 WithNamespace()，用于定制 Logger 的行为
 func New(ctx context.Context, config *Config, opts ...Option) (Logger, error) {
+	// 验证配置有效性
+	if err := config.Validate(); err != nil {
+		// 对于明显无效的配置，直接返回错误，不创建 fallback logger
+		return nil, err
+	}
+	
 	// 解析选项
 	options := ParseOptions(opts...)
-	logger, err := internal.NewLogger(config, options.namespace)
+	logger, err := internal.NewLogger(config, options.Namespace)
 	if err != nil {
 		// 返回一个备用的 fallback logger 和原始错误
 		return internal.NewFallbackLogger(), err
@@ -81,9 +87,15 @@ func New(ctx context.Context, config *Config, opts ...Option) (Logger, error) {
 // ctx: 仅用于控制本次初始化过程的上下文。Logger 实例本身不会持有此上下文
 // opts: 一系列功能选项，如 WithNamespace()，用于定制 Logger 的行为
 func Init(ctx context.Context, config *Config, opts ...Option) error {
+	// 验证配置有效性
+	if err := config.Validate(); err != nil {
+		// 对于明显无效的配置，直接返回错误
+		return err
+	}
+	
 	// 解析选项
 	options := ParseOptions(opts...)
-	logger, err := internal.NewLogger(config, options.namespace)
+	logger, err := internal.NewLogger(config, options.Namespace)
 	if err != nil {
 		// 返回错误，但不替换现有 logger，保持系统可用性
 		return err

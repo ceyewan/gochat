@@ -21,19 +21,46 @@ cd examples/comprehensive
 go run main.go
 ```
 
-### 2. simple/main.go - 基础示例
-展示了 clog 的基本用法，包括：
-- 基本日志记录
+### 2. basic/main.go - 基础功能演示
+专注于 clog 的基础功能测试，适合初学者快速上手。
+
+**覆盖场景：**
+- 控制台输出
+- JSON 文件输出
 - 层次化命名空间
-- 上下文集成
-- 自定义配置
-- 独立 logger 实例创建
+- Context 集成
+- 链式调用
 
-### 3. basic/main.go - 基础功能
-更基础的功能演示，适合初学者。
+**运行方式：**
+```bash
+cd examples/basic
+go run main.go
+```
 
-### 4. advanced/main.go - 高级功能
-展示了高级配置和特性（需要更新以适配新 API）。
+### 3. options/main.go - Options 模式演示
+展示 clog 的 options 模式，提供用户友好的配置方式。
+
+**覆盖场景：**
+- 使用 WithNamespace 配置命名空间
+- 创建独立的 logger 实例
+- 上下文与 options 结合使用
+- 链式命名空间调用
+- 多种输出格式混合使用
+
+**运行方式：**
+```bash
+cd examples/options
+go run main.go
+```
+
+**核心用法：**
+```go
+// 使用 WithNamespace 初始化全局 logger
+err := clog.Init(ctx, config, clog.WithNamespace("im-gateway"))
+
+// 创建独立的 logger 实例
+logger, err := clog.New(ctx, config, clog.WithNamespace("order-service"))
+```
 
 ## 核心概念演示
 

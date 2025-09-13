@@ -105,27 +105,3 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// Option 是一个用于配置 Logger 实例的功能选项
-type Option func(*options)
-
-type options struct {
-	namespace string
-}
-
-// WithNamespace 为 Logger 实例设置根命名空间（通常是服务名）
-// 这个命名空间会出现在该 Logger 实例产生的所有日志中，作为层次化标识的根节点
-func WithNamespace(name string) Option {
-	return func(o *options) {
-		o.namespace = name
-	}
-}
-
-// ParseOptions 解析选项列表并返回 options 结构体
-// 这是一个内部辅助函数，供 clog 包内部使用
-func ParseOptions(opts ...Option) *options {
-	var result options
-	for _, opt := range opts {
-		opt(&result)
-	}
-	return &result
-}

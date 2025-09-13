@@ -15,22 +15,21 @@ import (
 
 // TestNew_InvalidConfig 测试无效配置的处理
 func TestNew_InvalidConfig(t *testing.T) {
-	// 准备测试数据 - 注意：clog 内部会使用默认值而不是报错
+	// 准备测试数据 - 明显无效的配置
 	invalidConfig := &Config{
-		Level:  "invalid-level",  // 内部会默认为 "info"
-		Format: "invalid-format", // 内部会默认为 "console"
-		Output: "",                // 内部会默认为 "stdout"
+		Level:  "invalid-level",  // 无效的日志级别
+		Format: "invalid-format", // 无效的格式
+		Output: "",                // 空的输出目标
 	}
 
-	// 执行测试 - clog 有容错机制，不会报错
+	// 执行测试 - clog 现在对明显无效的配置会报错
 	logger, err := New(context.Background(), invalidConfig)
 
-	// 验证结果 - clog 应该能处理无效配置并返回有效的 logger
-	assert.NoError(t, err, "clog 应该能处理无效配置")
-	assert.NotNil(t, logger, "应该返回有效的 logger")
+	// 验证结果 - clog 应该检测到无效配置并返回错误
+	assert.Error(t, err, "clog 应该检测到无效配置")
+	assert.Nil(t, logger, "不应该返回 logger")
 	
-	// logger 应该能正常工作
-	logger.Info("logger with invalid config test")
+	assert.Contains(t, err.Error(), "invalid log level", "错误信息应该包含无效级别描述")
 }
 
 // TestGetDefaultConfig 测试默认配置功能
@@ -219,18 +218,18 @@ func TestWithNamespace_Option(t *testing.T) {
 func TestParseOptions(t *testing.T) {
 	// 测试空选项
 	options := ParseOptions()
-	assert.Equal(t, "", options.namespace)
+	assert.Equal(t, "", options.Namespace)
 
 	// 测试 WithNamespace 选项
 	options = ParseOptions(WithNamespace("test-namespace"))
-	assert.Equal(t, "test-namespace", options.namespace)
+	assert.Equal(t, "test-namespace", options.Namespace)
 
 	// 测试多个选项（最后一个生效）
 	options = ParseOptions(
 		WithNamespace("first"),
 		WithNamespace("second"),
 	)
-	assert.Equal(t, "second", options.namespace)
+	assert.Equal(t, "second", options.Namespace)
 }
 
 // TestConfig_Validation 测试配置验证
