@@ -26,7 +26,7 @@ type Config struct {
 // GetDefaultConfig 返回默认的数据库配置。
 // 开发环境：较少连接数，较详细的日志级别，较短的超时时间
 // 生产环境：较多连接数，较少的日志输出，较长的连接生命周期
-func GetDefaultConfig(env string) *Config
+func GetDefaultConfig(env string) Config
 
 // ShardingConfig 定义了分库分表配置。
 type ShardingConfig struct {
@@ -46,10 +46,13 @@ type Option func(*provider)
 
 // WithLogger 将一个 clog.Logger 实例注入 GORM，用于结构化记录 SQL 日志。
 // 这是与 clog 组件联动的推荐做法。
-func WithLogger(logger clog.Logger) Option
+func WithLogger(logger *clog.Logger) Option
+
+// WithComponentName 设置组件名称，用于日志和监控标识。
+func WithComponentName(name string) Option
 
 // New 是创建数据库 Provider 实例的唯一入口。
-func New(ctx context.Context, config *Config, opts ...Option) (Provider, error)
+func New(ctx context.Context, config Config, opts ...Option) (Provider, error)
 ```
 
 ### 2.2 Provider 接口
@@ -96,7 +99,7 @@ func initializeDB() (db.Provider, error) {
     // 根据需要覆盖特定配置
     config.DSN = "user:password@tcp(127.0.0.1:3306)/gochat?charset=utf8mb4&parseTime=True&loc=Local"
     
-    return db.New(context.Background(), config, db.WithLogger(clog.Module("gorm")))
+    return db.New(context.Background(), config, db.WithLogger(clog.Namespace("gorm")))
 }
 
 // 在业务方法中使用

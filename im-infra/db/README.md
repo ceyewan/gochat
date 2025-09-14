@@ -6,7 +6,7 @@
 
 - **📦 MySQL 专用**: 专门为 MySQL 数据库优化，确保最佳性能和稳定性
 - **🚀 分库分表**: 基于 gorm.io/sharding 的高性能分片机制
-- **🎯 接口驱动**: 通过 `db.DB` 接口暴露功能，便于测试和模拟
+- **🎯 Provider 接口**: 通过 `db.Provider` 接口暴露功能，支持上下文传播和依赖注入
 - **⚡ 高性能**: 优化的连接池管理和查询性能
 - **🔧 零额外依赖**: 仅依赖 GORM 和 clog
 - **📊 类型安全**: 所有配置参数使用强类型，避免配置错误
@@ -38,40 +38,42 @@ import (
     "time"
 
     "github.com/ceyewan/gochat/im-infra/db"
+    "github.com/ceyewan/gochat/im-infra/clog"
+    "gorm.io/gorm"
 )
+
+type User struct {
+    ID       uint   `gorm:"primaryKey"`
+    Username string `gorm:"uniqueIndex"`
+    Email    string
+}
 
 func main() {
     ctx := context.Background()
 
     // 创建 MySQL 配置
     cfg := db.MySQLConfig("root:mysql@tcp(localhost:3306)/myapp?charset=utf8mb4&parseTime=True&loc=Local")
-    
-    // 创建数据库实例
-    database, err := db.New(ctx, cfg)
+
+    // 创建 Provider 实例
+    logger := clog.Namespace("example")
+    provider, err := db.New(ctx, cfg, db.WithLogger(logger))
     if err != nil {
         log.Fatal(err)
     }
-    defer database.Close()
+    defer provider.Close()
 
     // 获取 GORM 实例进行数据库操作
-    gormDB := database.GetDB()
-    
-    // 定义模型
-    type User struct {
-        ID       uint   `gorm:"primaryKey"`
-        Username string `gorm:"uniqueIndex"`
-        Email    string
-    }
+    gormDB := provider.DB(ctx)
 
     // 自动迁移
-    err = database.AutoMigrate(&User{})
+    err = provider.AutoMigrate(ctx, &User{})
     if err != nil {
         log.Fatal(err)
     }
 
     // 创建记录
     user := &User{Username: "alice", Email: "alice@example.com"}
-    result := gormDB.WithContext(ctx).Create(user)
+    result := gormDB.Create(user)
     if result.Error != nil {
         log.Fatal(result.Error)
     }
@@ -90,6 +92,7 @@ import (
     "log"
 
     "github.com/ceyewan/gochat/im-infra/db"
+    "github.com/ceyewan/gochat/im-infra/clog"
 )
 
 type User struct {
@@ -123,39 +126,40 @@ func main() {
     cfg := db.MySQLConfig("root:mysql@tcp(localhost:3306)/myapp?charset=utf8mb4&parseTime=True&loc=Local")
     cfg.Sharding = shardingConfig
 
-    // 创建数据库实例
-    database, err := db.New(ctx, cfg)
+    // 创建 Provider 实例
+    logger := clog.Namespace("sharding-example")
+    provider, err := db.New(ctx, cfg, db.WithLogger(logger))
     if err != nil {
         log.Fatal(err)
     }
-    defer database.Close()
+    defer provider.Close()
 
     // 获取 GORM 实例
-    gormDB := database.GetDB()
+    gormDB := provider.DB(ctx)
 
     // 自动迁移（会自动创建分片表）
-    err = database.AutoMigrate(&User{}, &Order{})
+    err = provider.AutoMigrate(ctx, &User{}, &Order{})
     if err != nil {
         log.Fatal(err)
     }
 
     // 创建用户（会自动路由到正确的分片表）
     user := &User{UserID: 12345, Name: "Alice", Email: "alice@example.com"}
-    result := gormDB.WithContext(ctx).Create(user)
+    result := gormDB.Create(user)
     if result.Error != nil {
         log.Fatal(result.Error)
     }
 
     // 创建订单（会自动路由到正确的分片表）
     order := &Order{UserID: 12345, Amount: 99.99, Status: "pending"}
-    result = gormDB.WithContext(ctx).Create(order)
+    result = gormDB.Create(order)
     if result.Error != nil {
         log.Fatal(result.Error)
     }
 
     // 查询用户（必须包含分片键）
     var users []User
-    result = gormDB.WithContext(ctx).Where("user_id = ?", 12345).Find(&users)
+    result = gormDB.Where("user_id = ?", 12345).Find(&users)
     if result.Error != nil {
         log.Fatal(result.Error)
     }
@@ -169,16 +173,43 @@ func main() {
 ### 主接口
 
 ```go
-// DB 定义数据库操作的核心接口
-type DB interface {
-    GetDB() *gorm.DB                                    // 获取原生 GORM 实例
-    Ping(ctx context.Context) error                     // 检查连接
-    Close() error                                       // 关闭连接
-    Stats() sql.DBStats                                 // 连接池统计
-    WithContext(ctx context.Context) *gorm.DB           // 带上下文的实例
-    Transaction(fn func(tx *gorm.DB) error) error       // 事务操作
-    AutoMigrate(dst ...interface{}) error               // 自动迁移
+// Provider 定义数据库操作的核心接口
+type Provider interface {
+    DB(ctx context.Context) *gorm.DB                    // 获取原生 GORM 实例
+    Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error  // 事务操作
+    AutoMigrate(ctx context.Context, dst ...interface{}) error       // 自动迁移
+    Ping(ctx context.Context) error                       // 检查连接
+    Close() error                                         // 关闭连接
 }
+```
+
+### 工厂函数
+
+```go
+// New 创建 Provider 实例（唯一入口）
+func New(ctx context.Context, cfg Config, opts ...Option) (Provider, error)
+
+// DefaultConfig 返回默认配置
+func DefaultConfig() Config
+
+// MySQLConfig 创建 MySQL 配置
+func MySQLConfig(dsn string) Config
+
+// NewShardingConfig 创建分片配置
+func NewShardingConfig(shardingKey string, numberOfShards int) *ShardingConfig
+
+// GetDefaultConfig 根据环境返回预设配置
+func GetDefaultConfig(env string) Config
+```
+
+### 选项模式
+
+```go
+// WithLogger 设置日志组件
+func WithLogger(logger *clog.Logger) Option
+
+// WithComponentName 设置组件名称
+func WithComponentName(name string) Option
 ```
 
 ### 配置结构
@@ -240,6 +271,10 @@ cfg := db.Config{
     LogLevel:        "warn",    // 日志级别
     SlowThreshold:   200 * time.Millisecond, // 慢查询阈值
 }
+
+// 创建 Provider 实例
+logger := clog.Namespace("myapp")
+provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 ```
 
 ### 分片配置
@@ -254,6 +289,10 @@ shardingConfig.Tables["orders"] = &db.TableShardingConfig{}
 
 // 应用到数据库配置
 cfg.Sharding = shardingConfig
+
+// 创建支持分片的 Provider 实例
+logger := clog.Namespace("sharding-app")
+provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 ```
 
 ## 🚀 分片机制详解
@@ -291,6 +330,7 @@ shardingConfig := &db.ShardingConfig{
 
 // 查询操作（会自动路由到正确分片）
 var users []User
+gormDB := provider.DB(ctx)
 gormDB.Where("user_id = ?", 12345).Find(&users) // 路由到 users_09（假设）
 
 // 插入操作（会自动路由到正确分片）
@@ -310,6 +350,10 @@ cfg := db.Config{
     ConnMaxLifetime: time.Hour, // 避免长连接问题
     ConnMaxIdleTime: 30 * time.Minute, // 及时释放空闲连接
 }
+
+// 创建 Provider 实例
+logger := clog.Namespace("high-concurrency-app")
+provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 ```
 
 ### 分片性能优化
@@ -378,6 +422,7 @@ type Order struct {
 
 ```go
 // ✅ 推荐：查询时包含分片键
+gormDB := provider.DB(ctx)
 gormDB.Where("user_id = ? AND status = ?", userID, "active").Find(&orders)
 
 // ❌ 避免：不包含分片键的查询
@@ -388,20 +433,21 @@ gormDB.Where("status = ?", "active").Find(&orders) // 会查询所有分片
 
 ```go
 // ✅ 推荐：单分片事务
-err := database.Transaction(func(tx *gorm.DB) error {
+ctx := context.Background()
+err := provider.Transaction(ctx, func(tx *gorm.DB) error {
     // 所有操作都使用相同的 user_id，保证在同一分片
     userID := uint64(12345)
-    
+
     user := &User{UserID: userID, Name: "Alice"}
     if err := tx.Create(user).Error; err != nil {
         return err
     }
-    
+
     order := &Order{UserID: userID, Amount: 99.99}
     if err := tx.Create(order).Error; err != nil {
         return err
     }
-    
+
     return nil
 })
 ```
@@ -413,7 +459,8 @@ err := database.Transaction(func(tx *gorm.DB) error {
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 defer cancel()
 
-result := database.WithContext(ctx).Where("user_id = ?", userID).Find(&users)
+gormDB := provider.DB(ctx)
+result := gormDB.Where("user_id = ?", userID).Find(&users)
 ```
 
 ## 🔧 故障排查
@@ -429,7 +476,13 @@ result := database.WithContext(ctx).Where("user_id = ?", userID).Find(&users)
 
 ```go
 // 获取连接池统计信息
-stats := database.Stats()
+gormDB := provider.DB(ctx)
+sqlDB, err := gormDB.DB()
+if err != nil {
+    log.Fatal(err)
+}
+
+stats := sqlDB.Stats()
 log.Printf("打开连接数: %d", stats.OpenConnections)
 log.Printf("使用中连接数: %d", stats.InUse)
 log.Printf("空闲连接数: %d", stats.Idle)
@@ -451,8 +504,14 @@ log.Printf("空闲连接数: %d", stats.Idle)
 # 启动 MySQL
 docker run --name mysql-test -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0
 
-# 运行测试
+# 运行单元测试
 go test ./...
+
+# 运行集成测试
+go test -v ./... -short=false
+
+# 运行基准测试
+go test -bench=. ./... -benchmem
 ```
 
 ## 📄 许可证

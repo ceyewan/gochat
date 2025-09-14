@@ -40,14 +40,10 @@ type Config struct {
 // 生产环境：较多的连接数，较长的超时时间，启用重试机制
 func GetDefaultConfig(env string) *Config
 
-// Option 定义了用于定制 cache Provider 的函数。
 type Option func(*options)
 
 // WithLogger 将一个 clog.Logger 实例注入 cache，用于记录内部日志。
 func WithLogger(logger clog.Logger) Option
-
-// WithCoordProvider 注入 coord.Provider，用于从配置中心获取动态配置。
-func WithCoordProvider(provider coord.Provider) Option
 
 // New 创建一个新的 cache Provider 实例。
 // 这是与 cache 组件交互的唯一入口。
@@ -205,7 +201,6 @@ func main() {
     // 创建 cache Provider
     cacheProvider, err := cache.New(context.Background(), config, 
         cache.WithLogger(clog.Namespace("cache")),
-        cache.WithCoordProvider(coordProvider),
     )
     if err != nil {
         clog.Fatal("初始化 cache 失败", clog.Err(err))

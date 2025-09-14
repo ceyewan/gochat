@@ -9,7 +9,7 @@
 1. **简洁易用**：提供清晰、直观的 API，隐藏底层 GORM 的复杂性
 2. **分片优先**：核心功能是分库分表机制，支持大规模数据存储
 3. **类型安全**：所有配置参数使用强类型，避免配置错误
-4. **面向接口**：通过 `db.DB` 接口暴露功能，便于测试和模拟
+4. **面向接口**：通过 `db.Provider` 接口暴露功能，便于测试和模拟
 5. **专注 MySQL**：专门为 MySQL 数据库优化，确保最佳性能
 6. **可扩展性**：为后续功能扩展预留架构空间
 
@@ -27,31 +27,33 @@ graph TD
 
     subgraph "Public API Layer (db package)"
         B[db.New Factory]
-        C[db.DB Interface]
+        C[db.Provider Interface]
         D[db.Config]
+        E[db.Option Functions]
     end
     
     subgraph "Internal Implementation Layer (internal package)"
-        E[internal.NewDB]
-        F[internal.client struct]
-        G[internal.sharding]
+        F[internal.NewDB]
+        G[internal.client struct]
+        H[internal.sharding]
     end
     
     subgraph "Underlying Driver"
-        H[GORM v2]
-        I[gorm.io/sharding]
-        J[MySQL Driver]
+        I[GORM v2]
+        J[gorm.io/sharding]
+        K[MySQL Driver]
     end
-    
+
     A -- Calls --> B
     A -- Uses --> C
-    B -- Creates --> E
-    C -- Implemented by --> F
-    E -- Assembles --> F
-    F -- Uses --> G
-    G -- Uses --> H
+    A -- Uses --> E
+    B -- Creates --> F
+    C -- Implemented by --> G
+    E -- Configures --> F
+    F -- Uses --> H
     H -- Uses --> I
-    H -- Uses --> J
+    I -- Uses --> J
+    I -- Uses --> K
 ```
 
 ### 关键组件设计
@@ -59,46 +61,77 @@ graph TD
 #### 1. 工厂函数 (`db.New`)
 
 **设计要点**:
-- **唯一入口**: `New` 是创建 `DB` 实例的唯一入口，移除全局方法
+- **唯一入口**: `New` 是创建 `Provider` 实例的唯一入口，移除全局方法
 - **配置验证**: 严格验证配置参数，确保数据库连接的可靠性
+- **选项模式**: 支持可选的日志、组件名称等配置
 - **分片配置**: 支持可选的分库分表配置
 - **连接池管理**: 自动配置最优的连接池参数
 
 **代码示例**:
 ```go
-func New(ctx context.Context, cfg Config) (DB, error) {
+func New(ctx context.Context, cfg Config, opts ...Option) (Provider, error) {
     // 验证配置
     if err := cfg.Validate(); err != nil {
         return nil, err
     }
-    
+
+    // 应用选项
+    options := defaultOptions()
+    for _, opt := range opts {
+        opt(options)
+    }
+
     // 创建内部实例
-    return internal.NewDB(cfg)
+    return internal.NewDB(cfg, options)
 }
 ```
 
-#### 2. 核心接口 (`db.DB`)
+#### 2. 核心接口 (`db.Provider`)
 
 **设计要点**:
-- **GORM 原生访问**: 通过 `GetDB()` 返回原生 GORM 实例
-- **连接管理**: 提供 `Ping`, `Close`, `Stats` 等连接管理方法
-- **事务支持**: 内置事务处理方法
+- **GORM 原生访问**: 通过 `DB(ctx context.Context)` 返回原生 GORM 实例
+- **上下文传播**: 所有方法都支持上下文传播
+- **事务支持**: 内置事务处理方法，支持上下文
 - **表结构管理**: 支持自动迁移等数据库管理功能
+- **连接管理**: 提供 `Ping`, `Close` 等连接管理方法
 
 **代码示例**:
 ```go
-type DB interface {
-    GetDB() *gorm.DB
+type Provider interface {
+    DB(ctx context.Context) *gorm.DB
+    Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
+    AutoMigrate(ctx context.Context, dst ...interface{}) error
     Ping(ctx context.Context) error
     Close() error
-    Stats() sql.DBStats
-    WithContext(ctx context.Context) *gorm.DB
-    Transaction(fn func(tx *gorm.DB) error) error
-    AutoMigrate(dst ...interface{}) error
 }
 ```
 
-#### 3. 分片机制 (`internal.sharding`)
+#### 3. 选项模式 (`db.Option`)
+
+**设计要点**:
+- **可选配置**: 通过选项模式提供可选配置
+- **日志集成**: 支持自定义日志组件
+- **组件标识**: 支持设置组件名称用于监控和日志
+- **扩展性**: 为未来选项扩展预留空间
+
+**代码示例**:
+```go
+type Option func(*options)
+
+func WithLogger(logger *clog.Logger) Option {
+    return func(opts *options) {
+        opts.logger = logger
+    }
+}
+
+func WithComponentName(name string) Option {
+    return func(opts *options) {
+        opts.componentName = name
+    }
+}
+```
+
+#### 4. 分片机制 (`internal.sharding`)
 
 **设计要点**:
 - **基于 gorm.io/sharding**: 使用成熟的分片库
@@ -188,7 +221,8 @@ shardingConfig := &db.ShardingConfig{
 }
 
 // 查询会自动路由到正确分片
-db.GetDB().Where("user_id = ?", 12345).Find(&users)
+ctx := context.Background()
+provider.DB(ctx).Where("user_id = ?", 12345).Find(&users)
 ```
 
 ### 分片最佳实践
@@ -201,18 +235,22 @@ db.GetDB().Where("user_id = ?", 12345).Find(&users)
 ## 🎨 设计模式应用
 
 ### 1. 工厂模式 (Factory Pattern)
-- **应用**: `db.New` 函数创建 DB 实例
+- **应用**: `db.New` 函数创建 Provider 实例
 - **优势**: 封装创建逻辑，支持配置验证
 
 ### 2. 外观模式 (Facade Pattern)
 - **应用**: `db` 包为 GORM 提供简化接口
 - **优势**: 隐藏复杂性，提供统一 API
 
-### 3. 策略模式 (Strategy Pattern)
+### 3. 选项模式 (Option Pattern)
+- **应用**: `db.WithLogger`, `db.WithComponentName` 等选项函数
+- **优势**: 提供灵活的可选配置，避免参数爆炸
+
+### 4. 策略模式 (Strategy Pattern)
 - **应用**: 分片算法的可插拔设计
 - **优势**: 支持多种分片策略
 
-### 4. 适配器模式 (Adapter Pattern)
+### 5. 适配器模式 (Adapter Pattern)
 - **应用**: GORM 日志适配到 clog
 - **优势**: 统一日志输出格式
 
@@ -323,9 +361,11 @@ BenchmarkDBTransaction-8   3000    400 μs/op    8 allocs/op
 
 ## 总结
 
-`db` 模块通过精心设计的架构，将复杂的分库分表功能封装为简单易用的 API。模块专注于 MySQL 数据库，通过分片机制支持大规模数据存储，是 GoChat 基础设施的重要组成部分。
+`db` 模块通过精心设计的架构，将复杂的分库分表功能封装为简单易用的 API。模块专注于 MySQL 数据库，通过 Provider 接口和选项模式提供灵活的数据库操作能力，通过分片机制支持大规模数据存储，是 GoChat 基础设施的重要组成部分。
 
 设计亮点：
+- **Provider 接口**：统一的数据库操作接口，支持上下文传播
+- **选项模式**：灵活的可选配置机制，便于依赖注入
 - **分片机制**：基于成熟的 gorm.io/sharding 实现
 - **性能优化**：针对 MySQL 的专门优化
 - **架构清晰**：公共接口与内部实现分离

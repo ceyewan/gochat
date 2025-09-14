@@ -12,15 +12,6 @@ func WithLogger(logger clog.Logger) Option {
 	}
 }
 
-// WithCoordProvider 注入 coord.Provider，用于从配置中心获取动态配置。
-func WithCoordProvider(provider any) Option {
-	return func(o *options) {
-		o.coordProvider = provider
-	}
-}
-
-// options 是 cache 组件的内部选项结构体
 type options struct {
-	logger        clog.Logger
-	coordProvider any
+	logger clog.Logger
 }
