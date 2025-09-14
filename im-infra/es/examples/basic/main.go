@@ -72,7 +72,7 @@ func main() {
 
 	// 等待批量索引器完成 - 增加等待时间
 	log.Println("等待批量索引器刷新...")
-	time.Sleep(5 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	// 5. 搜索消息
 	log.Println("\n=== 测试 1: 全局搜索包含 'message' 的消息 ===")

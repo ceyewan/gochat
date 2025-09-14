@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-infra/es/internal"
@@ -110,7 +111,7 @@ func (p *provider[T]) SearchGlobal(ctx context.Context, index, keyword string, p
 func (p *provider[T]) SearchInSession(ctx context.Context, index, sessionID, keyword string, page, size int) (*SearchResult[T], error) {
 	filter := map[string]interface{}{
 		"term": map[string]interface{}{
-			"session_id": sessionID,
+			"session_id.keyword": sessionID, // 使用 .keyword 子字段进行精确匹配
 		},
 	}
 	return p.search(ctx, index, keyword, page, size, filter)
@@ -151,6 +152,13 @@ func (p *provider[T]) search(ctx context.Context, index, keyword string, page, s
 		p.logger.Error("编码搜索查询失败", clog.Err(err))
 		return nil, err
 	}
+
+	// 添加调试日志
+	p.logger.Debug("搜索查询",
+		clog.String("index", index),
+		clog.String("keyword", keyword),
+		clog.String("has_filter", fmt.Sprintf("%v", filter != nil)),
+	)
 
 	res, err := p.client.Search(
 		p.client.Search.WithContext(ctx),
