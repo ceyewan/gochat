@@ -25,6 +25,7 @@ import (
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-infra/coord"
 	"github.com/ceyewan/gochat/im-infra/db"
+	"github.com/ceyewan/gochat/im-infra/es"
 	"github.com/ceyewan/gochat/im-infra/metrics"
 	"github.com/ceyewan/gochat/im-infra/mq"
 	"github.com/ceyewan/gochat/im-infra/once"
@@ -164,6 +165,18 @@ func main() {
 	}
 	defer breakerProvider.Close()
 	clog.Info("breaker Provider 初始化成功")
+
+	// 初始化消息索引 (es)
+	esConfig := es.GetDefaultConfig(environment)
+	// esConfig.Addresses = []string{"http://es1:9200"} // 按需覆盖
+	esProvider, err := es.New(context.Background(), esConfig,
+		es.WithLogger(clog.Namespace("es")),
+	)
+	if err != nil {
+		clog.Fatal("初始化 es 失败", clog.Err(err))
+	}
+	defer esProvider.Close()
+	clog.Info("es Provider 初始化成功")
 
 	// --- 4. 启动业务服务 ---
 	// ... 在这里，将初始化好的 providers 注入到你的业务服务中 ...
@@ -860,3 +873,70 @@ func main() {
   // 对于 Gin HTTP 服务
   // engine.Use(metricsProvider.HTTPMiddleware())
   ```
+ 
+ ---
+ 
+ ## 11. `es` - 分布式泛型索引
+ 
+ `es` 组件提供了与 Elasticsearch 交互的统一接口，用于索引和搜索任何实现了 `es.Indexable` 接口的数据。
+ 
+ - **初始化 (main.go)**:
+   ```go
+   import "github.com/ceyewan/gochat/im-infra/es"
+ 
+   // 在服务的 main 函数中，初始化 es Provider。
+   func main() {
+       // ... 首先初始化 clog ...
+       
+       // 1. 获取并覆盖配置
+       config := es.GetDefaultConfig("production")
+       config.Addresses = []string{"http://elasticsearch:9200"}
+       
+       // 2. 创建 Provider
+       esProvider, err := es.New(context.Background(), config,
+           es.WithLogger(clog.Namespace("es")),
+       )
+       if err != nil {
+           clog.Fatal("初始化 es 失败", clog.Err(err))
+       }
+       defer esProvider.Close()
+       
+       clog.Info("es Provider 初始化成功")
+   }
+   ```
+ 
+ - **核心用法**:
+   ```go
+   // 1. 在业务代码中定义你的模型
+   type MyMessage struct {
+       MessageID string `json:"message_id"`
+       SessionID string `json:"session_id"`
+       Content   string `json:"content"`
+   }
+ 
+   // 2. 实现 es.Indexable 接口
+   func (m MyMessage) GetID() string {
+       return m.MessageID
+   }
+ 
+   // 3. 批量索引 (泛型调用)
+   messages := []MyMessage{
+       { MessageID: "1", SessionID: "s1", Content: "你好" },
+       { MessageID: "2", SessionID: "s1", Content: "世界" },
+   }
+   err := esProvider.BulkIndex(ctx, messages)
+   if err != nil {
+       // 处理错误
+   }
+ 
+   // 4. 在会话内搜索 (泛型调用)
+   results, err := esProvider.SearchInSession[MyMessage](ctx, "user1", "s1", "你好", 1, 10)
+   if err != nil {
+       // 处理错误
+   }
+   log.Printf("找到 %d 条消息", results.Total)
+   for _, msg := range results.Messages {
+       // msg 是 *MyMessage 类型
+       log.Printf("消息内容: %s", msg.Content)
+   }
+   ```

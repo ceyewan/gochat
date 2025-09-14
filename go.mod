@@ -5,12 +5,14 @@ go 1.23.8
 toolchain go1.24.3
 
 require (
+	github.com/elastic/go-elasticsearch/v8 v8.19.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang/snappy v1.0.0
 	github.com/google/uuid v1.6.0
 	github.com/pierrec/lz4/v4 v4.1.22
 	github.com/prometheus/client_golang v1.23.1
 	github.com/redis/go-redis/v9 v9.2.1
+	github.com/sony/gobreaker v0.5.0
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.11.1
 	github.com/twmb/franz-go v1.19.5
@@ -47,6 +49,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect

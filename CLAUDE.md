@@ -97,6 +97,76 @@ im-logic → Kafka (任务) → im-task (异步处理)
 
 ## 开发指南
 
+### 文档结构
+项目包含完整的文档体系，开发前建议按以下顺序阅读：
+
+1. **必读文档**（开发前必须了解）：
+   - `docs/README.md` - 项目文档中心导航
+   - `docs/01_architecture/01_overview.md` - 系统架构概览
+   - `docs/01_architecture/02_dataflow.md` - 核心业务流程数据流图
+   - `docs/01_architecture/03_tech_stack.md` - 技术栈说明
+
+2. **API定义**（服务接口和数据结构）：
+   - `api/proto/im_logic/v1/auth.proto` - 认证服务定义
+   - `api/proto/im_logic/v1/conversation.proto` - 会话服务定义
+   - `api/proto/im_logic/v1/message.proto` - 消息服务定义
+   - `api/proto/im_repo/v1/user.proto` - 用户数据访问定义
+   - `api/proto/im_repo/v1/conversation.proto` - 会话数据访问定义
+   - `api/proto/im_repo/v1/message.proto` - 消息数据访问定义
+   - `docs/02_apis/00_openapi.yaml` - OpenAPI HTTP API规范
+   - `docs/02_apis/01_http_ws_api.md` - HTTP和WebSocket API文档
+   - `docs/02_apis/02_grpc_services.md` - 内部gRPC服务文档
+   - `docs/02_apis/03_mq_topics.md` - Kafka Topic定义
+
+3. **数据模型**（数据库设计）：
+   - `docs/06_data_models/01_db_schema.md` - MySQL数据库架构详细说明
+   - `docs/06_data_models/02_core_im_flows.md` - IM核心功能实现流程
+   - `docs/06_data_models/03_auth_and_sync_flows.md` - 认证与同步流程
+   - `docs/06_data_models/04_world_chat_scalability.md` - 世界聊天室扩展性设计
+
+4. **基础设施组件**（im-infra）：
+   - `docs/08_infra/usage_guide.md` - 所有组件的生产级别初始化范例
+   - `docs/08_infra/breaker.md` - 熔断器组件
+   - `docs/08_infra/cache.md` - 缓存组件
+   - `docs/08_infra/clog.md` - 日志组件
+   - `docs/08_infra/coord.md` - 分布式协调组件
+   - `docs/08_infra/db.md` - 数据库组件
+   - `docs/08_infra/es.md` - 消息索引组件
+   - `docs/08_infra/metrics.md` - 可观测性组件
+   - `docs/08_infra/mq.md` - 消息队列组件
+   - `docs/08_infra/once.md` - 幂等操作组件
+   - `docs/08_infra/ratelimit.md` - 分布式限流组件
+   - `docs/08_infra/uid.md` - 唯一ID生成组件
+
+5. **开发指南**：
+   - `docs/03_development/01_workflow.md` - 开发工作流程概述
+   - `docs/03_development/02_style_guide.md` - 代码风格和约定标准
+   - `docs/03_development/03_service_guide.md` - 微服务开发指南
+   - `docs/03_development/04_testing_strategy.md` - 测试策略与规范
+
+6. **部署指南**：
+   - `docs/04_deployment/README.md` - 部署与配置指南
+
+7. **服务文档**：
+   - `docs/05_services/im-gateway.md` - 网关服务详细设计文档
+   - `docs/05_services/im-logic.md` - 业务逻辑服务文档
+   - `docs/05_services/im-repo.md` - 数据仓库服务文档
+   - `docs/05_services/im-task.md` - 任务处理服务文档
+
+8. **重构计划**：
+   - `docs/07_todo_task/README.md` - 项目后续的核心重构和开发计划书
+
+### 消息队列Topic设计
+- **核心消息流**：`gochat.messages.upstream`、`gochat.messages.persist`、`gochat.messages.downstream.{gateway_id}`
+- **领域事件**：`gochat.user-events`、`gochat.conversation-events`、`gochat.message-events`、`gochat.notifications`
+
+### 核心数据表
+- **`users`**: 用户基本信息
+- **`conversations`**: 会话信息（单聊、群聊、世界聊天室统一抽象）
+- **`conversation_members`**: 会话成员关系
+- **`messages`**: 消息内容
+- **`user_read_pointers`**: 用户已读状态指针
+
 ### 使用 Protobuf
 - 所有服务 API 都定义在 `/api/proto/` 中
 - 修改 .proto 文件后运行 `make proto`

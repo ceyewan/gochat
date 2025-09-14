@@ -74,6 +74,7 @@
 - **[日志 (clog)](./clog.md)**
 - **[分布式协调 (coord)](./coord.md)**
 - **[数据库 (db)](./db.md)**
+- **[消息索引 (es)](./es.md)**
 - **[可观测性 (metrics)](./metrics.md)**
 - **[消息队列 (mq)](./mq.md)**
 - **[幂等操作 (once)](./once.md)**
