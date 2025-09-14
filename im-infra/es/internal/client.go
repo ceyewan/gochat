@@ -8,13 +8,13 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 )
 
-// Client is a wrapper around the official Elasticsearch client.
+// Client 是官方 Elasticsearch 客户端的包装器
 type Client struct {
 	*elasticsearch.Client
 	logger clog.Logger
 }
 
-// NewClient creates a new Elasticsearch client.
+// NewClient 创建一个新的 Elasticsearch 客户端
 func NewClient(cfg *Config, logger clog.Logger) (*Client, error) {
 	esCfg := elasticsearch.Config{
 		Addresses: cfg.Addresses,
@@ -22,7 +22,7 @@ func NewClient(cfg *Config, logger clog.Logger) (*Client, error) {
 		Password:  cfg.Password,
 		CloudID:   cfg.CloudID,
 		APIKey:    cfg.APIKey,
-		// Custom transport to add logging
+		// 自定义传输层，添加日志记录
 		Transport: &loggingTransport{
 			transport: http.DefaultTransport,
 			logger:    logger.With(clog.String("sub_component", "es_transport")),
@@ -31,24 +31,24 @@ func NewClient(cfg *Config, logger clog.Logger) (*Client, error) {
 
 	esClient, err := elasticsearch.NewClient(esCfg)
 	if err != nil {
-		logger.Error("failed to create elasticsearch client", clog.Err(err))
-		return nil, fmt.Errorf("failed to create elasticsearch client: %w", err)
+		logger.Error("创建 elasticsearch 客户端失败", clog.Err(err))
+		return nil, fmt.Errorf("创建 elasticsearch 客户端失败: %w", err)
 	}
 
-	// Ping the server to verify the connection
+	// Ping 服务器以验证连接
 	res, err := esClient.Ping()
 	if err != nil {
-		logger.Error("failed to ping elasticsearch", clog.Err(err))
-		return nil, fmt.Errorf("failed to ping elasticsearch: %w", err)
+		logger.Error("ping elasticsearch 失败", clog.Err(err))
+		return nil, fmt.Errorf("ping elasticsearch 失败: %w", err)
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		logger.Error("elasticsearch ping failed", clog.String("status", res.Status()))
-		return nil, fmt.Errorf("elasticsearch ping failed: %s", res.Status())
+		logger.Error("elasticsearch ping 失败", clog.String("status", res.Status()))
+		return nil, fmt.Errorf("elasticsearch ping 失败: %s", res.Status())
 	}
 
-	logger.Info("elasticsearch client created and connected successfully")
+	logger.Info("elasticsearch 客户端创建并连接成功")
 
 	return &Client{
 		Client: esClient,
@@ -56,33 +56,33 @@ func NewClient(cfg *Config, logger clog.Logger) (*Client, error) {
 	}, nil
 }
 
-// loggingTransport is a custom http.RoundTripper that logs requests and responses.
+// loggingTransport 是一个自定义的 http.RoundTripper，记录请求和响应
 type loggingTransport struct {
 	transport http.RoundTripper
 	logger    clog.Logger
 }
 
 func (t *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	t.logger.Debug("sending request to elasticsearch",
+	t.logger.Debug("向 elasticsearch 发送请求",
 		clog.String("method", req.Method),
 		clog.String("url", req.URL.String()),
 	)
 
 	resp, err := t.transport.RoundTrip(req)
 	if err != nil {
-		t.logger.Error("elasticsearch request failed", clog.Err(err))
+		t.logger.Error("elasticsearch 请求失败", clog.Err(err))
 		return nil, err
 	}
 
-	t.logger.Debug("received response from elasticsearch",
+	t.logger.Debug("收到 elasticsearch 响应",
 		clog.String("status", resp.Status),
 	)
 	return resp, nil
 }
 
-// Close is a placeholder as the underlying client does not have a Close method.
-// The transport is managed by the http package.
+// Close 是一个占位符，因为底层客户端没有 Close 方法
+// 传输层由 http 包管理
 func (c *Client) Close() error {
-	c.logger.Info("elasticsearch client does not require explicit closing")
+	c.logger.Info("elasticsearch 客户端不需要显式关闭")
 	return nil
 }

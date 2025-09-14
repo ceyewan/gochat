@@ -2,8 +2,8 @@ package es
 
 import "github.com/ceyewan/gochat/im-infra/es/internal"
 
-// Config is an alias for the internal Config type.
+// Config 是内部 Config 类型的别名
 type Config = internal.Config
 
-// GetDefaultConfig is an alias for the internal GetDefaultConfig function.
+// GetDefaultConfig 是内部 GetDefaultConfig 函数的别名
 var GetDefaultConfig = internal.GetDefaultConfig

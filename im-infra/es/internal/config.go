@@ -3,38 +3,38 @@ package internal
 import "time"
 
 const (
-	// EnvDev is the development environment.
+	// EnvDev 是开发环境
 	EnvDev = "development"
-	// EnvProd is the production environment.
+	// EnvProd 是生产环境
 	EnvProd = "production"
 )
 
-// Config defines the configuration for the Elasticsearch client.
+// Config 定义了 Elasticsearch 客户端的配置
 type Config struct {
-	// Addresses is a list of Elasticsearch nodes to connect to.
+	// Addresses 是要连接的 Elasticsearch 节点列表
 	Addresses []string `json:"addresses" toml:"addresses"`
-	// Username for authentication.
+	// Username 用于认证
 	Username string `json:"username" toml:"username"`
-	// Password for authentication.
+	// Password 用于认证
 	Password string `json:"password" toml:"password"`
-	// CloudID is the ID of the Elastic Cloud deployment.
-	// If CloudID is set, Addresses should be empty.
+	// CloudID 是 Elastic Cloud 部署的 ID
+	// 如果设置了 CloudID，Addresses 应该为空
 	CloudID string `json:"cloud_id" toml:"cloud_id"`
-	// APIKey for authentication.
+	// APIKey 用于认证
 	APIKey string `json:"api_key" toml:"api_key"`
 
-	// BulkIndexer includes parameters for the bulk indexer.
+	// BulkIndexer 包含批量索引器的参数
 	BulkIndexer struct {
-		// FlushBytes is the size in bytes at which the bulk indexer should flush.
+		// FlushBytes 是批量索引器应该刷新的字节大小
 		FlushBytes int `json:"flush_bytes" toml:"flush_bytes"`
-		// FlushInterval is the time interval at which the bulk indexer should flush.
+		// FlushInterval 是批量索引器应该刷新的时间间隔
 		FlushInterval time.Duration `json:"flush_interval" toml:"flush_interval"`
-		// Workers is the number of concurrent workers for the bulk indexer.
+		// Workers 是批量索引器的并发工作线程数
 		Workers int `json:"workers" toml:"workers"`
 	} `json:"bulk_indexer" toml:"bulk_indexer"`
 }
 
-// GetDefaultConfig returns the default configuration for the given environment.
+// GetDefaultConfig 返回给定环境的默认配置
 func GetDefaultConfig(env string) *Config {
 	cfg := &Config{
 		Addresses: []string{"http://localhost:9200"},

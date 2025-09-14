@@ -5,7 +5,7 @@ import (
 	"github.com/ceyewan/gochat/im-infra/coord"
 )
 
-// Option is a function that configures the es provider.
+// Option 是一个配置 es provider 的函数
 type Option func(*providerOptions)
 
 type providerOptions struct {
@@ -13,14 +13,14 @@ type providerOptions struct {
 	coord  coord.Provider
 }
 
-// WithLogger sets the logger for the es provider.
+// WithLogger 为 es provider 设置日志记录器
 func WithLogger(logger clog.Logger) Option {
 	return func(o *providerOptions) {
 		o.logger = logger
 	}
 }
 
-// WithCoordinator sets the coordinator for the es provider.
+// WithCoordinator 为 es provider 设置协调器
 func WithCoordinator(coord coord.Provider) Option {
 	return func(o *providerOptions) {
 		o.coord = coord

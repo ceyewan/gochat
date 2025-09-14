@@ -45,11 +45,11 @@ func New[T Indexable](ctx context.Context, cfg *Config, opts ...Option) (Provide
 		FlushBytes:    cfg.BulkIndexer.FlushBytes,
 		FlushInterval: cfg.BulkIndexer.FlushInterval,
 		OnError: func(ctx context.Context, err error) {
-			logger.Error("bulk indexer error", clog.Err(err))
+			logger.Error("批量索引器错误", clog.Err(err))
 		},
 	})
 	if err != nil {
-		logger.Error("failed to create bulk indexer", clog.Err(err))
+		logger.Error("创建批量索引器失败", clog.Err(err))
 		return nil, err
 	}
 
@@ -65,7 +65,7 @@ func (p *provider[T]) BulkIndex(ctx context.Context, index string, items []T) er
 	for _, item := range items {
 		payload, err := json.Marshal(item)
 		if err != nil {
-			p.logger.Error("failed to marshal item for bulk indexing",
+			p.logger.Error("批量索引时序列化文档失败",
 				clog.Err(err),
 				clog.String("item_id", item.GetID()))
 			continue
@@ -81,7 +81,7 @@ func (p *provider[T]) BulkIndex(ctx context.Context, index string, items []T) er
 			},
 		)
 		if err != nil {
-			p.logger.Error("failed to add item to bulk indexer",
+			p.logger.Error("添加文档到批量索引器失败",
 				clog.Err(err),
 				clog.String("item_id", item.GetID()))
 			return err
@@ -92,12 +92,12 @@ func (p *provider[T]) BulkIndex(ctx context.Context, index string, items []T) er
 
 // Close 关闭 es provider
 func (p *provider[T]) Close() error {
-	p.logger.Info("closing elasticsearch provider")
+	p.logger.Info("正在关闭 Elasticsearch provider")
 	if err := p.bulkIndexer.Close(context.Background()); err != nil {
-		p.logger.Error("failed to close bulk indexer", clog.Err(err))
+		p.logger.Error("关闭批量索引器失败", clog.Err(err))
 		return err
 	}
-	p.logger.Info("elasticsearch provider closed successfully")
+	p.logger.Info("Elasticsearch provider 已成功关闭")
 	return nil
 }
 
@@ -148,7 +148,7 @@ func (p *provider[T]) search(ctx context.Context, index, keyword string, page, s
 	}
 
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
-		p.logger.Error("failed to encode search query", clog.Err(err))
+		p.logger.Error("编码搜索查询失败", clog.Err(err))
 		return nil, err
 	}
 
@@ -159,13 +159,13 @@ func (p *provider[T]) search(ctx context.Context, index, keyword string, page, s
 		p.client.Search.WithTrackTotalHits(true),
 	)
 	if err != nil {
-		p.logger.Error("search request failed", clog.Err(err))
+		p.logger.Error("搜索请求失败", clog.Err(err))
 		return nil, err
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		p.logger.Error("search response error", clog.String("status", res.Status()))
+		p.logger.Error("搜索响应错误", clog.String("status", res.Status()))
 		return nil, errors.New(res.Status())
 	}
 
@@ -181,7 +181,7 @@ func (p *provider[T]) search(ctx context.Context, index, keyword string, page, s
 	}
 
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
-		p.logger.Error("failed to decode search response", clog.Err(err))
+		p.logger.Error("解码搜索响应失败", clog.Err(err))
 		return nil, err
 	}
 
