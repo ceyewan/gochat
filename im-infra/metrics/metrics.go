@@ -61,8 +61,8 @@ import (
 
 var (
 	// 模块化日志器，用于记录 metrics 包的操作日志
-	metricsLogger = clog.Module("metrics")
-	helperLogger  = clog.Module("metrics.helper")
+	metricsLogger = clog.Namespace("metrics")
+	helperLogger  = clog.Namespace("metrics.helper")
 )
 
 // Provider 定义了 metrics 和 tracing 系统的核心接口。

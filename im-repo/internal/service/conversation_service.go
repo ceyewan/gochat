@@ -24,7 +24,7 @@ func NewConversationService(conversationRepo *repository.ConversationRepository,
 	return &ConversationService{
 		conversationRepo: conversationRepo,
 		messageRepo:      messageRepo,
-		logger:           clog.Module("conversation-service"),
+		logger:           clog.Namespace("conversation-service"),
 	}
 }
 

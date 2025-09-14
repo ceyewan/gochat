@@ -11,7 +11,7 @@ import (
 
 // configureSharding 配置分库分表
 func configureSharding(db *gorm.DB, cfg *ShardingConfig) error {
-	logger := clog.Module("db.sharding")
+	logger := clog.Namespace("db.sharding")
 
 	logger.Info("开始配置分库分表",
 		clog.String("shardingKey", cfg.ShardingKey),
@@ -107,7 +107,7 @@ type ShardingHelper struct {
 func NewShardingHelper(config *ShardingConfig) *ShardingHelper {
 	return &ShardingHelper{
 		config: config,
-		logger: clog.Module("db.sharding.helper"),
+		logger: clog.Namespace("db.sharding.helper"),
 	}
 }
 

@@ -28,7 +28,7 @@ type Client struct {
 
 // NewClient 创建 gRPC 客户端
 func NewClient(cfg *config.Config) (*Client, error) {
-	logger := clog.Module("grpc-client")
+	logger := clog.Namespace("grpc-client")
 
 	client := &Client{
 		config: cfg,

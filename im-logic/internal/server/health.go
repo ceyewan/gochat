@@ -28,7 +28,7 @@ type HealthCheckable interface {
 // NewHealthChecker 创建健康检查器
 func NewHealthChecker() *HealthChecker {
 	return &HealthChecker{
-		logger:     clog.Module("health-checker"),
+		logger:     clog.Namespace("health-checker"),
 		components: make(map[string]HealthCheckable),
 	}
 }

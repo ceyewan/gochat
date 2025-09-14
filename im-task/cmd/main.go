@@ -16,7 +16,7 @@ import (
 // 负责初始化配置、启动任务处理器并处理优雅关闭
 func main() {
 	// 初始化日志
-	logger := clog.Module("im-task")
+	logger := clog.Namespace("im-task")
 	logger.Info("正在启动 im-task 服务...")
 
 	// 加载配置

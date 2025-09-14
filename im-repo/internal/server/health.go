@@ -24,7 +24,7 @@ type healthChecker struct {
 func NewHealthChecker(srv *server) HealthChecker {
 	return &healthChecker{
 		server: srv,
-		logger: clog.Module("health-checker"),
+		logger: clog.Namespace("health-checker"),
 	}
 }
 

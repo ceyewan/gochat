@@ -41,7 +41,7 @@ var (
 	// 确保默认客户端只初始化一次
 	defaultClientOnce sync.Once
 	// 模块日志器
-	logger = clog.Module("idempotent")
+	logger = clog.Namespace("idempotent")
 )
 
 // getDefaultClient 获取全局默认幂等客户端实例，使用懒加载和单例模式

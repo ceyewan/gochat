@@ -33,7 +33,7 @@ func NewGRPCClient(cfg *config.Config, coordinator coord.Provider) (*GRPCClient,
 	client := &GRPCClient{
 		config:      cfg,
 		coordinator: coordinator,
-		logger:      clog.Module("grpc-client"),
+		logger:      clog.Namespace("grpc-client"),
 	}
 
 	// 初始化 gRPC 连接

@@ -22,7 +22,7 @@ func NewMessageRepository(db *Database, cache *CacheManager) *MessageRepository 
 	return &MessageRepository{
 		db:     db,
 		cache:  cache,
-		logger: clog.Module("message-repository"),
+		logger: clog.Namespace("message-repository"),
 	}
 }
 

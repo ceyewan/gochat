@@ -35,7 +35,7 @@ func NewMQ(cfg Config) (MQ, error) {
 		return nil, NewConfigError("MQ配置无效", err)
 	}
 
-	logger := clog.Module("mq")
+	logger := clog.Namespace("mq")
 
 	// 创建连接池
 	connectionPool, err := NewConnectionPool(mergedCfg)
@@ -223,7 +223,7 @@ type MQManager struct {
 func NewMQManager() *MQManager {
 	return &MQManager{
 		instances: make(map[string]MQ),
-		logger:    clog.Module("mq.manager"),
+		logger:    clog.Namespace("mq.manager"),
 	}
 }
 

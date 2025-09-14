@@ -94,7 +94,7 @@ type tokenBucket struct {
 func newTokenBucket(cache cache.Cache) *tokenBucket {
 	return &tokenBucket{
 		cache:  cache,
-		logger: clog.Module("ratelimit.bucket"),
+		logger: clog.Namespace("ratelimit.bucket"),
 	}
 }
 

@@ -23,7 +23,7 @@ func NewUserRepository(db *Database, cache *CacheManager) *UserRepository {
 	return &UserRepository{
 		db:     db,
 		cache:  cache,
-		logger: clog.Module("user-repository"),
+		logger: clog.Namespace("user-repository"),
 	}
 }
 

@@ -73,7 +73,7 @@ func main() {
 	ctx := context.Background()
 
 	// 创建自定义日志器
-	logger := clog.Module("db-migration-example")
+	logger := clog.Namespace("db-migration-example")
 
 	// 创建 MySQL 配置
 	cfg := db.MySQLConfig("gochat:gochat_pass_2024@tcp(localhost:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local")

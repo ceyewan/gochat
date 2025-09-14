@@ -85,7 +85,7 @@ func New(ctx context.Context, cfg Config, opts ...Option) (UID, error) {
 
 	logger := options.Logger
 	if logger == nil {
-		logger = clog.Module("uid")
+		logger = clog.Namespace("uid")
 	}
 
 	if options.ComponentName != "" {

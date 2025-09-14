@@ -34,7 +34,7 @@ func NewIdempotentClient(cfg Config) (Idempotent, error) {
 	return &client{
 		cache:  cacheInstance,
 		config: cfg,
-		logger: clog.Module("idempotent"),
+		logger: clog.Namespace("idempotent"),
 	}, nil
 }
 

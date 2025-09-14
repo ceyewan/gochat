@@ -77,7 +77,7 @@ func NewConnectionPool(cfg Config) (ConnectionPool, error) {
 		stats: poolStats{
 			maxConnections: int32(cfg.PoolConfig.MaxConnections),
 		},
-		logger:          clog.Module("mq.pool"),
+		logger:          clog.Namespace("mq.pool"),
 		healthCheckDone: make(chan struct{}),
 	}
 

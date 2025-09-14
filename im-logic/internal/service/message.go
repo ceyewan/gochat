@@ -23,7 +23,7 @@ type MessageService struct {
 
 // NewMessageService 创建消息服务
 func NewMessageService(cfg *config.Config, client *grpc.Client) *MessageService {
-	logger := clog.Module("message-service")
+	logger := clog.Namespace("message-service")
 
 	return &MessageService{
 		config: cfg,

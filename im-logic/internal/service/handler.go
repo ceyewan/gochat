@@ -33,7 +33,7 @@ type Services struct {
 
 // NewMessageHandler 创建消息处理器
 func NewMessageHandler(cfg *config.Config, client *grpc.Client, producer *kafka.Producer, services *Services) *MessageHandler {
-	logger := clog.Module("message-handler")
+	logger := clog.Namespace("message-handler")
 
 	return &MessageHandler{
 		config:   cfg,

@@ -307,7 +307,7 @@ func NewDB(cfg Config, logger clog.Logger) (DB, error) {
 // CreateDatabaseIfNotExistsWithConfig 使用指定配置创建MySQL数据库（如果不存在）
 func CreateDatabaseIfNotExistsWithConfig(cfg Config, dbName string) error {
 	// 创建一个默认的logger
-	logger := clog.Module("db")
+	logger := clog.Namespace("db")
 
 	logger.Info("使用指定配置创建MySQL数据库", clog.String("database", dbName))
 

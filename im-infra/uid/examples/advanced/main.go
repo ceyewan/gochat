@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	logger := clog.Module("uid-example")
+	logger := clog.Namespace("uid-example")
 
 	cfg := uid.Config{
 		WorkerID:     1,

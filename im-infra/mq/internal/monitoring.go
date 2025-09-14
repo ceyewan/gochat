@@ -135,7 +135,7 @@ func NewMetricsCollector() MetricsCollector {
 		latencyStats:    make(map[string]*latencyMetrics),
 		throughputStats: make(map[string]*throughputMetrics),
 		errorStats:      make(map[string]*errorMetrics),
-		logger:          clog.Module("mq.metrics"),
+		logger:          clog.Namespace("mq.metrics"),
 	}
 }
 
@@ -378,7 +378,7 @@ type defaultHealthChecker struct {
 func NewHealthChecker() HealthChecker {
 	return &defaultHealthChecker{
 		checks: make(map[string]HealthCheckFunc),
-		logger: clog.Module("mq.health"),
+		logger: clog.Namespace("mq.health"),
 	}
 }
 
@@ -458,7 +458,7 @@ func NewMonitoringManager(cfg MonitoringConfig) *MonitoringManager {
 		metricsCollector: NewMetricsCollector(),
 		healthChecker:    NewHealthChecker(),
 		config:           cfg,
-		logger:           clog.Module("mq.monitoring"),
+		logger:           clog.Namespace("mq.monitoring"),
 		done:             make(chan struct{}),
 	}
 

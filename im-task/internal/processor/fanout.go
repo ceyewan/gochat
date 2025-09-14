@@ -20,7 +20,7 @@ type FanoutProcessor struct {
 // NewFanoutProcessor 创建扩散处理器实例
 func NewFanoutProcessor() *FanoutProcessor {
 	return &FanoutProcessor{
-		logger: clog.Module("fanout-processor"),
+		logger: clog.Namespace("fanout-processor"),
 	}
 }
 

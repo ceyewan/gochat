@@ -20,7 +20,7 @@ type CacheManager struct {
 
 // NewCacheManager 创建缓存管理器
 func NewCacheManager(cfg *config.Config) (*CacheManager, error) {
-	logger := clog.Module("cache-manager")
+	logger := clog.Namespace("cache-manager")
 
 	// 创建缓存连接
 	cacheClient, err := cache.New(context.Background(), cfg.Cache, cache.WithLogger(logger))

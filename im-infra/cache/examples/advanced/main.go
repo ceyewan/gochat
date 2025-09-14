@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	logger := clog.Module("cache-advanced-example")
+	logger := clog.Namespace("cache-advanced-example")
 	ctx := context.Background()
 	cfg := cache.DefaultConfig()
 	cfg.Addr = "localhost:6379"

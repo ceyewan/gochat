@@ -132,7 +132,7 @@ func NewProducer(cfg ProducerConfig) (Producer, error) {
 	p := &producer{
 		client: client,
 		config: cfg,
-		logger: clog.Module("mq.producer"),
+		logger: clog.Namespace("mq.producer"),
 		metrics: producerMetrics{
 			lastResetTime: time.Now(),
 			minLatency:    time.Hour, // 初始化为一个大值

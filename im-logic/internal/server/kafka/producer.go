@@ -24,7 +24,7 @@ type Producer struct {
 
 // NewProducer 创建 Kafka 生产者
 func NewProducer(cfg *config.Config) (*Producer, error) {
-	logger := clog.Module("kafka-producer")
+	logger := clog.Namespace("kafka-producer")
 
 	ctx, cancel := context.WithCancel(context.Background())
 

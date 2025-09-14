@@ -23,7 +23,7 @@ type OnlineStatusService struct {
 func NewOnlineStatusService(onlineStatusRepo *repository.OnlineStatusRepository) *OnlineStatusService {
 	return &OnlineStatusService{
 		onlineStatusRepo: onlineStatusRepo,
-		logger:           clog.Module("online-status-service"),
+		logger:           clog.Namespace("online-status-service"),
 	}
 }
 

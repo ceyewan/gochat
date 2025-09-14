@@ -26,7 +26,7 @@ type Consumer struct {
 
 // NewConsumer 创建 Kafka 消费者
 func NewConsumer(cfg *config.Config, handler *service.MessageHandler) (*Consumer, error) {
-	logger := clog.Module("kafka-consumer")
+	logger := clog.Namespace("kafka-consumer")
 
 	ctx, cancel := context.WithCancel(context.Background())
 

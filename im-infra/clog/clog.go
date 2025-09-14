@@ -19,9 +19,20 @@ var (
 	defaultLogger     atomic.Value
 	defaultLoggerOnce sync.Once
 
+	// exitFunc allows mocking os.Exit in tests
+	exitFunc = os.Exit
+
 	// traceID 上下文键的类型安全封装
 	traceIDKey struct{}
 )
+
+// SetExitFunc sets the exit function for testing (used in tests to mock os.Exit)
+func SetExitFunc(fn func(int)) {
+	exitFunc = fn
+	internal.SetExitFunc(fn)
+}
+
+// WithTraceID 将一个 trace_id 注入到 context 中，并返回一个新的 context
 
 // WithTraceID 将一个 trace_id 注入到 context 中，并返回一个新的 context
 // 这个函数通常在请求入口处（如 gRPC 拦截器或 HTTP 中间件）调用
@@ -137,7 +148,7 @@ func Error(msg string, fields ...Field) {
 // Fatal 记录 Fatal 级别的日志并退出程序
 func Fatal(msg string, fields ...Field) {
 	getDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // C 是 WithContext 的简短别名，提供更简洁的 API

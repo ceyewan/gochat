@@ -27,7 +27,7 @@ func NewMessageService(messageRepo *repository.MessageRepository, conversationRe
 	return &MessageService{
 		messageRepo:      messageRepo,
 		conversationRepo: conversationRepo,
-		logger:           clog.Module("message-service"),
+		logger:           clog.Namespace("message-service"),
 	}
 }
 

@@ -86,7 +86,7 @@ func NewWebSocketManager(cfg *config.Config, producer kafka.Producer) *WebSocket
 			},
 		},
 		connections:   make(map[string]*Connection),
-		logger:        clog.Module("websocket-manager"),
+		logger:        clog.Namespace("websocket-manager"),
 		messageChan:   make(chan *WSMessage, 1000),
 		kafkaProducer: producer,
 		gatewayID:     generateGatewayID(),

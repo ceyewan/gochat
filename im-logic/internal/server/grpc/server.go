@@ -29,7 +29,7 @@ type Server struct {
 
 // New 创建 gRPC 服务器
 func New(cfg *config.Config, services *service.Services) (*Server, error) {
-	logger := clog.Module("grpc-server")
+	logger := clog.Namespace("grpc-server")
 
 	// 创建 TCP 监听器
 	listener, err := net.Listen("tcp", cfg.GetGRPCAddr())

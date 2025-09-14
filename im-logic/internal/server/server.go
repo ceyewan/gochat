@@ -43,7 +43,7 @@ type server struct {
 
 // New 创建新的服务器实例
 func New(cfg *config.Config) (Server, error) {
-	logger := clog.Module("logic-server")
+	logger := clog.Namespace("logic-server")
 
 	s := &server{
 		config:      cfg,

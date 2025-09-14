@@ -60,7 +60,7 @@ var (
 	// 确保默认MQ只初始化一次
 	defaultMQOnce sync.Once
 	// 模块日志器
-	logger = clog.Module("mq")
+	logger = clog.Namespace("mq")
 )
 
 // MQ 定义消息队列操作的核心接口。

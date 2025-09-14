@@ -16,8 +16,8 @@ import (
 
 var (
 	// 模块化日志器
-	mainLogger = clog.Module("basic.main")
-	grpcLogger = clog.Module("basic.grpc")
+	mainLogger = clog.Namespace("basic.main")
+	grpcLogger = clog.Namespace("basic.grpc")
 )
 
 func main() {

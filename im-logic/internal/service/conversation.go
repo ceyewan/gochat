@@ -22,7 +22,7 @@ type ConversationService struct {
 
 // NewConversationService 创建会话服务
 func NewConversationService(cfg *config.Config, client *grpc.Client) *ConversationService {
-	logger := clog.Module("conversation-service")
+	logger := clog.Namespace("conversation-service")
 
 	return &ConversationService{
 		config: cfg,

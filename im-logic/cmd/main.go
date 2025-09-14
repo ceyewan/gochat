@@ -18,7 +18,7 @@ import (
 // 负责初始化配置、启动 gRPC 服务器并处理优雅关闭
 func main() {
 	// 初始化日志
-	logger := clog.Module("im-logic")
+	logger := clog.Namespace("im-logic")
 	logger.Info("正在启动 im-logic 服务...")
 
 	// 加载配置

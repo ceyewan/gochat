@@ -19,7 +19,7 @@ import (
 // 示例：
 //
 //	cfg := cache.DefaultConfig()
-//	logger := clog.Module("my-cache")
+//	logger := clog.Namespace("my-cache")
 //	cache, err := cache.New(ctx, cfg, cache.WithLogger(logger))
 //	if err != nil {
 //		log.Fatal(err)
@@ -41,9 +41,9 @@ func New(ctx context.Context, cfg Config, opts ...Option) (Cache, error) {
 		}
 	} else {
 		if options.ComponentName != "" {
-			componentLogger = clog.Module("cache").With(clog.String("name", options.ComponentName))
+			componentLogger = clog.Namespace("cache").With(clog.String("name", options.ComponentName))
 		} else {
-			componentLogger = clog.Module("cache")
+			componentLogger = clog.Namespace("cache")
 		}
 	}
 

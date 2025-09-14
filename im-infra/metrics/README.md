@@ -64,7 +64,7 @@
 ## 4. 日志集成特性
 
 ### 4.1 模块化日志器
-本库使用 `clog.Module()` 为不同组件创建专用日志器：
+本库使用 `clog.Namespace()` 为不同组件创建专用日志器：
 - `metrics.provider`: Provider 生命周期日志
 - `metrics.exporter`: 导出器相关日志
 - `metrics.interceptor`: 拦截器执行日志

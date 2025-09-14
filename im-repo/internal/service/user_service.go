@@ -25,7 +25,7 @@ type UserService struct {
 func NewUserService(userRepo *repository.UserRepository) *UserService {
 	return &UserService{
 		userRepo: userRepo,
-		logger:   clog.Module("user-service"),
+		logger:   clog.Namespace("user-service"),
 	}
 }
 

@@ -24,7 +24,7 @@ type GroupService struct {
 
 // NewGroupService 创建群组服务
 func NewGroupService(cfg *config.Config, client *grpc.Client) *GroupService {
-	logger := clog.Module("group-service")
+	logger := clog.Namespace("group-service")
 
 	return &GroupService{
 		config: cfg,

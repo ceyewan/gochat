@@ -20,7 +20,7 @@ type Database struct {
 
 // NewDatabase 创建数据库管理器
 func NewDatabase(cfg *config.Config) (*Database, error) {
-	logger := clog.Module("database")
+	logger := clog.Namespace("database")
 
 	// 创建数据库连接
 	database, err := db.New(context.Background(), cfg.Database, db.WithLogger(logger))

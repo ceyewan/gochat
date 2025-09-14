@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// 使用自定义 Logger
-	logger := clog.Module("cache-example")
+	logger := clog.Namespace("cache-example")
 	ctx := context.Background()
 
 	// 使用默认配置

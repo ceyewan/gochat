@@ -31,10 +31,10 @@ var (
 	meter  = otel.Meter(InstrumentationName)
 
 	// 模块化日志器
-	interceptorLogger = clog.Module("metrics.interceptor")
-	grpcServerLogger  = clog.Module("metrics.grpc.server")
-	grpcClientLogger  = clog.Module("metrics.grpc.client")
-	httpServerLogger  = clog.Module("metrics.http.server")
+	interceptorLogger = clog.Namespace("metrics.interceptor")
+	grpcServerLogger  = clog.Namespace("metrics.grpc.server")
+	grpcClientLogger  = clog.Namespace("metrics.grpc.client")
+	httpServerLogger  = clog.Namespace("metrics.http.server")
 
 	// gRPC 服务端指标
 	grpcServerRequests metric.Int64Counter

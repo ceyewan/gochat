@@ -24,10 +24,10 @@ import (
 
 var (
 	// 模块化日志器
-	mainLogger    = clog.Module("advanced.main")
-	serviceLogger = clog.Module("advanced.service")
-	grpcLogger    = clog.Module("advanced.grpc")
-	httpLogger    = clog.Module("advanced.http")
+	mainLogger    = clog.Namespace("advanced.main")
+	serviceLogger = clog.Namespace("advanced.service")
+	grpcLogger    = clog.Namespace("advanced.grpc")
+	httpLogger    = clog.Namespace("advanced.http")
 
 	// 自定义业务指标
 	businessCounter   *metrics.Counter

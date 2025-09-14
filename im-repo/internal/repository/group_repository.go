@@ -22,7 +22,7 @@ func NewGroupRepository(db *Database, cache *CacheManager) *GroupRepository {
 	return &GroupRepository{
 		db:     db,
 		cache:  cache,
-		logger: clog.Module("group-repository"),
+		logger: clog.Namespace("group-repository"),
 	}
 }
 

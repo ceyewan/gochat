@@ -4,13 +4,11 @@ import (
 	"github.com/ceyewan/gochat/im-infra/clog"
 )
 
-// Options 包含创建 db 实例时的可选配置
+// Options holds configuration for the database.
 type Options struct {
-	// Logger 自定义日志记录器
-	Logger clog.Logger
-
-	// ComponentName 组件名称，用于日志标识
-	ComponentName string
+	Logger       clog.Logger
+	Namespace    string
+	ComponentName string // For backward compatibility
 }
 
 // Option 定义配置选项的函数类型
@@ -20,7 +18,7 @@ type Option func(*Options)
 //
 // 示例：
 //
-// logger := clog.Module("my-app")
+// logger := clog.Namespace("my-app")
 // database, err := db.New(ctx, cfg, db.WithLogger(logger))
 func WithLogger(logger clog.Logger) Option {
 	return func(opts *Options) {
@@ -28,13 +26,29 @@ func WithLogger(logger clog.Logger) Option {
 	}
 }
 
-// WithComponentName 设置组件名称
+// WithNamespace sets the namespace for the database.
+func WithNamespace(namespace string) Option {
+	return func(opts *Options) {
+		opts.Namespace = namespace
+	}
+}
+
+// WithComponentName sets the component name for backward compatibility.
 //
-// 示例：
+// Example:
 //
 // database, err := db.New(ctx, cfg, db.WithComponentName("user-db"))
 func WithComponentName(name string) Option {
 	return func(opts *Options) {
 		opts.ComponentName = name
+		opts.Namespace = name
+	}
+}
+
+// DefaultOptions returns default options for database.
+func DefaultOptions() *Options {
+	return &Options{
+		Logger:    clog.Namespace("db"),
+		Namespace: "db",
 	}
 }

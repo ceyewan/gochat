@@ -12,6 +12,14 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// ExitFunc allows mocking os.Exit in tests
+var ExitFunc = os.Exit
+
+// SetExitFunc sets the exit function for testing
+func SetExitFunc(fn func(int)) {
+	ExitFunc = fn
+}
+
 // Hook 定义 context 钩子函数类型
 type Hook func(context.Context) (string, bool)
 
@@ -216,7 +224,7 @@ func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
 	} else {
 		logger.Fatal(msg, fields...)
 	}
-	os.Exit(1)
+	ExitFunc(1)
 }
 
 // Namespace 创建子命名空间的 Logger 实例，支持链式调用

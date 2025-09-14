@@ -53,7 +53,7 @@ func NewKafkaConsumer(cfg *config.Config, producer mq.Producer, wsManager *WebSo
 		producer:        producer,
 		consumer:        consumer,
 		wsManager:       wsManager,
-		logger:          clog.Module("kafka-consumer"),
+		logger:          clog.Namespace("kafka-consumer"),
 		downstreamTopic: downstreamTopic,
 	}, nil
 }

@@ -90,34 +90,55 @@ type ConfigCenter interface {
 	// Set 将 v 序列化为 JSON 并写入指定的 key。
 	Set(ctx context.Context, key string, v interface{}) error
 
-	// Watch 监听一个键或一个前缀的变更。
+	// Delete 删除指定的 key。
+	Delete(ctx context.Context, key string) error
+
+	// Watch 监听单个键的变更。
 	//
-	// 行为约定:
-	// - 如果 key 不以 "/" 结尾，则只监听该单个键的变更。
-	// - 如果 key 以 "/" 结尾，则监听该前缀下的所有键的变更 (WatchPrefix 行为)。
-    //
-    // 设计注记:
-    // - 返回的 Event.Value 是原始的 []byte，需要使用者自行反序列化。
-    //   这是为了在反序列化失败时不丢失事件通知，并将错误处理的灵活性交给调用方。
+	// 设计注记:
+	// - 通过泛型提供类型安全的事件处理，避免了手动反序列化的复杂性。
+	// - 如果反序列化失败，事件仍会被传递，Value 为零值，确保不丢失通知。
 	//
 	// 返回的 Watcher 会在后台自动处理重连和错误。
-	Watch(ctx context.Context, key string) (Watcher, error)
+	Watch(ctx context.Context, key string, v interface{}) (Watcher[any], error)
+
+	// WatchPrefix 监听指定前缀下所有键的变更。
+	//
+	// 使用场景:
+	// - 动态配置热更新（如监听 /ratelimit/rules/ 下的所有限流规则）
+	// - 批量配置同步（如监听 /config/services/ 下的服务配置）
+	// - 功能开关管理（如监听 /features/ 下的所有开关状态）
+	//
+	// 相比多个单独的 Watch，WatchPrefix 更高效且能自动发现新增的配置键。
+	WatchPrefix(ctx context.Context, prefix string, v interface{}) (Watcher[any], error)
+
+	// ===== 高级操作支持 =====
+
+	// GetWithVersion 获取配置值和版本信息
+	// 返回值、版本号和错误。版本号用于后续的 CompareAndSet 操作
+	GetWithVersion(ctx context.Context, key string, v interface{}) (version int64, err error)
+
+	// CompareAndSet 原子地比较并设置配置值
+	// 只有当远程配置的版本号与期望版本号匹配时，才会更新配置
+	// 这确保了配置更新的原子性，避免并发修改导致的数据丢失
+	CompareAndSet(ctx context.Context, key string, value interface{}, expectedVersion int64) error
 }
 
 // Watcher 定义了配置监听器。
-type Watcher interface {
+// 泛型参数 T 表示配置值的类型，提供类型安全的事件处理。
+type Watcher[T any] interface {
     // Chan 返回一个只读通道，用于接收配置变更事件。
-    Chan() <-chan Event
+    Chan() <-chan ConfigEvent[T]
     // Close 关闭监听器。
     Close()
 }
 
-// Event 代表一次配置变更。
-type Event struct {
-    Type EventType // PUT 或 DELETE
-    Key  string
-    // Value 是变更后的值的原始字节。对于 DELETE 事件，Value 为 nil。
-    Value []byte
+// ConfigEvent 代表一次配置变更。
+// 泛型参数 T 表示配置值的类型，避免了原始字节的手动反序列化。
+type ConfigEvent[T any] struct {
+    Type  EventType // PUT 或 DELETE
+    Key   string
+    Value T         // 变更后的值。对于 DELETE 事件，Value 为零值。
 }
 ```
 
@@ -127,14 +148,27 @@ type Event struct {
 // ServiceRegistry 定义了服务注册与发现的操作。
 type ServiceRegistry interface {
 	Register(ctx context.Context, service ServiceInfo, ttl time.Duration) error
+	Unregister(ctx context.Context, serviceID string) error
 	Discover(ctx context.Context, serviceName string) ([]ServiceInfo, error)
-	// ...
+	Watch(ctx context.Context, serviceName string) (<-chan ServiceEvent, error)
+	GetConnection(ctx context.Context, serviceName string) (*grpc.ClientConn, error)
 }
 
 // DistributedLock 定义了分布式锁的操作。
 type DistributedLock interface {
-	Acquire(ctx context.Context, key string, ttl time.Duration) (Locker, error)
-	// ...
+	Acquire(ctx context.Context, key string, ttl time.Duration) (Lock, error)
+	// TryAcquire 尝试获取锁（非阻塞），如果锁已被占用，会立即返回错误
+	TryAcquire(ctx context.Context, key string, ttl time.Duration) (Lock, error)
+}
+
+// Lock 是一个已获取的锁对象的接口
+type Lock interface {
+	// Unlock 释放锁
+	Unlock(ctx context.Context) error
+	// TTL 获取锁的剩余有效时间
+	TTL(ctx context.Context) (time.Duration, error)
+	// Key 获取锁的键
+	Key() string
 }
 
 // InstanceIDAllocator 为一类服务的实例分配唯一的、可自动回收的ID。
@@ -198,13 +232,10 @@ func (s *UserService) AssignInstanceID(ctx context.Context) (int, error) {
 ### 4.1 GetDefaultConfig 默认值说明
 ... (保持不变) ...
 
-### 4.2 Watch 接口的前缀监听约定
+### 4.2 组件自治的动态配置模式
 ... (保持不变) ...
 
-### 4.3 组件自治的动态配置模式
-... (保持不变) ...
-
-### 4.4 InstanceIDAllocator 工作原理
+### 4.3 InstanceIDAllocator 工作原理
 
 `InstanceIDAllocator` 是一个基于 `etcd` 的租约（Lease）和临时节点（Ephemeral Node）实现的、高可用的唯一 ID 分配器。
 

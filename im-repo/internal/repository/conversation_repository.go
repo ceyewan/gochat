@@ -22,7 +22,7 @@ func NewConversationRepository(db *Database, cache *CacheManager) *ConversationR
 	return &ConversationRepository{
 		db:     db,
 		cache:  cache,
-		logger: clog.Module("conversation-repository"),
+		logger: clog.Namespace("conversation-repository"),
 	}
 }
 

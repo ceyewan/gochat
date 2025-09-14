@@ -24,10 +24,10 @@ import (
 
 var (
 	// 模块化日志器，用于不同组件的日志记录
-	providerLogger   = clog.Module("metrics.provider")
-	exporterLogger   = clog.Module("metrics.exporter")
-	shutdownLogger   = clog.Module("metrics.shutdown")
-	prometheusLogger = clog.Module("metrics.prometheus")
+	providerLogger   = clog.Namespace("metrics.provider")
+	exporterLogger   = clog.Namespace("metrics.exporter")
+	shutdownLogger   = clog.Namespace("metrics.shutdown")
+	prometheusLogger = clog.Namespace("metrics.prometheus")
 )
 
 // ShutdownFunc 是一个可以被调用来优雅关闭 metrics 和 tracing providers 的函数。

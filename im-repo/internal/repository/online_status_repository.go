@@ -19,7 +19,7 @@ type OnlineStatusRepository struct {
 func NewOnlineStatusRepository(cache *CacheManager) *OnlineStatusRepository {
 	return &OnlineStatusRepository{
 		cache:  cache,
-		logger: clog.Module("online-status-repository"),
+		logger: clog.Namespace("online-status-repository"),
 	}
 }
 

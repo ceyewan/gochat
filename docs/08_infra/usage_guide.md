@@ -271,7 +271,7 @@ func main() {
       coordProvider, err := coord.New(
           context.Background(),
           config,
-          coord.WithLogger(clog.Module("coord")),
+          coord.WithLogger(clog.Namespace("coord")),
       )
       if err != nil {
           log.Fatalf("初始化 coord 失败: %v", err)
@@ -286,7 +286,7 @@ func main() {
 - **核心用法**:
   ```go
   // 1. 服务发现: 获取 gRPC 连接
-  conn, err := coordinator.Registry().GetConnection(ctx, "user-service")
+  conn, err := coordProvider.Registry().GetConnection(ctx, "user-service")
   if err != nil {
       return fmt.Errorf("获取服务连接失败: %w", err)
   }
@@ -294,13 +294,29 @@ func main() {
 
   // 2. 配置管理: 获取配置
   var dbConfig myapp.DatabaseConfig
-  err = coordinator.Config().Get(ctx, "/config/dev/global/db", &dbConfig)
+  err = coordProvider.Config().Get(ctx, "/config/dev/global/db", &dbConfig)
   if err != nil {
       return fmt.Errorf("获取配置失败: %w", err)
   }
 
+  // 2.1. 前缀监听: 动态配置热更新
+  // 示例：监听所有限流规则变更，实现无需重启的热更新
+  var watchValue interface{}
+  watcher, err := coordProvider.Config().WatchPrefix(ctx, "/config/ratelimit/rules/", &watchValue)
+  if err != nil {
+      return fmt.Errorf("创建前缀监听器失败: %w", err)
+  }
+  defer watcher.Close()
+
+  go func() {
+      for event := range watcher.Chan() {
+          log.Printf("检测到限流规则变更: type=%s, key=%s", event.Type, event.Key)
+          // 重新加载规则逻辑...
+      }
+  }()
+
   // 3. 分布式锁
-  lock, err := coordinator.Lock().Acquire(ctx, "my-resource-key", 30*time.Second)
+  lock, err := coordProvider.Lock().Acquire(ctx, "my-resource-key", 30*time.Second)
   if err != nil {
       return fmt.Errorf("获取锁失败: %w", err)
   }
@@ -335,7 +351,7 @@ func main() {
       producer, err := mq.NewProducer(
           context.Background(),
           config,
-          mq.WithLogger(clog.NameSpace("mq-producer")),
+          mq.WithLogger(clog.Namespace("mq-producer")),
           mq.WithCoordProvider(coordProvider),
       )
       if err != nil {
@@ -348,7 +364,7 @@ func main() {
           context.Background(),
           config,
           "notification-service-user-events-group", // 遵循命名规范的 GroupID
-          mq.WithLogger(clog.Module("mq-consumer")),
+          mq.WithLogger(clog.Namespace("mq-consumer")),
           mq.WithCoordProvider(coordProvider),
       )
       if err != nil {
@@ -441,7 +457,7 @@ func main() {
       dbProvider, err := db.New(
           context.Background(),
           config,
-          db.WithLogger(clog.Module("gorm")),
+          db.WithLogger(clog.Namespace("gorm")),
       )
       if err != nil {
           log.Fatalf("初始化 db 失败: %v", err)

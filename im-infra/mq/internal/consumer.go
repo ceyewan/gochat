@@ -138,7 +138,7 @@ func NewConsumer(cfg ConsumerConfig) (Consumer, error) {
 	c := &consumer{
 		client:           client,
 		config:           cfg,
-		logger:           clog.Module("mq.consumer"),
+		logger:           clog.Namespace("mq.consumer"),
 		pausedPartitions: make(map[TopicPartition]bool),
 		metrics: consumerMetrics{
 			lastResetTime:       time.Now(),

@@ -44,7 +44,7 @@ type adminClient struct {
 
 // NewAdminClient 创建管理客户端
 func NewAdminClient(cfg Config) (AdminClient, error) {
-	logger := clog.Module("mq.admin")
+	logger := clog.Namespace("mq.admin")
 
 	// 创建 Kafka 客户端
 	opts := []kgo.Opt{

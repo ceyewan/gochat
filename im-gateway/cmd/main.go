@@ -17,7 +17,7 @@ import (
 // 负责初始化配置、启动服务器并处理优雅关闭
 func main() {
 	// 初始化日志
-	logger := clog.Module("im-gateway")
+	logger := clog.Namespace("im-gateway")
 	logger.Info("正在启动 im-gateway 服务...")
 
 	// 加载配置

@@ -49,7 +49,7 @@ type server struct {
 
 // New 创建新的服务器实例
 func New(cfg *config.Config) (Server, error) {
-	logger := clog.Module("repo-server")
+	logger := clog.Namespace("repo-server")
 
 	s := &server{
 		config: cfg,

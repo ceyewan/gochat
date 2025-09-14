@@ -60,7 +60,7 @@ func New(ctx context.Context, serviceName string, opts ...Option) (RateLimiter, 
 	l := &limiter{
 		serviceName: serviceName,
 		opts:        options,
-		logger:      clog.Module("ratelimit"),
+		logger:      clog.Namespace("ratelimit"),
 		rules:       make(map[string]Rule),
 		ctx:         limiterCtx,
 		cancel:      cancel,

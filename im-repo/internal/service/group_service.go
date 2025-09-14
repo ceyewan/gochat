@@ -24,7 +24,7 @@ type GroupService struct {
 func NewGroupService(groupRepo *repository.GroupRepository) *GroupService {
 	return &GroupService{
 		groupRepo: groupRepo,
-		logger:    clog.Module("group-service"),
+		logger:    clog.Namespace("group-service"),
 	}
 }
 

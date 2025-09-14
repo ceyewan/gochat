@@ -49,7 +49,7 @@ type TableShardingConfig = internal.TableShardingConfig
 // defer database.Close()
 //
 // // 带 Logger 的配置
-// logger := clog.Module("my-app")
+// logger := clog.Namespace("my-app")
 // database, err := db.New(ctx, cfg, db.WithLogger(logger))
 //
 // // 带组件名称的配置
@@ -100,9 +100,9 @@ func New(ctx context.Context, cfg Config, opts ...Option) (DB, error) {
 		}
 	} else {
 		if options.ComponentName != "" {
-			componentLogger = clog.Module("db").With(clog.String("name", options.ComponentName))
+			componentLogger = clog.Namespace("db").With(clog.String("name", options.ComponentName))
 		} else {
-			componentLogger = clog.Module("db")
+			componentLogger = clog.Namespace("db")
 		}
 	}
 

@@ -28,7 +28,7 @@ type AuthService struct {
 
 // NewAuthService 创建认证服务
 func NewAuthService(cfg *config.Config, client *grpc.Client) *AuthService {
-	logger := clog.Module("auth-service")
+	logger := clog.Namespace("auth-service")
 
 	return &AuthService{
 		config:    cfg,

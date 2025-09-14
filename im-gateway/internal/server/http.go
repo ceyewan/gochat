@@ -36,7 +36,7 @@ func NewHTTPServer(cfg *config.Config) *HTTPServer {
 	return &HTTPServer{
 		config: cfg,
 		server: server,
-		logger: clog.Module("http-server"),
+		logger: clog.Namespace("http-server"),
 	}
 }
 
@@ -169,7 +169,7 @@ func loggingMiddleware(logConfig config.LogConfig) gin.HandlerFunc {
 		latency := time.Since(start)
 		statusCode := c.Writer.Status()
 
-		logger := clog.Module("http-request")
+		logger := clog.Namespace("http-request")
 		logger.Info("HTTP请求",
 			clog.String("method", method),
 			clog.String("path", path),
