@@ -40,26 +40,26 @@ func main() {
 	ctx := context.Background()
 
 	// 创建自定义日志器
-	logger := clog.Module("db-transaction-example")
+	logger := clog.Namespace("db-transaction-example")
 
 	// 创建 MySQL 配置
 	cfg := db.MySQLConfig("gochat:gochat_pass_2024@tcp(localhost:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local")
 
 	// 使用 New 函数创建数据库实例，并注入 Logger
-	database, err := db.New(ctx, cfg, db.WithLogger(logger), db.WithComponentName("transaction-example"))
+	provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 	if err != nil {
 		log.Fatalf("创建数据库实例失败: %v", err)
 	}
-	defer database.Close()
+	defer provider.Close()
 
 	logger.Info("开始事务操作示例")
 
 	// 自动迁移
-	if err := database.AutoMigrate(&Account{}, &TransactionLog{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &Account{}, &TransactionLog{}); err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
 
-	gormDB := database.GetDB()
+	gormDB := provider.DB(ctx)
 
 	// === 初始化测试数据 ===
 	logger.Info("初始化测试账户")
@@ -81,7 +81,7 @@ func main() {
 
 	// === 示例1: 基础事务操作 ===
 	logger.Info("=== 示例1: 基础事务操作 ===")
-	err = database.Transaction(func(tx *gorm.DB) error {
+	err = provider.Transaction(ctx, func(tx *gorm.DB) error {
 		// 在事务中创建多个相关记录
 		user4Account := Account{
 			UserID:    4,
@@ -122,7 +122,7 @@ func main() {
 	fromAccountNo := "ACC001"
 	toAccountNo := "ACC002"
 
-	err = performTransfer(database, logger, fromAccountNo, toAccountNo, transferAmount)
+	err = performTransfer(provider, logger, fromAccountNo, toAccountNo, transferAmount)
 	if err != nil {
 		logger.Error("转账失败", clog.Err(err))
 	} else {
@@ -136,7 +136,7 @@ func main() {
 	toAccountNo = "ACC003"
 
 	logger.Info("开始执行转账事务（预期失败场景）")
-	err = performTransfer(database, logger, fromAccountNo, toAccountNo, transferAmount)
+	err = performTransfer(provider, logger, fromAccountNo, toAccountNo, transferAmount)
 	if err != nil {
 		logger.Error("转账失败（预期失败）", clog.Err(err))
 		logger.Info("确认事务已回滚，检查账户余额是否恢复")
@@ -146,7 +146,7 @@ func main() {
 
 	// === 示例4: 嵌套事务 ===
 	logger.Info("=== 示例4: 嵌套事务 ===")
-	err = database.Transaction(func(tx *gorm.DB) error {
+	err = provider.Transaction(ctx, func(tx *gorm.DB) error {
 		// 外层事务：批量创建账户
 		newAccounts := []Account{
 			{UserID: 5, AccountNo: "ACC005", Balance: 30000},
@@ -188,7 +188,7 @@ func main() {
 	logger.Info("=== 示例5: 事务中的错误处理和重试 ===")
 	maxRetries := 3
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		err = database.Transaction(func(tx *gorm.DB) error {
+		err = provider.Transaction(ctx, func(tx *gorm.DB) error {
 			// 模拟可能失败的操作
 			if rand.Float32() < 0.7 && attempt < 3 { // 70%概率失败，但第3次必成功
 				return errors.New("模拟网络错误")
@@ -247,8 +247,8 @@ func main() {
 }
 
 // performTransfer 执行转账操作
-func performTransfer(database db.DB, logger clog.Logger, fromAccountNo, toAccountNo string, amount int64) error {
-	return database.Transaction(func(tx *gorm.DB) error {
+func performTransfer(provider db.Provider, logger clog.Logger, fromAccountNo, toAccountNo string, amount int64) error {
+	return provider.Transaction(context.Background(), func(tx *gorm.DB) error {
 		// 1. 查询转出账户（加锁）
 		var fromAccount Account
 		if err := tx.Where("account_no = ?", fromAccountNo).First(&fromAccount).Error; err != nil {

@@ -79,15 +79,15 @@ func main() {
 	cfg := db.MySQLConfig("gochat:gochat_pass_2024@tcp(localhost:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local")
 
 	// 使用 New 函数创建数据库实例，并注入 Logger
-	database, err := db.New(ctx, cfg, db.WithLogger(logger), db.WithComponentName("migration-example"))
+	provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 	if err != nil {
 		log.Fatalf("创建数据库实例失败: %v", err)
 	}
-	defer database.Close()
+	defer provider.Close()
 
 	// 获取 GORM DB 实例用于调试
 	var gormDB *gorm.DB
-	gormDB = database.GetDB()
+	gormDB = provider.DB(ctx)
 
 	logger.Info("开始数据库迁移示例")
 
@@ -158,12 +158,12 @@ func main() {
 
 	// === 第一次迁移：V1 模型 ===
 	logger.Info("执行 V1 迁移：创建基础用户表")
-	if err := database.AutoMigrate(&UserV1{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &UserV1{}); err != nil {
 		log.Fatalf("V1 迁移失败: %v", err)
 	}
 
 	// 插入一些 V1 数据
-	gormDB = database.GetDB()
+	gormDB = provider.DB(ctx)
 	users := []UserV1{
 		{Username: "alice", Email: "alice@example.com"},
 		{Username: "bob", Email: "bob@example.com"},
@@ -180,7 +180,7 @@ func main() {
 
 	// === 第二次迁移：V2 模型 ===
 	logger.Info("执行 V2 迁移：创建独立的 V2 表并迁移数据")
-	if err := database.AutoMigrate(&UserV2{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &UserV2{}); err != nil {
 		log.Fatalf("V2 迁移失败: %v", err)
 	}
 
@@ -208,7 +208,7 @@ func main() {
 
 	// === 第三次迁移：V3 模型 ===
 	logger.Info("执行 V3 迁移：创建独立的 V3 表并迁移数据")
-	if err := database.AutoMigrate(&UserV3{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &UserV3{}); err != nil {
 		log.Fatalf("V3 迁移失败: %v", err)
 	}
 
@@ -303,7 +303,7 @@ func main() {
 
 	// === 第四次迁移：添加关联表 ===
 	logger.Info("执行关联表迁移：创建 Profile 表")
-	if err := database.AutoMigrate(&ProfileV3{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &ProfileV3{}); err != nil {
 		log.Fatalf("Profile 表迁移失败: %v", err)
 	}
 

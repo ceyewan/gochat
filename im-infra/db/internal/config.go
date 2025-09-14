@@ -75,11 +75,6 @@ type ShardingConfig struct {
 	// NumberOfShards 分片数量
 	NumberOfShards int `json:"numberOfShards" yaml:"numberOfShards"`
 
-	// ShardingAlgorithm 分片算法
-	// 支持: "hash", "range", "mod"
-	// 默认: "hash"
-	ShardingAlgorithm string `json:"shardingAlgorithm" yaml:"shardingAlgorithm"`
-
 	// Tables 需要分片的表配置
 	Tables map[string]*TableShardingConfig `json:"tables" yaml:"tables"`
 }
@@ -91,28 +86,53 @@ type TableShardingConfig struct {
 
 	// NumberOfShards 该表的分片数量（如果与全局不同）
 	NumberOfShards int `json:"numberOfShards,omitempty" yaml:"numberOfShards,omitempty"`
-
-	// ShardingAlgorithm 该表的分片算法（如果与全局不同）
-	ShardingAlgorithm string `json:"shardingAlgorithm,omitempty" yaml:"shardingAlgorithm,omitempty"`
 }
 
 // DefaultConfig 返回一个带有合理默认值的 Config。
 // 默认配置适用于大多数开发和测试场景。
 func DefaultConfig() Config {
-	return Config{
-		DSN:                                      "root:mysql@tcp(localhost:3306)/gochat?charset=utf8mb4&parseTime=True&loc=Local",
-		Driver:                                   "mysql",
-		MaxOpenConns:                             25,
-		MaxIdleConns:                             10,
-		ConnMaxLifetime:                          time.Hour,
-		ConnMaxIdleTime:                          30 * time.Minute,
-		LogLevel:                                 "warn",
-		SlowThreshold:                            200 * time.Millisecond,
-		EnableMetrics:                            false,
-		EnableTracing:                            false,
-		TablePrefix:                              "",
-		DisableForeignKeyConstraintWhenMigrating: false,
-		AutoCreateDatabase:                       true,
+	return GetDefaultConfig("development")
+}
+
+// GetDefaultConfig 返回默认的数据库配置。
+// 开发环境：较少连接数，较详细的日志级别，较短的超时时间
+// 生产环境：较多连接数，较少的日志输出，较长的连接生命周期
+func GetDefaultConfig(env string) Config {
+	switch env {
+	case "development":
+		return Config{
+			DSN:                                      "root:mysql@tcp(localhost:3306)/gochat?charset=utf8mb4&parseTime=True&loc=Local",
+			Driver:                                   "mysql",
+			MaxOpenConns:                             25,
+			MaxIdleConns:                             5,
+			ConnMaxLifetime:                          5 * time.Minute,
+			ConnMaxIdleTime:                          30 * time.Minute,
+			LogLevel:                                 "info",
+			SlowThreshold:                            100 * time.Millisecond,
+			EnableMetrics:                            false,
+			EnableTracing:                            false,
+			TablePrefix:                              "",
+			DisableForeignKeyConstraintWhenMigrating: false,
+			AutoCreateDatabase:                       true,
+		}
+	case "production":
+		return Config{
+			DSN:                                      "",
+			Driver:                                   "mysql",
+			MaxOpenConns:                             100,
+			MaxIdleConns:                             10,
+			ConnMaxLifetime:                          time.Hour,
+			ConnMaxIdleTime:                          30 * time.Minute,
+			LogLevel:                                 "warn",
+			SlowThreshold:                            500 * time.Millisecond,
+			EnableMetrics:                            true,
+			EnableTracing:                            true,
+			TablePrefix:                              "",
+			DisableForeignKeyConstraintWhenMigrating: false,
+			AutoCreateDatabase:                       false,
+		}
+	default:
+		return DefaultConfig()
 	}
 }
 
@@ -178,24 +198,10 @@ func (c *Config) validateShardingConfig() error {
 		return fmt.Errorf("number of shards must be greater than 0")
 	}
 
-	if c.Sharding.ShardingAlgorithm == "" {
-		c.Sharding.ShardingAlgorithm = "hash"
-	}
-
-	validAlgorithms := map[string]bool{
-		"hash":  true,
-		"range": true,
-		"mod":   true,
-	}
-
-	if !validAlgorithms[c.Sharding.ShardingAlgorithm] {
-		return fmt.Errorf("unsupported sharding algorithm: %s", c.Sharding.ShardingAlgorithm)
-	}
-
 	return nil
 }
 
 // ValidateConfig 验证配置的完整性和合理性（导出函数）
-func ValidateConfig(cfg Config) error {
+func ValidateConfig(cfg *Config) error {
 	return cfg.Validate()
 }

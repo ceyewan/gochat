@@ -53,7 +53,7 @@ func main() {
 	ctx := context.Background()
 
 	// 创建自定义日志器
-	logger := clog.Module("db-performance-example")
+	logger := clog.Namespace("db-performance-example")
 
 	// 创建 MySQL 配置 - 优化连接池设置以提高性能
 	cfg := db.MySQLConfig("gochat:gochat_pass_2024@tcp(localhost:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local")
@@ -70,20 +70,20 @@ func main() {
 		clog.Duration("connMaxLifetime", cfg.ConnMaxLifetime))
 
 	// 使用 New 函数创建数据库实例，并注入 Logger
-	database, err := db.New(ctx, cfg, db.WithLogger(logger), db.WithComponentName("performance-example"))
+	provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 	if err != nil {
 		log.Fatalf("创建数据库实例失败: %v", err)
 	}
-	defer database.Close()
+	defer provider.Close()
 
 	logger.Info("开始数据库性能测试")
 
 	// 自动迁移
-	if err := database.AutoMigrate(&Product{}, &Review{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &Product{}, &Review{}); err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
 
-	gormDB := database.GetDB()
+	gormDB := provider.DB(ctx)
 
 	// 清理测试数据
 	gormDB.Where("1 = 1").Delete(&Review{})
@@ -363,7 +363,7 @@ func main() {
 	transactionCount := 100
 
 	for i := 0; i < transactionCount; i++ {
-		err := database.Transaction(func(tx *gorm.DB) error {
+		err := provider.Transaction(ctx, func(tx *gorm.DB) error {
 			// 在事务中执行多个操作
 			product := Product{
 				Name:        fmt.Sprintf("Transaction Product %d", i),
@@ -414,16 +414,21 @@ func main() {
 	// === 连接池状态监控 ===
 	logger.Info("=== 连接池状态监控 ===")
 
-	stats := database.Stats()
-	logger.Info("连接池统计信息",
-		clog.Int("openConnections", stats.OpenConnections),
-		clog.Int("inUse", stats.InUse),
-		clog.Int("idle", stats.Idle),
-		clog.Int64("waitCount", stats.WaitCount),
-		clog.Duration("waitDuration", stats.WaitDuration),
-		clog.Int64("maxIdleClosed", stats.MaxIdleClosed),
-		clog.Int64("maxIdleTimeClosed", stats.MaxIdleTimeClosed),
-		clog.Int64("maxLifetimeClosed", stats.MaxLifetimeClosed))
+	sqlDB, err := provider.DB(ctx).DB()
+	if err != nil {
+		logger.Error("获取底层 SQL DB 失败", clog.Err(err))
+	} else {
+		stats := sqlDB.Stats()
+		logger.Info("连接池统计信息",
+			clog.Int("openConnections", stats.OpenConnections),
+			clog.Int("inUse", stats.InUse),
+			clog.Int("idle", stats.Idle),
+			clog.Int64("waitCount", stats.WaitCount),
+			clog.Duration("waitDuration", stats.WaitDuration),
+			clog.Int64("maxIdleClosed", stats.MaxIdleClosed),
+			clog.Int64("maxIdleTimeClosed", stats.MaxIdleTimeClosed),
+			clog.Int64("maxLifetimeClosed", stats.MaxLifetimeClosed))
+	}
 
 	// === 输出性能测试报告 ===
 	logger.Info("=== 性能测试报告 ===")

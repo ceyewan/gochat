@@ -19,7 +19,7 @@ func main() {
 	ctx := context.Background()
 
 	// 创建日志器
-	logger := clog.Module("simple-sharding")
+	logger := clog.Namespace("simple-sharding")
 
 	// 创建 MySQL 配置
 	cfg := db.MySQLConfig("gochat:gochat_pass_2024@tcp(localhost:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local")
@@ -28,9 +28,8 @@ func main() {
 	shardingConfig := db.NewShardingConfig("user_id", 4)
 	shardingConfig.Tables = map[string]*db.TableShardingConfig{
 		"orders": {
-			ShardingKey:       "user_id",
-			NumberOfShards:    4,
-			ShardingAlgorithm: "hash",
+			ShardingKey:    "user_id",
+			NumberOfShards: 4,
 		},
 	}
 	cfg.Sharding = shardingConfig
@@ -38,18 +37,18 @@ func main() {
 	logger.Info("分片配置完成", clog.Int("numberOfShards", 4))
 
 	// 创建数据库实例
-	database, err := db.New(ctx, cfg, db.WithLogger(logger))
+	provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 	if err != nil {
 		log.Fatalf("创建数据库实例失败: %v", err)
 	}
-	defer database.Close()
+	defer provider.Close()
 
 	// 自动迁移
-	if err := database.AutoMigrate(&Order{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &Order{}); err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
 
-	gormDB := database.GetDB()
+	gormDB := provider.DB(ctx)
 
 	// 插入测试数据
 	logger.Info("插入测试数据")

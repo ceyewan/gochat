@@ -13,13 +13,16 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// client 是 DB 接口的内部实现。
+// client 是 Provider 接口的内部实现。
 // 它包装了一个 *gorm.DB，并提供接口方法。
 type client struct {
 	db     *gorm.DB
 	config Config
 	logger clog.Logger
 }
+
+// 确保 client 实现了 Provider 接口
+var _ Provider = (*client)(nil)
 
 // GetDB 返回原生的 GORM 数据库实例
 func (c *client) GetDB() *gorm.DB {
@@ -96,13 +99,19 @@ func (c *client) Stats() sql.DBStats {
 	return stats
 }
 
+// DB 从当前请求的上下文中获取一个 gorm.DB 实例用于执行查询。
+// 返回的 *gorm.DB 实例是轻量级且无状态的，应在需要时调用此方法获取，不要长期持有。
+func (c *client) DB(ctx context.Context) *gorm.DB {
+	return c.db.WithContext(ctx)
+}
+
 // WithContext 返回一个带有指定上下文的数据库实例
 func (c *client) WithContext(ctx context.Context) *gorm.DB {
 	return c.db.WithContext(ctx)
 }
 
-// Transaction 执行事务操作
-func (c *client) Transaction(fn func(tx *gorm.DB) error) error {
+// transactionInternal 执行事务操作（内部方法）
+func (c *client) transactionInternal(fn func(tx *gorm.DB) error) error {
 	start := time.Now()
 
 	c.logger.Debug("开始数据库事务")
@@ -126,13 +135,68 @@ func (c *client) Transaction(fn func(tx *gorm.DB) error) error {
 	return nil
 }
 
-// AutoMigrate 自动迁移数据库表结构
-func (c *client) AutoMigrate(dst ...interface{}) error {
+// Transaction 执行一个数据库事务。
+// 传入的 ctx 会被自动应用到事务实例 tx 上，使用者无需再次调用 tx.WithContext(ctx)。
+// 回调函数中的任何 error 都会导致事务回滚。
+func (c *client) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	start := time.Now()
+
+	c.logger.Debug("开始数据库事务")
+
+	// 执行事务，并确保上下文被正确传递
+	err := c.db.WithContext(ctx).Transaction(fn)
+
+	duration := time.Since(start)
+
+	if err != nil {
+		c.logger.Error("数据库事务失败",
+			clog.Err(err),
+			clog.Duration("duration", duration),
+		)
+		return err
+	}
+
+	c.logger.Debug("数据库事务成功完成",
+		clog.Duration("duration", duration),
+	)
+
+	return nil
+}
+
+// autoMigrateInternal 自动迁移数据库表结构（内部方法）
+func (c *client) autoMigrateInternal(dst ...interface{}) error {
 	start := time.Now()
 
 	c.logger.Info("开始数据库自动迁移")
 
 	err := c.db.AutoMigrate(dst...)
+
+	duration := time.Since(start)
+
+	if err != nil {
+		c.logger.Error("数据库自动迁移失败",
+			clog.Err(err),
+			clog.Duration("duration", duration),
+		)
+		return fmt.Errorf("auto migrate failed: %w", err)
+	}
+
+	c.logger.Info("数据库自动迁移成功完成",
+		clog.Duration("duration", duration),
+		clog.Int("models", len(dst)),
+	)
+
+	return nil
+}
+
+// AutoMigrate 自动迁移数据库表结构，能正确处理分片表的创建。
+func (c *client) AutoMigrate(ctx context.Context, dst ...interface{}) error {
+	start := time.Now()
+
+	c.logger.Info("开始数据库自动迁移")
+
+	// 使用上下文执行自动迁移
+	err := c.db.WithContext(ctx).AutoMigrate(dst...)
 
 	duration := time.Since(start)
 
@@ -186,8 +250,8 @@ func (c *client) CreateDatabaseIfNotExists(dbName string) error {
 	return nil
 }
 
-// NewDB 根据提供的配置创建一个新的 DB 实例（仅支持MySQL）
-func NewDB(cfg Config, logger clog.Logger) (DB, error) {
+// NewDB 根据提供的配置创建一个新的 Provider 实例（仅支持MySQL）
+func NewDB(cfg Config, logger clog.Logger) (Provider, error) {
 	// 验证配置
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
@@ -258,7 +322,13 @@ func NewDB(cfg Config, logger clog.Logger) (DB, error) {
 			defer tempDB.Close()
 
 			// 创建目标数据库
-			createErr := tempDB.CreateDatabaseIfNotExists(dbName)
+			var createErr error
+			if dbImpl, ok := tempDB.(*client); ok {
+				createErr = dbImpl.CreateDatabaseIfNotExists(dbName)
+			} else {
+				createErr = fmt.Errorf("failed to access internal database implementation")
+			}
+
 			if createErr != nil {
 				logger.Error("自动创建MySQL数据库失败",
 					clog.Err(createErr),
@@ -327,8 +397,12 @@ func CreateDatabaseIfNotExistsWithConfig(cfg Config, dbName string) error {
 	}
 	defer tempDB.Close()
 
-	// 使用临时连接创建目标数据库
-	return tempDB.CreateDatabaseIfNotExists(dbName)
+	// 使用临时连接创建目标数据库 - 通过内部接口访问
+	if dbImpl, ok := tempDB.(*client); ok {
+		return dbImpl.CreateDatabaseIfNotExists(dbName)
+	}
+
+	return fmt.Errorf("failed to access internal database implementation")
 }
 
 // configureConnectionPool 配置数据库连接池
@@ -419,7 +493,7 @@ func createMySQLSystemDSN(originalDSN string) string {
 }
 
 // newClient 创建一个新的数据库客户端实例
-func newClient(db *gorm.DB, config Config, logger clog.Logger) DB {
+func newClient(db *gorm.DB, config Config, logger clog.Logger) Provider {
 	return &client{
 		db:     db,
 		config: config,

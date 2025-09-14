@@ -40,7 +40,7 @@ func configureSharding(db *gorm.DB, cfg *ShardingConfig) error {
 			case uint64:
 				intValue = int64(v)
 			case string:
-				// 对于字符串，可以尝试解析为数字
+				// 对于字符串，优先解析为数字
 				if parsed, parseErr := strconv.ParseInt(v, 10, 64); parseErr == nil {
 					intValue = parsed
 				} else {
@@ -55,10 +55,12 @@ func configureSharding(db *gorm.DB, cfg *ShardingConfig) error {
 				return "", fmt.Errorf("unsupported sharding key type: %T", columnValue)
 			}
 
+			// 取绝对值
 			if intValue < 0 {
 				intValue = -intValue
 			}
 
+			// 对分片总数进行取模，得到分片索引
 			shardIndex := intValue % int64(cfg.NumberOfShards)
 			return fmt.Sprintf("_%02d", shardIndex), nil
 		},
@@ -67,7 +69,7 @@ func configureSharding(db *gorm.DB, cfg *ShardingConfig) error {
 	// 根据 gorm.io/sharding 的实际 API，Register 函数接受配置和表名列表
 	var err error
 	if len(cfg.Tables) > 0 {
-		// 收集需要分片的表名 - 注意：直接传递字符串，不要传递任何结构体
+		// 收集需要分片的表名
 		tables := make([]string, 0, len(cfg.Tables))
 		for tableName := range cfg.Tables {
 			tables = append(tables, tableName)

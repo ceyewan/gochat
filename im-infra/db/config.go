@@ -15,16 +15,15 @@ func MySQLConfig(dsn string) Config {
 }
 
 // ValidateConfig 验证配置的完整性和合理性
-func ValidateConfig(cfg Config) error {
+func ValidateConfig(cfg *Config) error {
 	return internal.ValidateConfig(cfg)
 }
 
 // NewShardingConfig 创建新的分库分表配置
 func NewShardingConfig(shardingKey string, numberOfShards int) *ShardingConfig {
 	return &ShardingConfig{
-		ShardingKey:       shardingKey,
-		NumberOfShards:    numberOfShards,
-		ShardingAlgorithm: "hash",
-		Tables:            make(map[string]*TableShardingConfig),
+		ShardingKey:    shardingKey,
+		NumberOfShards: numberOfShards,
+		Tables:         make(map[string]*TableShardingConfig),
 	}
 }

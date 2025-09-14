@@ -7,9 +7,9 @@ import (
 	"github.com/ceyewan/gochat/im-infra/db/internal"
 )
 
-// DB 定义数据库操作的核心接口。
-// 提供对 GORM 实例的访问和基础连接管理功能。
-type DB = internal.DB
+// Provider 提供了访问数据库的能力。
+// 这是用户应该使用的接口，符合文档设计。
+type Provider = internal.Provider
 
 // Config 是 db 的主配置结构体。
 // 用于声明式地定义数据库连接和行为参数。
@@ -21,7 +21,7 @@ type ShardingConfig = internal.ShardingConfig
 // TableShardingConfig 表分片配置
 type TableShardingConfig = internal.TableShardingConfig
 
-// New 根据提供的配置创建一个新的 DB 实例。
+// New 根据提供的配置创建一个新的 Provider 实例。
 // 这是创建数据库实例的唯一入口，移除了全局方法以推动依赖注入。
 //
 // 参数：
@@ -56,10 +56,10 @@ type TableShardingConfig = internal.TableShardingConfig
 // database, err := db.New(ctx, cfg, db.WithComponentName("user-db"))
 //
 // // 获取 GORM 实例进行数据库操作
-// gormDB := database.GetDB()
+// gormDB := database.DB(ctx)
 //
 // // 自动迁移
-// err = database.AutoMigrate(&User{})
+// err = database.AutoMigrate(ctx, &User{})
 // if err != nil {
 // log.Fatal(err)
 // }
@@ -83,27 +83,21 @@ type TableShardingConfig = internal.TableShardingConfig
 //
 // cfg.Sharding = shardingConfig
 // database, err := db.New(ctx, cfg)
-func New(ctx context.Context, cfg Config, opts ...Option) (DB, error) {
+func New(ctx context.Context, cfg Config, opts ...Option) (Provider, error) {
 	// 应用选项
-	options := &Options{}
-	for _, opt := range opts {
-		opt(options)
+	p := &provider{
+		logger:       clog.Namespace("db"),
+		componentName: "db",
 	}
 
-	// 设置默认 Logger
-	var componentLogger clog.Logger
-	if options.Logger != nil {
-		if options.ComponentName != "" {
-			componentLogger = options.Logger.With(clog.String("component", options.ComponentName))
-		} else {
-			componentLogger = options.Logger.With(clog.String("component", "db"))
-		}
-	} else {
-		if options.ComponentName != "" {
-			componentLogger = clog.Namespace("db").With(clog.String("name", options.ComponentName))
-		} else {
-			componentLogger = clog.Namespace("db")
-		}
+	for _, opt := range opts {
+		opt(p)
+	}
+
+	// 设置组件日志器
+	componentLogger := p.logger
+	if p.componentName != "" && p.componentName != "db" {
+		componentLogger = p.logger.With(clog.String("component", p.componentName))
 	}
 
 	componentLogger.Info("创建数据库实例",
@@ -134,4 +128,11 @@ func New(ctx context.Context, cfg Config, opts ...Option) (DB, error) {
 //	}
 func DefaultConfig() Config {
 	return internal.DefaultConfig()
+}
+
+// GetDefaultConfig 返回默认的数据库配置。
+// 开发环境：较少连接数，较详细的日志级别，较短的超时时间
+// 生产环境：较多连接数，较少的日志输出，较长的连接生命周期
+func GetDefaultConfig(env string) Config {
+	return internal.GetDefaultConfig(env)
 }

@@ -23,7 +23,7 @@ func main() {
 	ctx := context.Background()
 
 	// 创建自定义日志器
-	logger := clog.Module("db-basic-example")
+	logger := clog.Namespace("db-basic-example")
 
 	// 创建 MySQL 配置
 	cfg := db.MySQLConfig("gochat:gochat_pass_2024@tcp(localhost:3306)/gochat_dev?charset=utf8mb4&parseTime=True&loc=Local")
@@ -35,28 +35,28 @@ func main() {
 	cfg.ConnMaxIdleTime = 30 * time.Minute
 
 	// 使用 New 函数创建数据库实例，并注入 Logger
-	database, err := db.New(ctx, cfg, db.WithLogger(logger), db.WithComponentName("basic-example"))
+	provider, err := db.New(ctx, cfg, db.WithLogger(logger))
 	if err != nil {
 		log.Fatalf("创建数据库实例失败: %v", err)
 	}
-	defer database.Close()
+	defer provider.Close()
 
 	logger.Info("数据库连接创建成功")
 
 	// 检查连接
-	if err := database.Ping(ctx); err != nil {
+	if err := provider.Ping(ctx); err != nil {
 		log.Fatalf("数据库连接检查失败: %v", err)
 	}
 	logger.Info("数据库连接检查通过")
 
 	// 自动迁移
-	if err := database.AutoMigrate(&User{}); err != nil {
+	if err := provider.AutoMigrate(ctx, &User{}); err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
 	logger.Info("数据库迁移完成")
 
 	// 获取 GORM 实例进行操作
-	gormDB := database.GetDB()
+	gormDB := provider.DB(ctx)
 
 	// 创建用户
 	user := &User{
@@ -111,12 +111,18 @@ func main() {
 	}
 
 	// 获取连接池统计信息
-	stats := database.Stats()
-	logger.Info("连接池统计信息",
-		clog.Int("openConnections", stats.OpenConnections),
-		clog.Int("inUse", stats.InUse),
-		clog.Int("idle", stats.Idle),
-		clog.Int64("waitCount", stats.WaitCount))
+	gormDBWithStats := provider.DB(ctx)
+	sqlDB, err := gormDBWithStats.DB()
+	if err != nil {
+		logger.Error("获取底层 SQL DB 失败", clog.Err(err))
+	} else {
+		stats := sqlDB.Stats()
+		logger.Info("连接池统计信息",
+			clog.Int("openConnections", stats.OpenConnections),
+			clog.Int("inUse", stats.InUse),
+			clog.Int("idle", stats.Idle),
+			clog.Int64("waitCount", stats.WaitCount))
+	}
 
 	logger.Info("基础示例运行完成")
 }
