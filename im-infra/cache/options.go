@@ -2,33 +2,25 @@ package cache
 
 import "github.com/ceyewan/gochat/im-infra/clog"
 
-// Options holds configuration for the cache.
-type Options struct {
-	Logger    clog.Logger
-	Namespace string
-}
+// Option 定义了用于定制 cache Provider 的函数。
+type Option func(*options)
 
-// Option configures a cache instance.
-type Option func(*Options)
-
-// WithLogger provides a logger for the cache.
+// WithLogger 将一个 clog.Logger 实例注入 cache，用于记录内部日志。
 func WithLogger(logger clog.Logger) Option {
-	return func(o *Options) {
-		o.Logger = logger
+	return func(o *options) {
+		o.logger = logger
 	}
 }
 
-// WithNamespace sets the namespace for the cache.
-func WithNamespace(namespace string) Option {
-	return func(o *Options) {
-		o.Namespace = namespace
+// WithCoordProvider 注入 coord.Provider，用于从配置中心获取动态配置。
+func WithCoordProvider(provider any) Option {
+	return func(o *options) {
+		o.coordProvider = provider
 	}
 }
 
-// DefaultOptions returns default options for cache.
-func DefaultOptions() *Options {
-	return &Options{
-		Logger:    clog.Namespace("cache"),
-		Namespace: "cache",
-	}
+// options 是 cache 组件的内部选项结构体
+type options struct {
+	logger        clog.Logger
+	coordProvider any
 }

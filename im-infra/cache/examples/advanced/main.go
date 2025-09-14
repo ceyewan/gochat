@@ -13,7 +13,7 @@ import (
 func main() {
 	logger := clog.Namespace("cache-advanced-example")
 	ctx := context.Background()
-	cfg := cache.DefaultConfig()
+	cfg := cache.GetDefaultConfig("development")
 	cfg.Addr = "localhost:6379"
 
 	cacheClient, err := cache.New(ctx, cfg, cache.WithLogger(logger))
@@ -33,7 +33,7 @@ func main() {
 	// 协程 1: 获取锁并执行任务
 	go func() {
 		defer wg.Done()
-		lock, err := cacheClient.Lock(ctx, lockKey, 10*time.Second)
+		lock, err := cacheClient.Lock().Acquire(ctx, lockKey, 10*time.Second)
 		if err != nil {
 			log.Printf("协程 1: 获取锁失败: %v", err)
 			return
@@ -54,7 +54,7 @@ func main() {
 		defer wg.Done()
 		time.Sleep(500 * time.Millisecond) // 确保协程1先获取锁
 		log.Println("协程 2: 尝试获取锁...")
-		lock, err := cacheClient.Lock(ctx, lockKey, 10*time.Second)
+		lock, err := cacheClient.Lock().Acquire(ctx, lockKey, 10*time.Second)
 		if err != nil {
 			log.Printf("协程 2: 获取锁时发生错误: %v", err)
 			return
@@ -73,7 +73,7 @@ func main() {
 	log.Println("\n--- 布隆过滤器演示 ---")
 	bfKey := "user-blacklist"
 	// 初始化布隆过滤器，错误率 0.1%，容量 1000
-	err = cacheClient.BFInit(ctx, bfKey, 0.001, 1000)
+	err = cacheClient.Bloom().BFReserve(ctx, bfKey, 0.001, 1000)
 	if err != nil {
 		// 检查是否是因为服务器不支持该功能
 		if err.Error() == "redis server does not support bloom filter commands (RedisBloom module may not be installed)" {
@@ -87,14 +87,14 @@ func main() {
 
 	// 添加用户到黑名单
 	blacklistedUser := "bad-user-123"
-	err = cacheClient.BFAdd(ctx, bfKey, blacklistedUser)
+	err = cacheClient.Bloom().BFAdd(ctx, bfKey, blacklistedUser)
 	if err != nil {
 		log.Fatalf("添加用户到布隆过滤器失败: %v", err)
 	}
 	log.Printf("成功将用户 '%s' 添加到布隆过滤器", blacklistedUser)
 
 	// 检查存在的用户
-	exists, err := cacheClient.BFExists(ctx, bfKey, blacklistedUser)
+	exists, err := cacheClient.Bloom().BFExists(ctx, bfKey, blacklistedUser)
 	if err != nil {
 		log.Fatalf("检查布隆过滤器失败: %v", err)
 	}
@@ -105,7 +105,7 @@ func main() {
 
 	// 检查不存在的用户
 	goodUser := "good-user-456"
-	exists, err = cacheClient.BFExists(ctx, bfKey, goodUser)
+	exists, err = cacheClient.Bloom().BFExists(ctx, bfKey, goodUser)
 	if err != nil {
 		log.Fatalf("检查布隆过滤器失败: %v", err)
 	}

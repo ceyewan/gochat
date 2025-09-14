@@ -29,6 +29,10 @@ func (s *stringOperations) formatKey(key string) string {
 	if s.keyPrefix == "" {
 		return key
 	}
+	// 如果前缀已经以冒号结尾，直接拼接
+	if len(s.keyPrefix) > 0 && s.keyPrefix[len(s.keyPrefix)-1] == ':' {
+		return s.keyPrefix + key
+	}
 	return s.keyPrefix + ":" + key
 }
 
@@ -37,6 +41,9 @@ func (s *stringOperations) Get(ctx context.Context, key string) (string, error) 
 	formattedKey := s.formatKey(key)
 	result, err := s.client.Get(ctx, formattedKey).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return "", ErrCacheMiss
+		}
 		s.logger.Error("Failed to Get", clog.String("key", formattedKey), clog.Err(err))
 		return "", err
 	}
@@ -133,6 +140,20 @@ func (s *stringOperations) Exists(ctx context.Context, keys ...string) (int64, e
 	if err != nil {
 		s.logger.Error("Failed to Exists", clog.Any("keys", formattedKeys), clog.Err(err))
 		return 0, err
+	}
+	return result, nil
+}
+
+// GetSet 设置新值并返回旧值
+func (s *stringOperations) GetSet(ctx context.Context, key string, value interface{}) (string, error) {
+	formattedKey := s.formatKey(key)
+	result, err := s.client.GetSet(ctx, formattedKey, value).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return "", ErrCacheMiss
+		}
+		s.logger.Error("Failed to GetSet", clog.String("key", formattedKey), clog.Any("value", value), clog.Err(err))
+		return "", err
 	}
 	return result, nil
 }

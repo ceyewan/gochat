@@ -41,6 +41,10 @@ func (b *bloomFilterOperations) formatBitmapKey(key string) string {
 	if b.keyPrefix == "" {
 		return key + ":bf_bitmap"
 	}
+	// 如果前缀已经以冒号结尾，直接拼接
+	if len(b.keyPrefix) > 0 && b.keyPrefix[len(b.keyPrefix)-1] == ':' {
+		return b.keyPrefix + key + ":bf_bitmap"
+	}
 	return b.keyPrefix + ":" + key + ":bf_bitmap"
 }
 
@@ -49,11 +53,15 @@ func (b *bloomFilterOperations) formatMetaKey(key string) string {
 	if b.keyPrefix == "" {
 		return key + ":bf_meta"
 	}
+	// 如果前缀已经以冒号结尾，直接拼接
+	if len(b.keyPrefix) > 0 && b.keyPrefix[len(b.keyPrefix)-1] == ':' {
+		return b.keyPrefix + key + ":bf_meta"
+	}
 	return b.keyPrefix + ":" + key + ":bf_meta"
 }
 
-// BFInit 初始化一个布隆过滤器
-func (b *bloomFilterOperations) BFInit(ctx context.Context, key string, errorRate float64, capacity int64) error {
+// BFReserve 初始化一个布隆过滤器
+func (b *bloomFilterOperations) BFReserve(ctx context.Context, key string, errorRate float64, capacity uint64) error {
 	metaKey := b.formatMetaKey(key)
 
 	// 检查元数据是否已存在，如果存在则不执行任何操作

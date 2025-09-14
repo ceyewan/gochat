@@ -15,7 +15,7 @@ func main() {
 	ctx := context.Background()
 
 	// 使用默认配置
-	cfg := cache.DefaultConfig()
+	cfg := cache.GetDefaultConfig("development")
 	cfg.Addr = "localhost:6379" // 请确保 Redis 在此地址运行
 
 	// 创建 Cache 实例
@@ -33,13 +33,13 @@ func main() {
 	value := "hello world"
 	expiration := 5 * time.Minute
 
-	err = cacheClient.Set(ctx, key, value, expiration)
+	err = cacheClient.String().Set(ctx, key, value, expiration)
 	if err != nil {
 		log.Fatalf("设置值失败: %v", err)
 	}
 	log.Printf("成功设置键 '%s'，值为 '%s'，过期时间为 %v", key, value, expiration)
 
-	retrievedValue, err := cacheClient.Get(ctx, key)
+	retrievedValue, err := cacheClient.String().Get(ctx, key)
 	if err != nil {
 		log.Fatalf("获取值失败: %v", err)
 	}
@@ -55,13 +55,13 @@ func main() {
 	hField := "field1"
 	hValue := "value1"
 
-	err = cacheClient.HSet(ctx, hKey, hField, hValue)
+	err = cacheClient.Hash().HSet(ctx, hKey, hField, hValue)
 	if err != nil {
 		log.Fatalf("设置哈希字段失败: %v", err)
 	}
 	log.Printf("成功设置哈希键 '%s' 的字段 '%s' 为 '%s'", hKey, hField, hValue)
 
-	retrievedHValue, err := cacheClient.HGet(ctx, hKey, hField)
+	retrievedHValue, err := cacheClient.Hash().HGet(ctx, hKey, hField)
 	if err != nil {
 		log.Fatalf("获取哈希字段失败: %v", err)
 	}
@@ -76,13 +76,13 @@ func main() {
 	sKey := "myset"
 	sMember := "member1"
 
-	err = cacheClient.SAdd(ctx, sKey, sMember)
+	err = cacheClient.Set().SAdd(ctx, sKey, sMember)
 	if err != nil {
 		log.Fatalf("向集合添加成员失败: %v", err)
 	}
 	log.Printf("成功向集合 '%s' 添加成员 '%s'", sKey, sMember)
 
-	isMember, err := cacheClient.SIsMember(ctx, sKey, sMember)
+	isMember, err := cacheClient.Set().SIsMember(ctx, sKey, sMember)
 	if err != nil {
 		log.Fatalf("检查集合成员失败: %v", err)
 	}

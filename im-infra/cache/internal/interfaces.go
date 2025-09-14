@@ -1,34 +1,13 @@
-package cache
+package internal
 
 import (
 	"context"
 	"time"
-
-	"github.com/ceyewan/gochat/im-infra/cache/internal"
 )
-
-// ErrCacheMiss 表示在缓存中未找到指定的 key。
-// 所有 Get 操作在缓存未命中时，都应返回此错误。
-var ErrCacheMiss = internal.ErrCacheMiss
-
-// Provider 定义了 cache 组件提供的所有能力。
-type Provider interface {
-	String() StringOperations
-	Hash() HashOperations
-	Set() SetOperations
-	Lock() LockOperations
-	Bloom() BloomFilterOperations
-	Script() ScriptingOperations
-
-	// Ping 检查与 Redis 服务器的连接。
-	Ping(ctx context.Context) error
-	// Close 关闭所有与 Redis 的连接。
-	Close() error
-}
 
 // StringOperations 定义了所有与 Redis 字符串相关的操作。
 type StringOperations interface {
-	// Get 获取一个 key。如果 key 不存在，将返回 cache.ErrCacheMiss 错误。
+	// Get 获取一个 key。如果 key 不存在，将返回 redis.Nil 错误。
 	Get(ctx context.Context, key string) (string, error)
 	// Set 存入一个 key-value 对。
 	// 注意：value (interface{}) 参数需要调用者自行序列化为字符串或字节数组。
@@ -40,14 +19,14 @@ type StringOperations interface {
 	// SetNX (Set if Not Exists) 存入一个 key-value 对，仅当 key 不存在时。
 	// 注意：value (interface{}) 参数需要调用者自行序列化。
 	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error)
-	// GetSet 设置新值并返回旧值。如果 key 不存在，返回 cache.ErrCacheMiss。
+	// GetSet 设置新值并返回旧值。如果 key 不存在，返回 redis.Nil。
 	// 注意：value (interface{}) 参数需要调用者自行序列化。
 	GetSet(ctx context.Context, key string, value interface{}) (string, error)
 }
 
 // HashOperations 定义了所有与 Redis 哈希相关的操作。
 type HashOperations interface {
-	// HGet 获取哈希表 key 中一个 field 的值。如果 key 或 field 不存在，返回 cache.ErrCacheMiss。
+	// HGet 获取哈希表 key 中一个 field 的值。如果 key 或 field 不存在，返回 redis.Nil。
 	HGet(ctx context.Context, key, field string) (string, error)
 	// HSet 设置哈希表 key 中一个 field 的值。
 	// 注意：value (interface{}) 参数需要调用者自行序列化。
@@ -93,4 +72,19 @@ type ScriptingOperations interface {
 	EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) (interface{}, error)
 	ScriptLoad(ctx context.Context, script string) (string, error)
 	ScriptExists(ctx context.Context, sha1 ...string) ([]bool, error)
+}
+
+// Provider 定义了 cache 组件提供的所有能力。
+type Provider interface {
+	String() StringOperations
+	Hash() HashOperations
+	Set() SetOperations
+	Lock() LockOperations
+	Bloom() BloomFilterOperations
+	Script() ScriptingOperations
+
+	// Ping 检查与 Redis 服务器的连接。
+	Ping(ctx context.Context) error
+	// Close 关闭所有与 Redis 的连接。
+	Close() error
 }

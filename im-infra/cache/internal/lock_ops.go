@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
@@ -29,7 +30,11 @@ func newLockOperations(client *redis.Client, logger clog.Logger, keyPrefix strin
 // formatKey 格式化键名，添加前缀
 func (l *lockOperations) formatKey(key string) string {
 	if l.keyPrefix == "" {
-		return key
+		return "lock:" + key
+	}
+	// 如果前缀已经以冒号结尾，直接拼接
+	if len(l.keyPrefix) > 0 && l.keyPrefix[len(l.keyPrefix)-1] == ':' {
+		return l.keyPrefix + "lock:" + key
 	}
 	return l.keyPrefix + ":lock:" + key
 }
@@ -48,8 +53,8 @@ type Lock interface {
 	Value() string
 }
 
-// Lock 获取分布式锁
-func (l *lockOperations) Lock(ctx context.Context, key string, expiration time.Duration) (Lock, error) {
+// Acquire 获取分布式锁
+func (l *lockOperations) Acquire(ctx context.Context, key string, expiration time.Duration) (Locker, error) {
 	formattedKey := l.formatKey(key)
 	value := generateUniqueValue()
 
@@ -60,7 +65,7 @@ func (l *lockOperations) Lock(ctx context.Context, key string, expiration time.D
 		return nil, err
 	}
 	if !set {
-		return nil, nil // 锁已被占用
+		return nil, fmt.Errorf("lock already acquired") // 锁已被占用
 	}
 
 	return &distributedLock{

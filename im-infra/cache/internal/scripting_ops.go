@@ -44,3 +44,13 @@ func (s *scriptingOperations) ScriptLoad(ctx context.Context, script string) (st
 	}
 	return sha1, nil
 }
+
+// ScriptExists 检查指定的 SHA1 哈希值对应的脚本是否已加载
+func (s *scriptingOperations) ScriptExists(ctx context.Context, sha1 ...string) ([]bool, error) {
+	result, err := s.client.ScriptExists(ctx, sha1...).Result()
+	if err != nil {
+		s.logger.Error("检查脚本存在性失败", clog.Any("sha1", sha1), clog.Err(err))
+		return nil, fmt.Errorf("failed to check script existence: %w", err)
+	}
+	return result, nil
+}

@@ -9,7 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// client 是 Cache 接口的内部实现。
+// client 是 Provider 接口的内部实现。
 // 它包装了一个 *redis.Client，并提供接口方法。
 type client struct {
 	redisClient *redis.Client
@@ -17,12 +17,12 @@ type client struct {
 	config      Config
 
 	// 嵌入各种操作
-	*stringOperations
-	*hashOperations
-	*setOperations
-	*lockOperations
-	*bloomFilterOperations
-	*scriptingOperations
+	stringOps      *stringOperations
+	hashOps        *hashOperations
+	setOps         *setOperations
+	lockOps        *lockOperations
+	bloomOps       *bloomFilterOperations
+	scriptingOps   *scriptingOperations
 }
 
 // Config 配置结构体（内部使用）
@@ -45,9 +45,16 @@ type Config struct {
 	KeyPrefix       string
 }
 
+// Client 定义内部客户端的接口
+type Client interface {
+	Provider
+	Ping(ctx context.Context) error
+	Close() error
+}
+
 // NewCache 根据提供的配置创建一个新的 Cache 实例。
 // 这是核心工厂函数，按配置组装所有组件。
-func NewCache(ctx context.Context, cfg Config, logger clog.Logger) (*client, error) {
+func NewCache(ctx context.Context, cfg Config, logger clog.Logger) (Client, error) {
 	// 创建 Redis 客户端选项
 	redisOpts := &redis.Options{
 		Addr:            cfg.Addr,
@@ -79,19 +86,44 @@ func NewCache(ctx context.Context, cfg Config, logger clog.Logger) (*client, err
 
 	// 创建客户端实例
 	c := &client{
-		redisClient:           redisCache,
-		logger:                logger,
-		config:                cfg,
-		stringOperations:      newStringOperations(redisCache, logger, cfg.KeyPrefix),
-		hashOperations:        newHashOperations(redisCache, logger, cfg.KeyPrefix),
-		setOperations:         newSetOperations(redisCache, logger, cfg.KeyPrefix),
-		lockOperations:        newLockOperations(redisCache, logger, cfg.KeyPrefix),
-		bloomFilterOperations: newBloomFilterOperations(redisCache, logger, cfg.KeyPrefix),
-		scriptingOperations:   newScriptingOperations(redisCache, logger),
+		redisClient:     redisCache,
+		logger:          logger,
+		config:          cfg,
+		stringOps:       newStringOperations(redisCache, logger, cfg.KeyPrefix),
+		hashOps:         newHashOperations(redisCache, logger, cfg.KeyPrefix),
+		setOps:          newSetOperations(redisCache, logger, cfg.KeyPrefix),
+		lockOps:         newLockOperations(redisCache, logger, cfg.KeyPrefix),
+		bloomOps:        newBloomFilterOperations(redisCache, logger, cfg.KeyPrefix),
+		scriptingOps:    newScriptingOperations(redisCache, logger),
 	}
 
 	logger.Info("Cache 实例创建成功")
 	return c, nil
+}
+
+// Provider 接口方法实现
+func (c *client) String() StringOperations {
+	return c.stringOps
+}
+
+func (c *client) Hash() HashOperations {
+	return c.hashOps
+}
+
+func (c *client) Set() SetOperations {
+	return c.setOps
+}
+
+func (c *client) Lock() LockOperations {
+	return c.lockOps
+}
+
+func (c *client) Bloom() BloomFilterOperations {
+	return c.bloomOps
+}
+
+func (c *client) Script() ScriptingOperations {
+	return c.scriptingOps
 }
 
 // Ping 检查 Redis 连接是否正常

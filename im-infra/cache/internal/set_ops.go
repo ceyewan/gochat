@@ -28,6 +28,10 @@ func (s *setOperations) formatKey(key string) string {
 	if s.keyPrefix == "" {
 		return key
 	}
+	// 如果前缀已经以冒号结尾，直接拼接
+	if len(s.keyPrefix) > 0 && s.keyPrefix[len(s.keyPrefix)-1] == ':' {
+		return s.keyPrefix + key
+	}
 	return s.keyPrefix + ":" + key
 }
 

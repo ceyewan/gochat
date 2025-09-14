@@ -28,6 +28,10 @@ func (h *hashOperations) formatKey(key string) string {
 	if h.keyPrefix == "" {
 		return key
 	}
+	// 如果前缀已经以冒号结尾，直接拼接
+	if len(h.keyPrefix) > 0 && h.keyPrefix[len(h.keyPrefix)-1] == ':' {
+		return h.keyPrefix + key
+	}
 	return h.keyPrefix + ":" + key
 }
 
@@ -36,6 +40,9 @@ func (h *hashOperations) HGet(ctx context.Context, key, field string) (string, e
 	formattedKey := h.formatKey(key)
 	result, err := h.client.HGet(ctx, formattedKey, field).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return "", ErrCacheMiss
+		}
 		h.logger.Error("Failed to HGet", clog.String("key", formattedKey), clog.String("field", field), clog.Err(err))
 		return "", err
 	}
