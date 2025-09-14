@@ -16,6 +16,7 @@ type Provider interface {
 	String() StringOperations
 	Hash() HashOperations
 	Set() SetOperations
+	ZSet() ZSetOperations
 	Lock() LockOperations
 	Bloom() BloomFilterOperations
 	Script() ScriptingOperations
@@ -65,6 +66,36 @@ type SetOperations interface {
 	SMembers(ctx context.Context, key string) ([]string, error)
 	SIsMember(ctx context.Context, key string, member interface{}) (bool, error)
 	SCard(ctx context.Context, key string) (int64, error)
+}
+
+// ZSetOperations 定义了所有与 Redis 有序集合相关的操作。
+type ZSetOperations interface {
+	// ZAdd 添加一个或多个成员到有序集合
+	ZAdd(ctx context.Context, key string, members ...*ZMember) error
+	// ZRange 获取有序集合中指定范围内的成员，按分数从低到高排序
+	ZRange(ctx context.Context, key string, start, stop int64) ([]*ZMember, error)
+	// ZRevRange 获取有序集合中指定范围内的成员，按分数从高到低排序
+	ZRevRange(ctx context.Context, key string, start, stop int64) ([]*ZMember, error)
+	// ZRangeByScore 获取指定分数范围内的成员
+	ZRangeByScore(ctx context.Context, key string, min, max float64) ([]*ZMember, error)
+	// ZRem 从有序集合中移除一个或多个成员
+	ZRem(ctx context.Context, key string, members ...interface{}) error
+	// ZRemRangeByRank 移除有序集合中指定排名区间内的成员
+	ZRemRangeByRank(ctx context.Context, key string, start, stop int64) error
+	// ZCard 获取有序集合的成员数量
+	ZCard(ctx context.Context, key string) (int64, error)
+	// ZCount 获取指定分数范围内的成员数量
+	ZCount(ctx context.Context, key string, min, max float64) (int64, error)
+	// ZScore 获取成员的分数
+	ZScore(ctx context.Context, key string, member string) (float64, error)
+	// ZSetExpire 为有序集合设置过期时间
+	ZSetExpire(ctx context.Context, key string, expiration time.Duration) error
+}
+
+// ZMember 表示有序集合中的成员
+type ZMember struct {
+	Member interface{} // 成员值
+	Score  float64     // 分数
 }
 
 // LockOperations 定义了分布式锁的操作。

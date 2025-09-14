@@ -53,6 +53,10 @@ func main() {
 	log.Println("\n=== Script 接口演示 ===")
 	demoScriptOperations(ctx, cacheClient)
 
+	// --- ZSET 接口演示 ---
+	log.Println("\n=== ZSET 接口演示 ===")
+	demoZSetOperations(ctx, cacheClient)
+
 	// --- ErrCacheMiss 处理演示 ---
 	log.Println("\n=== ErrCacheMiss 处理演示 ===")
 	demoErrorHandling(ctx, cacheClient)
@@ -352,4 +356,117 @@ func demoErrorHandling(ctx context.Context, client cache.Provider) {
 	}
 
 	log.Printf("Error - 错误处理演示完成")
+}
+
+func demoZSetOperations(ctx context.Context, client cache.Provider) {
+	zsetOps := client.ZSet()
+
+	// 模拟会话消息管理：维护最近50条消息记录
+	sessionKey := "demo:zset:session:12345"
+
+	// 添加消息到会话（使用时间戳作为分数）
+	now := time.Now()
+	messages := []struct {
+		id      string
+		content string
+		score   float64
+	}{
+		{"msg1", "你好", float64(now.Add(-10 * time.Minute).Unix())},
+		{"msg2", "最近怎么样？", float64(now.Add(-8 * time.Minute).Unix())},
+		{"msg3", "我很好，谢谢！", float64(now.Add(-6 * time.Minute).Unix())},
+		{"msg4", "今天天气不错", float64(now.Add(-4 * time.Minute).Unix())},
+		{"msg5", "是啊，很适合出去走走", float64(now.Add(-2 * time.Minute).Unix())},
+	}
+
+	// 添加消息到ZSET
+	for _, msg := range messages {
+		member := &cache.ZMember{
+			Member: msg.id,
+			Score:  msg.score,
+		}
+		err := zsetOps.ZAdd(ctx, sessionKey, member)
+		if err != nil {
+			log.Printf("添加消息失败: %v", err)
+			return
+		}
+		log.Printf("ZSet - 添加消息: ID=%s, 时间戳=%f", msg.id, msg.score)
+	}
+
+	// 设置过期时间（1小时）
+	err := zsetOps.ZSetExpire(ctx, sessionKey, time.Hour)
+	if err != nil {
+		log.Printf("设置ZSET过期时间失败: %v", err)
+		return
+	}
+	log.Printf("ZSet - 设置过期时间: 1小时")
+
+	// 获取消息总数
+	count, err := zsetOps.ZCard(ctx, sessionKey)
+	if err != nil {
+		log.Printf("获取消息总数失败: %v", err)
+		return
+	}
+	log.Printf("ZSet - 会话消息总数: %d", count)
+
+	// 按时间从早到晚获取消息（ZRange）
+	earlyMessages, err := zsetOps.ZRange(ctx, sessionKey, 0, -1)
+	if err != nil {
+		log.Printf("获取早到晚消息失败: %v", err)
+		return
+	}
+	log.Printf("ZSet - 按时间从早到晚的消息（%d条）:", len(earlyMessages))
+	for i, msg := range earlyMessages {
+		log.Printf("  [%d] ID=%s, 时间戳=%f", i+1, msg.Member, msg.Score)
+	}
+
+	// 按时间从晚到早获取消息（ZRevRange）- 最新的在前
+	recentMessages, err := zsetOps.ZRevRange(ctx, sessionKey, 0, 4) // 获取最新的5条
+	if err != nil {
+		log.Printf("获取最新消息失败: %v", err)
+		return
+	}
+	log.Printf("ZSet - 最新的5条消息:")
+	for i, msg := range recentMessages {
+		log.Printf("  [%d] ID=%s, 时间戳=%f", i+1, msg.Member, msg.Score)
+	}
+
+	// 获取特定分数范围内的消息（最近1小时内的）
+	oneHourAgo := float64(now.Add(-time.Hour).Unix())
+	recentMessagesByScore, err := zsetOps.ZRangeByScore(ctx, sessionKey, oneHourAgo, float64(now.Unix()))
+	if err != nil {
+		log.Printf("按分数范围获取消息失败: %v", err)
+		return
+	}
+	log.Printf("ZSet - 最近1小时内的消息（%d条）:", len(recentMessagesByScore))
+	for i, msg := range recentMessagesByScore {
+		log.Printf("  [%d] ID=%s, 时间戳=%f", i+1, msg.Member, msg.Score)
+	}
+
+	// 获取特定消息的分数（时间戳）
+	msgID := "msg3"
+	score, err := zsetOps.ZScore(ctx, sessionKey, msgID)
+	if err != nil {
+		log.Printf("获取消息分数失败: %v", err)
+		return
+	}
+	log.Printf("ZSet - 消息 '%s' 的时间戳: %f", msgID, score)
+
+	// 移除旧消息（模拟维护最近50条的限制）
+	// 这里演示移除最早的消息
+	if count > 3 {
+		err := zsetOps.ZRemRangeByRank(ctx, sessionKey, 0, 0) // 移除排名最早的一条
+		if err != nil {
+			log.Printf("移除旧消息失败: %v", err)
+			return
+		}
+		log.Printf("ZSet - 移除了 1 条旧消息")
+	}
+
+	// 验证移除后的消息数量
+	newCount, err := zsetOps.ZCard(ctx, sessionKey)
+	if err != nil {
+		log.Printf("获取新的消息总数失败: %v", err)
+		return
+	}
+	log.Printf("ZSet - 移除后剩余消息数: %d", newCount)
 }

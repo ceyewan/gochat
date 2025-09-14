@@ -26,6 +26,10 @@ func (p *providerWrapper) Set() SetOperations {
 	return p.client.Set()
 }
 
+func (p *providerWrapper) ZSet() ZSetOperations {
+	return &zsetOperationsWrapper{ops: p.client.ZSet()}
+}
+
 func (p *providerWrapper) Lock() LockOperations {
 	return &lockOperationsWrapper{ops: p.client.Lock()}
 }
@@ -153,6 +157,98 @@ func (b *bloomOperationsWrapper) BFExists(ctx context.Context, key string, item 
 
 func (b *bloomOperationsWrapper) BFReserve(ctx context.Context, key string, errorRate float64, capacity uint64) error {
 	return b.ops.BFReserve(ctx, key, errorRate, capacity)
+}
+
+// zsetOperationsWrapper 包装内部 ZSetOperations
+type zsetOperationsWrapper struct {
+	ops internal.ZSetOperations
+}
+
+func (z *zsetOperationsWrapper) ZAdd(ctx context.Context, key string, members ...*ZMember) error {
+	// 转换为内部 ZMember 类型
+	internalMembers := make([]*internal.ZMember, len(members))
+	for i, member := range members {
+		internalMembers[i] = &internal.ZMember{
+			Member: member.Member,
+			Score:  member.Score,
+		}
+	}
+	return z.ops.ZAdd(ctx, key, internalMembers...)
+}
+
+func (z *zsetOperationsWrapper) ZRange(ctx context.Context, key string, start, stop int64) ([]*ZMember, error) {
+	internalMembers, err := z.ops.ZRange(ctx, key, start, stop)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为公共 ZMember 类型
+	members := make([]*ZMember, len(internalMembers))
+	for i, member := range internalMembers {
+		members[i] = &ZMember{
+			Member: member.Member,
+			Score:  member.Score,
+		}
+	}
+	return members, nil
+}
+
+func (z *zsetOperationsWrapper) ZRevRange(ctx context.Context, key string, start, stop int64) ([]*ZMember, error) {
+	internalMembers, err := z.ops.ZRevRange(ctx, key, start, stop)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为公共 ZMember 类型
+	members := make([]*ZMember, len(internalMembers))
+	for i, member := range internalMembers {
+		members[i] = &ZMember{
+			Member: member.Member,
+			Score:  member.Score,
+		}
+	}
+	return members, nil
+}
+
+func (z *zsetOperationsWrapper) ZRangeByScore(ctx context.Context, key string, min, max float64) ([]*ZMember, error) {
+	internalMembers, err := z.ops.ZRangeByScore(ctx, key, min, max)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为公共 ZMember 类型
+	members := make([]*ZMember, len(internalMembers))
+	for i, member := range internalMembers {
+		members[i] = &ZMember{
+			Member: member.Member,
+			Score:  member.Score,
+		}
+	}
+	return members, nil
+}
+
+func (z *zsetOperationsWrapper) ZRem(ctx context.Context, key string, members ...interface{}) error {
+	return z.ops.ZRem(ctx, key, members...)
+}
+
+func (z *zsetOperationsWrapper) ZRemRangeByRank(ctx context.Context, key string, start, stop int64) error {
+	return z.ops.ZRemRangeByRank(ctx, key, start, stop)
+}
+
+func (z *zsetOperationsWrapper) ZCard(ctx context.Context, key string) (int64, error) {
+	return z.ops.ZCard(ctx, key)
+}
+
+func (z *zsetOperationsWrapper) ZCount(ctx context.Context, key string, min, max float64) (int64, error) {
+	return z.ops.ZCount(ctx, key, min, max)
+}
+
+func (z *zsetOperationsWrapper) ZScore(ctx context.Context, key string, member string) (float64, error) {
+	return z.ops.ZScore(ctx, key, member)
+}
+
+func (z *zsetOperationsWrapper) ZSetExpire(ctx context.Context, key string, expiration time.Duration) error {
+	return z.ops.ZSetExpire(ctx, key, expiration)
 }
 
 // New 创建一个新的 cache Provider 实例。

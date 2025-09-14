@@ -20,6 +20,7 @@ type client struct {
 	stringOps      *stringOperations
 	hashOps        *hashOperations
 	setOps         *setOperations
+	zsetOps        *zsetOperations
 	lockOps        *lockOperations
 	bloomOps       *bloomFilterOperations
 	scriptingOps   *scriptingOperations
@@ -92,6 +93,7 @@ func NewCache(ctx context.Context, cfg Config, logger clog.Logger) (Client, erro
 		stringOps:       newStringOperations(redisCache, logger, cfg.KeyPrefix),
 		hashOps:         newHashOperations(redisCache, logger, cfg.KeyPrefix),
 		setOps:          newSetOperations(redisCache, logger, cfg.KeyPrefix),
+		zsetOps:         newZSetOperations(redisCache, logger, cfg.KeyPrefix),
 		lockOps:         newLockOperations(redisCache, logger, cfg.KeyPrefix),
 		bloomOps:        newBloomFilterOperations(redisCache, logger, cfg.KeyPrefix),
 		scriptingOps:    newScriptingOperations(redisCache, logger),
@@ -112,6 +114,10 @@ func (c *client) Hash() HashOperations {
 
 func (c *client) Set() SetOperations {
 	return c.setOps
+}
+
+func (c *client) ZSet() ZSetOperations {
+	return c.zsetOps
 }
 
 func (c *client) Lock() LockOperations {

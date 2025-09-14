@@ -7,11 +7,12 @@
 - 🏗️ **模块化架构**: 清晰的 `外部 API` -> `内部实现` 分层，职责分离。
 - 🔌 **面向接口编程**: 所有功能均通过 `cache.Provider` 接口暴露，易于测试和模拟 (mock)。
 - 🛡️ **类型安全**: 所有与时间相关的参数均使用 `time.Duration`，避免整数转换错误。
-- 📝 **功能完备**: 提供字符串、哈希、集合、分布式锁、布隆过滤器和 Lua 脚本执行等丰富操作。
+- 📝 **功能完备**: 提供字符串、哈希、集合、有序集合、分布式锁、布隆过滤器和 Lua 脚本执行等丰富操作。
 - ⚙️ **灵活配置**: 提供 `GetDefaultConfig()` 和 `Option` 函数（如 `WithLogger`），易于定制。
 - 📦 **封装设计**: 内部实现对用户透明，通过键前缀（`KeyPrefix`）支持命名空间隔离。
 - 📊 **日志集成**: 与 `im-infra/clog` 无缝集成，提供结构化的日志输出。
 - 🚫 **错误处理**: 提供标准的 `ErrCacheMiss` 错误类型，便于缓存未命中处理。
+- 🎯 **会话消息管理**: 内置 ZSET 操作支持，专为会话最近消息记录优化。
 
 ## 快速开始
 
@@ -85,18 +86,23 @@ func main() {
 ```
 cache/
 ├── cache.go              # 主入口，New 工厂函数
-├── interfaces.go         # 所有公共接口定义 (Cache, Lock, etc.)
+├── interfaces.go         # 所有公共接口定义 (Provider, Operations, etc.)
 ├── config.go             # 配置结构体 (Config)
 ├── options.go            # Option 函数 (WithLogger, etc.)
 ├── README.md             # 本文档
 ├── examples/             # 使用示例
 │   ├── basic/main.go
-│   └── advanced/main.go
+│   ├── advanced/main.go
+│   └── comprehensive/main.go
+├── cache_test.go         # 完整的单元测试
 └── internal/             # 内部实现
     ├── client.go         # 核心客户端实现
+    ├── interfaces.go     # 内部接口定义
+    ├── errors.go         # 错误定义
     ├── string_ops.go     # 字符串操作
     ├── hash_ops.go       # 哈希操作
     ├── set_ops.go        # 集合操作
+    ├── zset_ops.go       # 有序集合操作
     ├── lock_ops.go       # 分布式锁操作
     ├── bloom_ops.go      # 布隆过滤器操作
     └── scripting_ops.go  # Lua 脚本操作
@@ -113,6 +119,7 @@ type Provider interface {
 	String() StringOperations
 	Hash() HashOperations
 	Set() SetOperations
+	ZSet() ZSetOperations
 	Lock() LockOperations
 	Bloom() BloomFilterOperations
 	Script() ScriptingOperations
@@ -159,6 +166,21 @@ type Config struct {
 #### 集合 (`SetOperations`)
 - `SAdd(ctx, key, members...)`: 添加成员到集合
 - `SIsMember(ctx, key, member)`: 检查成员是否在集合中
+- `SRem(ctx, key, members...)`: 从集合中移除成员
+- `SMembers(ctx, key)`: 获取集合中所有成员
+- `SCard(ctx, key)`: 获取集合成员数量
+
+#### 有序集合 (`ZSetOperations`)
+- `ZAdd(ctx, key, members...)`: 添加一个或多个成员到有序集合
+- `ZRange(ctx, key, start, stop)`: 获取指定范围内的成员，按分数从低到高排序
+- `ZRevRange(ctx, key, start, stop)`: 获取指定范围内的成员，按分数从高到低排序
+- `ZRangeByScore(ctx, key, min, max)`: 获取指定分数范围内的成员
+- `ZRem(ctx, key, members...)`: 从有序集合中移除一个或多个成员
+- `ZRemRangeByRank(ctx, key, start, stop)`: 移除指定排名区间内的成员
+- `ZCard(ctx, key)`: 获取有序集合的成员数量
+- `ZCount(ctx, key, min, max)`: 获取指定分数范围内的成员数量
+- `ZScore(ctx, key, member)`: 获取成员的分数
+- `ZSetExpire(ctx, key, expiration)`: 为有序集合设置过期时间
 
 #### 分布式锁 (`LockOperations`)
 - `Acquire(ctx, key, expiration)`: 获取一个锁实例
@@ -180,6 +202,51 @@ type Config struct {
 - **基础用法**: [examples/basic/main.go](./examples/basic/main.go) - 字符串、哈希、集合操作
 - **高级用法**: [examples/advanced/main.go](./examples/advanced/main.go) - 分布式锁、布隆过滤器
 - **综合演示**: [examples/comprehensive/main.go](./examples/comprehensive/main.go) - 所有接口的完整演示
+
+### 会话消息管理示例
+
+使用 ZSET 维护每个会话最近50条消息记录：
+
+```go
+// 添加消息到会话（使用时间戳作为分数）
+now := time.Now()
+message := &cache.ZMember{
+    Member: "msg123",
+    Score:  float64(now.Unix()),
+}
+
+err := cacheClient.ZSet().ZAdd(ctx, "session:chat123", message)
+if err != nil {
+    log.Fatalf("添加消息失败: %v", err)
+}
+
+// 获取最新的5条消息
+recentMessages, err := cacheClient.ZSet().ZRevRange(ctx, "session:chat123", 0, 4)
+if err != nil {
+    log.Fatalf("获取最新消息失败: %v", err)
+}
+
+for i, msg := range recentMessages {
+    log.Printf("[%d] 消息ID: %s, 时间戳: %f", i+1, msg.Member, msg.Score)
+}
+
+// 获取最近1小时内的消息
+oneHourAgo := float64(now.Add(-time.Hour).Unix())
+recentByTime, err := cacheClient.ZSet().ZRangeByScore(ctx, "session:chat123", oneHourAgo, float64(now.Unix()))
+if err != nil {
+    log.Fatalf("按时间获取消息失败: %v", err)
+}
+
+// 维护最近50条消息（移除超过限制的旧消息）
+count, err := cacheClient.ZSet().ZCard(ctx, "session:chat123")
+if err == nil && count > 50 {
+    // 移除排名在50之外的所有旧消息
+    err = cacheClient.ZSet().ZRemRangeByRank(ctx, "session:chat123", 0, count-51)
+}
+
+// 设置过期时间，防止活跃会话内存占用过大
+err = cacheClient.ZSet().ZSetExpire(ctx, "session:chat123", 2*time.Hour)
+```
 
 ### 错误处理
 

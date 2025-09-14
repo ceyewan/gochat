@@ -7,13 +7,14 @@
 ### 核心设计原则
 
 1.  **简洁易用**：提供清晰、直观的 API，隐藏底层 `go-redis` 的复杂性。
-2.  **功能完备**：封装常用的 Redis 操作，包括字符串、哈希、集合、分布式锁和布隆过滤器。
+2.  **功能完备**：封装常用的 Redis 操作，包括字符串、哈希、集合、有序集合、分布式锁和布隆过滤器。
 3.  **类型安全**：所有与时间相关的参数（如过期时间）均使用 `time.Duration`，避免魔术数字和单位混淆。
 4.  **面向接口**：所有功能通过 `cache.Provider` 接口暴露，遵循依赖倒置原则，便于测试和模拟 (mocking)。
 5.  **配置灵活**：提供环境相关的默认配置 (`GetDefaultConfig`) 和函数式选项 (`Option`)，易于定制和扩展。
 6.  **清晰分层**：严格区分公共 API (`cache/`) 和内部实现 (`cache/internal/`)，实现关注点分离。
 7.  **错误处理**：提供标准的 `ErrCacheMiss` 错误类型，统一缓存未命中的处理方式。
 8.  **子接口设计**：通过 `Provider` 接口暴露子操作接口，避免接口膨胀，提高可组合性。
+9.  **场景优化**：针对 GoChat 项目的核心场景（如会话消息管理）提供专门的优化接口。
 
 ## 🏗️ 架构设计
 
@@ -101,6 +102,7 @@ type Provider interface {
 	String() StringOperations
 	Hash() HashOperations
 	Set() SetOperations
+	ZSet() ZSetOperations
 	Lock() LockOperations
 	Bloom() BloomFilterOperations
 	Script() ScriptingOperations
@@ -118,6 +120,10 @@ value, err := stringOps.Get(ctx, "key")
 // 只需要哈希操作
 hashOps := cacheClient.Hash()
 fields, err := hashOps.HGetAll(ctx, "user:123")
+
+// 只需要有序集合操作
+zsetOps := cacheClient.ZSet()
+recentMessages, err := zsetOps.ZRevRange(ctx, "session:123", 0, 49)
 ```
 
 #### 3. 公共/内部隔离
@@ -180,6 +186,42 @@ if err == cache.ErrCacheMiss {
     // 处理其他错误
     log.Printf("Error: %v", err)
 }
+```
+
+#### 7. 有序集合操作 (`ZSetOperations`)
+
+**设计要点**:
+*   **会话消息优化**: 专门为 GoChat 的会话消息管理场景设计，支持时间排序和大小限制。
+*   **时间戳排序**: 使用 Unix 时间戳作为分数，实现消息的时间排序。
+*   **大小控制**: 通过 `ZRemRangeByRank` 和 `ZRangeByScore` 实现消息数量的精确控制。
+*   **过期支持**: 提供 `ZSetExpire` 方法，防止活跃会话的内存无限增长。
+
+**核心场景**: 维护每个会话最近50条消息记录
+
+**代码示例**:
+```go
+// 添加消息到会话
+message := &cache.ZMember{
+    Member: "msg123",
+    Score:  float64(time.Now().Unix()), // 使用时间戳作为分数
+}
+err := cacheClient.ZSet().ZAdd(ctx, "session:chat123", message)
+
+// 获取最新的N条消息
+recentMessages, err := cacheClient.ZSet().ZRevRange(ctx, "session:chat123", 0, 49)
+
+// 维护消息数量限制（移除超过50条的旧消息）
+count, err := cacheClient.ZSet().ZCard(ctx, "session:chat123")
+if count > 50 {
+    err := cacheClient.ZSet().ZRemRangeByRank(ctx, "session:chat123", 0, count-51)
+}
+
+// 按时间范围获取消息
+oneHourAgo := float64(time.Now().Add(-time.Hour).Unix())
+recentByTime, err := cacheClient.ZSet().ZRangeByScore(ctx, "session:chat123", oneHourAgo, float64(time.Now().Unix()))
+
+// 设置过期时间，防止内存压力
+err := cacheClient.ZSet().ZSetExpire(ctx, "session:chat123", 2*time.Hour)
 ```
 
 #### 6. 环境相关配置
@@ -252,6 +294,8 @@ prodConfig := cache.GetDefaultConfig("production")
 *   **连接池健康检查**: 实现更智能的连接池管理，包括健康检查和自动重连机制。
 *   **缓存击穿保护**: 集成互斥锁机制，防止缓存击穿问题。
 *   **缓存雪崩保护**: 支持随机过期时间，避免大量缓存同时过期导致的雪崩效应。
+*   **ZSET 场景优化**: 针对消息会话管理提供更高级的抽象，如自动维护最近N条消息、批量消息插入优化等。
+*   **会话生命周期管理**: 集成会话过期策略，自动清理长期不活跃的会话数据。
 
 ## 📊 性能特性
 
