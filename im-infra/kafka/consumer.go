@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -10,8 +11,8 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-// consumer 实现 Consumer 接口
-type consumer struct {
+// consumerImpl 实现 Consumer 接口
+type consumerImpl struct {
 	client        *kgo.Client
 	config        *Config
 	groupID       string
@@ -31,15 +32,13 @@ type consumerMetrics struct {
 	mu               sync.RWMutex
 }
 
-// NewConsumer 创建一个新的消息消费者实例。
+// newConsumerImpl 创建一个新的消息消费者实例。
 // groupID 是 Kafka 的消费者组ID，用于实现负载均衡和故障转移。
-func NewConsumer(ctx context.Context, config *Config, groupID string, opts ...Option) (Consumer, error) {
-	options := &options{
-		logger: clog.Namespace("kafka-consumer"),
-	}
-
-	for _, opt := range opts {
-		opt(options)
+func newConsumerImpl(ctx context.Context, config *Config, groupID string, opts *options) (*consumerImpl, error) {
+	if opts == nil {
+		opts = &options{
+			logger: clog.Namespace("kafka-consumer"),
+		}
 	}
 
 	if config.ConsumerConfig == nil {
@@ -65,17 +64,23 @@ func NewConsumer(ctx context.Context, config *Config, groupID string, opts ...Op
 		// 当前只支持 PLAINTEXT 协议
 	}
 
+	// 添加客户端 ID 以便于调试
+	kgoOpts = append(kgoOpts, kgo.ClientID(fmt.Sprintf("kafka-consumer-%s", groupID)))
+
+	// 使用默认日志记录器
+	kgoOpts = append(kgoOpts, kgo.WithLogger(kgo.BasicLogger(os.Stderr, kgo.LogLevelInfo, func() string { return "" })))
+
 	client, err := kgo.NewClient(kgoOpts...)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("创建 Kafka 客户端失败: %w", err)
 	}
 
-	consumer := &consumer{
+	consumer := &consumerImpl{
 		client:        client,
 		config:        config,
 		groupID:       groupID,
-		logger:        options.logger,
+		logger:        opts.logger,
 		metrics:       consumerMetrics{},
 		cancelContext: cancel,
 		ctx:           consumerCtx,
@@ -141,7 +146,7 @@ func buildConsumerOpts(cfg *ConsumerConfig, groupID string) []kgo.Opt {
 }
 
 // Subscribe 订阅消息并根据处理结果决定是否提交偏移量。
-func (c *consumer) Subscribe(ctx context.Context, topics []string, callback ConsumeCallback) error {
+func (c *consumerImpl) Subscribe(ctx context.Context, topics []string, callback ConsumeCallback) error {
 	if len(topics) == 0 {
 		return fmt.Errorf("订阅主题列表不能为空")
 	}
@@ -185,7 +190,7 @@ func (c *consumer) Subscribe(ctx context.Context, topics []string, callback Cons
 }
 
 // consumeBatch 消费一批消息
-func (c *consumer) consumeBatch(ctx context.Context, callback ConsumeCallback) error {
+func (c *consumerImpl) consumeBatch(ctx context.Context, callback ConsumeCallback) error {
 	// 拉取消息
 	fetches := c.client.PollFetches(ctx)
 	if fetches.IsClientClosed() {
@@ -206,7 +211,7 @@ func (c *consumer) consumeBatch(ctx context.Context, callback ConsumeCallback) e
 }
 
 // processRecord 处理单条消息
-func (c *consumer) processRecord(ctx context.Context, record *kgo.Record, callback ConsumeCallback) {
+func (c *consumerImpl) processRecord(ctx context.Context, record *kgo.Record, callback ConsumeCallback) {
 	// 更新指标
 	c.metrics.mu.Lock()
 	c.metrics.totalMessages++
@@ -256,7 +261,7 @@ func (c *consumer) processRecord(ctx context.Context, record *kgo.Record, callba
 }
 
 // Close 优雅地关闭消费者。
-func (c *consumer) Close() error {
+func (c *consumerImpl) Close() error {
 	c.logger.Info("关闭 Kafka 消费者", clog.String("group_id", c.groupID))
 
 	// 取消上下文
@@ -272,7 +277,7 @@ func (c *consumer) Close() error {
 }
 
 // GetMetrics 获取消费者性能指标
-func (c *consumer) GetMetrics() map[string]interface{} {
+func (c *consumerImpl) GetMetrics() map[string]interface{} {
 	c.metrics.mu.RLock()
 	defer c.metrics.mu.RUnlock()
 
@@ -292,7 +297,7 @@ func (c *consumer) GetMetrics() map[string]interface{} {
 }
 
 // Ping 检查消费者健康状态
-func (c *consumer) Ping(ctx context.Context) error {
+func (c *consumerImpl) Ping(ctx context.Context) error {
 	c.logger.Debug("检查消费者健康状态", clog.String("group_id", c.groupID))
 
 	// 检查连接状态
@@ -336,10 +341,15 @@ func extractTraceIDFromHeaders(headers []kgo.RecordHeader) string {
 	return ""
 }
 
+// GetClient 获取底层的 kgo.Client，用于高级操作
+func (c *consumerImpl) GetClient() *kgo.Client {
+	return c.client
+}
+
 // injectTraceID 将 trace_id 注入到上下文中
 func injectTraceID(ctx context.Context, traceID string) context.Context {
 	if traceID == "" {
 		return ctx
 	}
-	return clog.WithTraceID(ctx, traceID)
+	return context.WithValue(ctx, TraceIDKey, traceID)
 }

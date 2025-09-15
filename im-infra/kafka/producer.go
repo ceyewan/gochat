@@ -10,8 +10,8 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-// producer 实现 Producer 接口
-type producer struct {
+// producerImpl 实现 Producer 接口
+type producerImpl struct {
 	client *kgo.Client
 	config *Config
 	logger clog.Logger
@@ -27,14 +27,12 @@ type producerMetrics struct {
 	mu              sync.RWMutex
 }
 
-// NewProducer 创建一个新的消息生产者实例。
-func NewProducer(ctx context.Context, config *Config, opts ...Option) (Producer, error) {
-	options := &options{
-		logger: clog.Namespace("kafka-producer"),
-	}
-
-	for _, opt := range opts {
-		opt(options)
+// newProducerImpl 创建一个新的消息生产者实例。
+func newProducerImpl(ctx context.Context, config *Config, opts *options) (*producerImpl, error) {
+	if opts == nil {
+		opts = &options{
+			logger: clog.Namespace("kafka-producer"),
+		}
 	}
 
 	if config.ProducerConfig == nil {
@@ -58,10 +56,10 @@ func NewProducer(ctx context.Context, config *Config, opts ...Option) (Producer,
 		return nil, fmt.Errorf("创建 Kafka 客户端失败: %w", err)
 	}
 
-	producer := &producer{
+	producer := &producerImpl{
 		client:  client,
 		config:  config,
-		logger:  options.logger,
+		logger:  opts.logger,
 		metrics: producerMetrics{},
 	}
 
@@ -145,7 +143,7 @@ func buildProducerOpts(cfg *ProducerConfig) []kgo.Opt {
 }
 
 // Send 异步发送消息。
-func (p *producer) Send(ctx context.Context, msg *Message, callback func(error)) {
+func (p *producerImpl) Send(ctx context.Context, msg *Message, callback func(error)) {
 	// 参数校验
 	if msg == nil {
 		if callback != nil {
@@ -220,7 +218,7 @@ func (p *producer) Send(ctx context.Context, msg *Message, callback func(error))
 }
 
 // SendSync 同步发送消息。
-func (p *producer) SendSync(ctx context.Context, msg *Message) error {
+func (p *producerImpl) SendSync(ctx context.Context, msg *Message) error {
 	// 参数校验
 	if msg == nil {
 		return fmt.Errorf("消息不能为空")
@@ -290,7 +288,7 @@ func (p *producer) SendSync(ctx context.Context, msg *Message) error {
 }
 
 // Close 关闭生产者。
-func (p *producer) Close() error {
+func (p *producerImpl) Close() error {
 	p.logger.Info("关闭 Kafka 生产者",
 		clog.Int64("total_messages", p.metrics.totalMessages),
 		clog.Int64("success_messages", p.metrics.successMessages),
@@ -308,7 +306,7 @@ func (p *producer) Close() error {
 }
 
 // GetMetrics 获取生产者性能指标
-func (p *producer) GetMetrics() map[string]interface{} {
+func (p *producerImpl) GetMetrics() map[string]interface{} {
 	p.metrics.mu.RLock()
 	defer p.metrics.mu.RUnlock()
 
@@ -327,13 +325,13 @@ func (p *producer) GetMetrics() map[string]interface{} {
 }
 
 // Flush 刷新所有待发送的消息
-func (p *producer) Flush(ctx context.Context) error {
+func (p *producerImpl) Flush(ctx context.Context) error {
 	p.logger.Debug("刷新生产者缓冲区")
 	return p.client.Flush(ctx)
 }
 
 // Ping 检查生产者健康状态
-func (p *producer) Ping(ctx context.Context) error {
+func (p *producerImpl) Ping(ctx context.Context) error {
 	p.logger.Debug("检查生产者健康状态")
 
 	// 检查连接状态
@@ -365,18 +363,21 @@ func convertHeaders(headers map[string][]byte) []kgo.RecordHeader {
 	return kgoHeaders
 }
 
+// GetClient 获取底层的 kgo.Client，用于高级操作
+func (p *producerImpl) GetClient() *kgo.Client {
+	return p.client
+}
+
 // extractTraceID 从上下文中提取 trace_id
 func extractTraceID(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
 
-	// 通过 clog 的 WithContext 函数间接检查是否包含 trace_id
-	// 这是一个简化的实现，实际项目中可能需要 clog 包提供 GetTraceID 函数
-	logger := clog.WithContext(ctx)
-	if logger != nil {
-		// 由于我们无法直接访问 traceIDKey，这里返回空字符串
-		// 实际使用时，业务代码可以在发送消息前手动将 trace_id 添加到消息头
+	// 从 context.Value 中提取 trace ID
+	if traceID, ok := ctx.Value(TraceIDKey).(string); ok {
+		return traceID
 	}
+
 	return ""
 }

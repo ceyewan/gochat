@@ -20,12 +20,12 @@ func TestKafkaProducerConsumer(t *testing.T) {
 	config := GetDefaultConfig("development")
 	config.Brokers = []string{"localhost:9092"}
 
-	// 尝试创建生产者来检查 Kafka 是否可用
-	testProducer, err := NewProducer(context.Background(), config)
+	// 尝试创建 Provider 来检查 Kafka 是否可用
+	testProvider, err := NewProvider(context.Background(), config)
 	if err != nil {
 		t.Skipf("Kafka 不可用，跳过集成测试: %v", err)
 	}
-	testProducer.Close()
+	testProvider.Close()
 
 	// 初始化 clog
 	clog.Init(context.Background(), clog.GetDefaultConfig("test"))
@@ -34,14 +34,18 @@ func TestKafkaProducerConsumer(t *testing.T) {
 	config.ProducerConfig = GetDefaultConfig("development").ProducerConfig
 	config.ConsumerConfig = GetDefaultConfig("development").ConsumerConfig
 
-	// 创建生产者
-	producer, err := NewProducer(context.Background(), config)
+	// 创建 Provider
+	provider, err := NewProvider(context.Background(), config)
 	require.NoError(t, err)
+	defer provider.Close()
+
+	// 获取生产者
+	producer := provider.Producer()
 	defer producer.Close()
 
-	// 创建消费者
-	consumer, err := NewConsumer(context.Background(), config, "test-consumer-group")
-	require.NoError(t, err)
+	// 获取消费者
+	consumer := provider.Consumer("test-consumer-group")
+	require.NotNil(t, consumer)
 	defer consumer.Close()
 
 	// 测试数据
@@ -71,7 +75,20 @@ func TestKafkaProducerConsumer(t *testing.T) {
 		}
 	}()
 
-	// 等待消费者准备就绪
+	// 等待消费者准备就绪（增加等待时间确保消费者完全就绪）
+	time.Sleep(3 * time.Second)
+
+	// 使用 admin 接口创建 topic
+	admin := provider.Admin()
+	require.NotNil(t, admin)
+
+	// 创建测试 topic
+	err = admin.CreateTopic(ctx, "example.test-topic", 1, 1, nil)
+	if err != nil {
+		t.Logf("创建 topic 失败（可能已存在）: %v", err)
+	}
+
+	// 等待 topic 创建完成
 	time.Sleep(1 * time.Second)
 
 	// 发送消息
@@ -88,7 +105,7 @@ func TestKafkaProducerConsumer(t *testing.T) {
 	// 等待接收消息
 	select {
 	case receivedMsg := <-messageChan:
-		assert.Equal(t, "test-topic", receivedMsg.Topic)
+		assert.Equal(t, "example.test-topic", receivedMsg.Topic)
 		assert.Equal(t, "test-key", string(receivedMsg.Key))
 
 		var receivedData map[string]string
@@ -105,18 +122,65 @@ func TestKafkaProducerConsumer(t *testing.T) {
 }
 
 func TestTraceIDPropagation(t *testing.T) {
-	// 测试 trace_id 传播逻辑
-	ctx := clog.WithTraceID(context.Background(), "test-trace-123")
+	// 测试生产者端 trace ID 提取
+	ctx := context.WithValue(context.Background(), TraceIDKey, "test-trace-123")
 
-	// 由于 traceIDKey 是私有的，我们只能测试 WithTraceID 函数本身
-	// 实际的 trace_id 传播功能需要在业务代码中手动处理
-	// 这里我们只测试 clog 的功能是否正常
-	logger := clog.WithContext(ctx)
-	assert.NotNil(t, logger)
+	// 测试 extractTraceID 函数
+	traceID := extractTraceID(ctx)
+	assert.Equal(t, "test-trace-123", traceID)
 
 	// 测试空上下文
-	logger = clog.WithContext(context.Background())
-	assert.NotNil(t, logger)
+	traceID = extractTraceID(context.Background())
+	assert.Empty(t, traceID)
+
+	// 测试 nil 上下文
+	traceID = extractTraceID(context.TODO())
+	assert.Empty(t, traceID)
+
+	// 测试错误类型的值
+	ctxWrongType := context.WithValue(context.Background(), TraceIDKey, 123)
+	traceID = extractTraceID(ctxWrongType)
+	assert.Empty(t, traceID)
+}
+
+func TestTraceIDInjection(t *testing.T) {
+	// 测试消费者端 trace ID 注入
+	ctx := context.Background()
+
+	// 测试正常 trace ID 注入
+	newCtx := injectTraceID(ctx, "injected-trace-456")
+	assert.Equal(t, "injected-trace-456", newCtx.Value(TraceIDKey))
+
+	// 测试空 trace ID 注入
+	sameCtx := injectTraceID(ctx, "")
+	assert.Equal(t, ctx, sameCtx)
+
+	// 测试覆盖已有 trace ID
+	ctxWithTrace := context.WithValue(ctx, TraceIDKey, "old-trace")
+	newCtx = injectTraceID(ctxWithTrace, "new-trace")
+	assert.Equal(t, "new-trace", newCtx.Value(TraceIDKey))
+}
+
+func TestTraceIDEndToEnd(t *testing.T) {
+	// 测试完整的 trace ID 传播流程
+	originalTraceID := "end-to-end-trace-789"
+
+	// 1. 业务代码设置 trace ID
+	businessCtx := context.WithValue(context.Background(), TraceIDKey, originalTraceID)
+
+	// 2. 生产者提取 trace ID（模拟）
+	extractedTraceID := extractTraceID(businessCtx)
+	assert.Equal(t, originalTraceID, extractedTraceID)
+
+	// 3. 模拟消费者收到消息并提取 trace ID（从消息头）
+	receivedTraceID := extractedTraceID // 实际从消息头 "X-Trace-ID" 获取
+
+	// 4. 消费者注入 trace ID 到新 context
+	consumerCtx := injectTraceID(context.Background(), receivedTraceID)
+
+	// 5. 业务处理函数获取 trace ID
+	finalTraceID := consumerCtx.Value(TraceIDKey).(string)
+	assert.Equal(t, originalTraceID, finalTraceID)
 }
 
 func TestGetDefaultConfig(t *testing.T) {

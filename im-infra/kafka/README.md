@@ -231,67 +231,44 @@ handler := func(ctx context.Context, msg *kafka.Message) error {
 
 ## 管理 Topics
 
-### 创建 Topics
+Kafka 组件专注于生产和消费消息，不提供 topic 管理功能。请使用以下方式管理 topics：
+
+### 使用脚本创建 Topics
+
+```bash
+# 创建 GoChat 业务 topics
+cd /Users/harrick/CodeField/gochat/deployment/scripts
+./init-kafka.sh
+
+# 创建示例测试 topics
+./init-kafka-example.sh
+
+# 使用 admin 脚本创建特定 topic
+./kafka-admin.sh create example.user.events
+```
+
+### 使用 kadm 库（推荐）
+
+如果需要在代码中管理 topics，可以使用 franz-go 的 kadm 包：
 
 ```go
-// 创建单个 topic
-admin, err := kafka.NewAdminClient(ctx, config)
-if err != nil {
-    log.Fatal("创建 admin 客户端失败:", err)
-}
-defer admin.Close()
+import "github.com/twmb/franz-go/pkg/kadm"
 
-err = admin.CreateTopic(ctx, "my-topic", 3, 1)
+// 创建 kadm 客户端
+kadmClient := kadm.NewClient(kgoClient)
+
+// 创建 topic
+responses, err := kadmClient.CreateTopics(ctx,
+    kadm.NewTopicCreate("my-topic").NumPartitions(3),
+)
 if err != nil {
     log.Fatal("创建 topic 失败:", err)
 }
 
-// 批量创建 topics
-topics := []kafka.TopicConfig{
-    {
-        Name:             "topic1",
-        Partitions:       3,
-        ReplicationFactor: 1,
-    },
-    {
-        Name:             "topic2",
-        Partitions:       6,
-        ReplicationFactor: 1,
-    },
-}
-
-err = admin.CreateTopics(ctx, topics)
-if err != nil {
-    log.Fatal("批量创建 topics 失败:", err)
-}
-```
-
-### 管理 Topics
-
-```go
-// 检查 topic 是否存在
-exists := admin.TopicExists(ctx, "my-topic")
-
-// 列出所有 topics
-topics, err := admin.ListTopics(ctx)
-if err != nil {
-    log.Fatal("获取 topic 列表失败:", err)
-}
-
-// 删除 topic
-err = admin.DeleteTopic(ctx, "old-topic")
-if err != nil {
-    log.Fatal("删除 topic 失败:", err)
-}
-```
-
-### 快速创建示例 Topics
-
-```go
-// 一键创建所有示例 topics
-err := kafka.CreateExampleTopics(ctx, config)
-if err != nil {
-    log.Fatal("创建示例 topics 失败:", err)
+// 获取创建结果
+response := kadm.AnyE(responses)
+if response.Error != nil {
+    log.Fatal("创建 topic 失败:", response.Error)
 }
 ```
 
