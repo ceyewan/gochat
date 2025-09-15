@@ -11,6 +11,7 @@ type Field = zap.Field
 var (
 	String   = zap.String
 	Int      = zap.Int
+	Int16    = zap.Int16
 	Int32    = zap.Int32
 	Int64    = zap.Int64
 	Uint     = zap.Uint
