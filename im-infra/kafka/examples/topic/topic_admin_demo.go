@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/ceyewan/gochat/im-infra/clog"
 	"github.com/ceyewan/gochat/im-infra/kafka"
@@ -21,133 +20,124 @@ func main() {
 	config := kafka.GetDefaultConfig("development")
 	config.Brokers = []string{"localhost:9092", "localhost:19092", "localhost:29092"}
 
-	// 3. 创建生产者 (用于获取 kgo.Client)
-	producer, err := kafka.NewProducer(ctx, config, kafka.WithNamespace("topic-admin"))
-	if err != nil {
-		log.Fatal("创建生产者失败:", err)
-	}
-	defer producer.Close()
-
-	// 4. 创建 Topic 管理器
+	// 3. 创建 Provider 和获取 Admin 接口
 	logger := clog.Namespace("topic-admin")
-	topicManager := kafka.NewTopicManager(producer.GetClient(), logger)
-	defer topicManager.Close()
+	provider, err := kafka.NewProvider(ctx, config, kafka.WithLogger(logger))
+	if err != nil {
+		log.Fatal("创建 Provider 失败:", err)
+	}
+	defer provider.Close()
 
-	// 5. 定义要创建的 Topics
-	testTopics := map[string]*kafka.TopicConfig{
+	admin := provider.Admin()
+
+	// 4. 定义要创建的 Topics
+	testTopics := map[string]struct {
+		partitions        int32
+		replicationFactor int16
+		config            map[string]string
+	}{
 		"example.user.events": {
-			Partitions:        3,
-			ReplicationFactor: 1,
-			Configs: map[string]*string{
-				"retention.ms":     kafka.StringPtr("86400000"), // 24 小时
-				"cleanup.policy":   kafka.StringPtr("delete"),
-				"compression.type": kafka.StringPtr("lz4"),
+			partitions:        3,
+			replicationFactor: 1,
+			config: map[string]string{
+				"retention.ms":     "86400000", // 24 小时
+				"cleanup.policy":   "delete",
+				"compression.type": "lz4",
 			},
-			Timeout: 30 * time.Second,
 		},
 		"example.test-topic": {
-			Partitions:        1,
-			ReplicationFactor: 1,
-			Configs: map[string]*string{
-				"retention.ms":      kafka.StringPtr("3600000"), // 1 小时
-				"cleanup.policy":    kafka.StringPtr("delete"),
-				"max.message.bytes": kafka.StringPtr("1048576"), // 1MB
+			partitions:        1,
+			replicationFactor: 1,
+			config: map[string]string{
+				"retention.ms":      "3600000", // 1 小时
+				"cleanup.policy":    "delete",
+				"max.message.bytes": "1048576", // 1MB
 			},
-			Timeout: 30 * time.Second,
 		},
 		"example.performance": {
-			Partitions:        6,
-			ReplicationFactor: 1,
-			Configs: map[string]*string{
-				"retention.ms":     kafka.StringPtr("1800000"), // 30 分钟
-				"cleanup.policy":   kafka.StringPtr("delete"),
-				"compression.type": kafka.StringPtr("zstd"),
+			partitions:        6,
+			replicationFactor: 1,
+			config: map[string]string{
+				"retention.ms":     "1800000", // 30 分钟
+				"cleanup.policy":   "delete",
+				"compression.type": "zstd",
 			},
-			Timeout: 30 * time.Second,
 		},
 	}
 
-	// 6. 批量创建 Topics
+	// 5. 批量创建 Topics
 	fmt.Println("=== 批量创建 Topics ===")
-	err = topicManager.CreateTopics(ctx, testTopics)
-	if err != nil {
-		logger.Error("批量创建 Topics 失败", clog.Err(err))
-		fmt.Printf("错误: %v\n", err)
-	} else {
-		fmt.Println("✅ 所有 Topics 创建成功!")
+	for topicName, topicConfig := range testTopics {
+		err = admin.CreateTopic(ctx, topicName, topicConfig.partitions, topicConfig.replicationFactor, topicConfig.config)
+		if err != nil {
+			logger.Error("创建 Topic 失败",
+				clog.String("topic", topicName),
+				clog.Err(err),
+			)
+			fmt.Printf("创建 Topic '%s' 失败: %v\n", topicName, err)
+		} else {
+			fmt.Printf("✅ Topic '%s' 创建成功!\n", topicName)
+		}
 	}
 
-	// 7. 列出所有 Topics
+	// 6. 列出所有 Topics
 	fmt.Println("\n=== 列出 Topics ===")
-	details, err := topicManager.ListTopics(ctx)
+	topics, err := admin.ListTopics(ctx)
 	if err != nil {
 		logger.Error("列出 Topics 失败", clog.Err(err))
 	} else {
-		fmt.Printf("📋 找到 %d 个 Topics:\n", len(details))
-		for topicName, detail := range details {
-			numPartitions := len(detail.Partitions)
-			replicationFactor := 1 // 默认值，如果无法从分区详情中获取
-			if len(detail.Partitions) > 0 {
-				for _, partitionDetail := range detail.Partitions {
-					replicationFactor = len(partitionDetail.Replicas)
-					break
-				}
-			}
+		fmt.Printf("📋 找到 %d 个 Topics:\n", len(topics))
+		for topicName, detail := range topics {
 			fmt.Printf("  - %s (分区数: %d, 副本数: %d)\n",
 				topicName,
-				numPartitions,
-				replicationFactor,
+				detail.NumPartitions,
+				detail.ReplicationFactor,
 			)
 		}
 	}
 
-	// 8. 检查特定 Topic 是否存在
+	// 7. 检查特定 Topic 是否存在
 	fmt.Println("\n=== 检查 Topic 存在性 ===")
 	testTopicName := "example.user.events"
-	exists, err := topicManager.TopicExists(ctx, testTopicName)
-	if err != nil {
-		logger.Error("检查 Topic 存在性失败", clog.String("topic", testTopicName), clog.Err(err))
-	} else {
-		fmt.Printf("🔍 Topic '%s' 存在: %t\n", testTopicName, exists)
-	}
-
-	// 9. 获取 Topic 详细信息
-	if exists {
-		fmt.Println("\n=== Topic 详细信息 ===")
-		detail, err := topicManager.GetTopicDetail(ctx, testTopicName)
-		if err != nil {
-			logger.Error("获取 Topic 详细信息失败", clog.String("topic", testTopicName), clog.Err(err))
-		} else {
-			fmt.Printf("📄 Topic '%s' 详细信息:\n", testTopicName)
-			fmt.Printf("  - Topic ID: %s\n", detail.ID)
-			fmt.Printf("  - 分区数: %d\n", len(detail.Partitions))
-			replicationFactor := 1
-			if len(detail.Partitions) > 0 {
-				for _, partitionDetail := range detail.Partitions {
-					replicationFactor = len(partitionDetail.Replicas)
-					break
-				}
-			}
-			fmt.Printf("  - 副本因子: %d\n", replicationFactor)
-			fmt.Printf("  - IsInternal: %t\n", detail.IsInternal)
+	if topics, err := admin.ListTopics(ctx); err == nil {
+		exists := false
+		if _, found := topics[testTopicName]; found {
+			exists = true
 		}
+		fmt.Printf("🔍 Topic '%s' 存在: %t\n", testTopicName, exists)
+
+		// 8. 获取 Topic 详细信息
+		if exists {
+			fmt.Println("\n=== Topic 详细信息 ===")
+			metadata, err := admin.GetTopicMetadata(ctx, testTopicName)
+			if err != nil {
+				logger.Error("获取 Topic 详细信息失败", clog.String("topic", testTopicName), clog.Err(err))
+			} else {
+				fmt.Printf("📄 Topic '%s' 详细信息:\n", testTopicName)
+				fmt.Printf("  - 分区数: %d\n", metadata.NumPartitions)
+				fmt.Printf("  - 副本因子: %d\n", metadata.ReplicationFactor)
+				fmt.Printf("  - 配置: %v\n", metadata.Config)
+			}
+		}
+	} else {
+		logger.Error("检查 Topic 存在性失败", clog.String("topic", testTopicName), clog.Err(err))
 	}
 
-	// 10. 清理测试 Topics (可选)
+	// 9. 清理测试 Topics (可选)
 	fmt.Println("\n=== 清理测试 Topics ===")
 	cleanup := os.Getenv("CLEANUP_TOPICS")
 	if cleanup == "true" || cleanup == "1" {
-		var topicsToDelete []string
 		for topicName := range testTopics {
-			topicsToDelete = append(topicsToDelete, topicName)
-		}
-
-		err = topicManager.DeleteTopics(ctx, topicsToDelete...)
-		if err != nil {
-			logger.Error("删除测试 Topics 失败", clog.Err(err))
-			fmt.Printf("删除失败: %v\n", err)
-		} else {
-			fmt.Println("🧹 所有测试 Topics 删除成功!")
+			err = admin.DeleteTopic(ctx, topicName)
+			if err != nil {
+				logger.Error("删除 Topic 失败",
+					clog.String("topic", topicName),
+					clog.Err(err),
+				)
+				fmt.Printf("删除 Topic '%s' 失败: %v\n", topicName, err)
+			} else {
+				fmt.Printf("🧹 Topic '%s' 删除成功!\n", topicName)
+			}
 		}
 	} else {
 		fmt.Println("💡 跳过清理 Topics (设置 CLEANUP_TOPICS=true 来启用清理)")

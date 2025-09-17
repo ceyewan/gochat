@@ -67,7 +67,8 @@ func startConsumer(ctx context.Context, consumer kafka.Consumer) {
 	handler := func(ctx context.Context, msg *kafka.Message) error {
 		// 从 context 中获取 trace ID
 		traceID := ctx.Value(kafka.TraceIDKey).(string)
-		logger := clog.WithTraceID(ctx, traceID)
+		ctx = clog.WithTraceID(ctx, traceID)
+		logger := clog.WithContext(ctx)
 		logger.Info("收到消息",
 			clog.String("topic", msg.Topic),
 			clog.String("key", string(msg.Key)),

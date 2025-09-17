@@ -16,13 +16,13 @@ import (
 
 // OrderEvent 订单事件
 type OrderEvent struct {
-	OrderID      string            `json:"order_id"`
-	UserID       string            `json:"user_id"`
-	Amount       float64           `json:"amount"`
-	Currency     string            `json:"currency"`
-	Status       string            `json:"status"`
-	Timestamp    time.Time         `json:"timestamp"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
+	OrderID   string            `json:"order_id"`
+	UserID    string            `json:"user_id"`
+	Amount    float64           `json:"amount"`
+	Currency  string            `json:"currency"`
+	Status    string            `json:"status"`
+	Timestamp time.Time         `json:"timestamp"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
 }
 
 func main() {
@@ -73,7 +73,7 @@ func main() {
 func setupTopics(ctx context.Context, admin kafka.AdminOperations) error {
 	// 创建订单事件 topic
 	if err := admin.CreateTopic(ctx, "order.events", 3, 1, map[string]string{
-		"retention.ms": "604800000", // 7天保留期
+		"retention.ms":   "604800000", // 7天保留期
 		"cleanup.policy": "delete",
 	}); err != nil {
 		// Topic 可能已存在，这是可以接受的
@@ -82,7 +82,7 @@ func setupTopics(ctx context.Context, admin kafka.AdminOperations) error {
 
 	// 创建订单处理结果 topic
 	if err := admin.CreateTopic(ctx, "order.processed", 3, 1, map[string]string{
-		"retention.ms": "2592000000", // 30天保留期
+		"retention.ms":   "2592000000", // 30天保留期
 		"cleanup.policy": "delete",
 	}); err != nil {
 		fmt.Printf("创建 order.processed topic 失败（可能已存在）: %v\n", err)
@@ -222,7 +222,7 @@ func sendOrderEvents(ctx context.Context, producer kafka.ProducerOperations) {
 		},
 	}
 
-	for i, order := range orders {
+	for _, order := range orders {
 		data, err := json.Marshal(order)
 		if err != nil {
 			log.Printf("序列化订单失败: %v", err)
